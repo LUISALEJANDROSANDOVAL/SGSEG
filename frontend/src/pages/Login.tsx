@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, AlertCircle, Loader } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader, GraduationCap, BookOpen, Award } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
@@ -27,68 +27,134 @@ export default function Login() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a0a0c] text-white font-sans antialiased">
-      {/* Background gradients */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-[#0a0a0c] to-[#050507]"></div>
-      <div className="absolute -top-40 -left-40 size-96 rounded-full bg-violet-600/10 blur-[128px]"></div>
-      <div className="absolute -bottom-40 -right-40 size-96 rounded-full bg-blue-500/10 blur-[128px]"></div>
+    <main className="flex min-h-screen font-sans antialiased">
 
-      <div className="relative w-full max-w-[420px] px-6">
-        {/* Logo/Header */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl ring-1 ring-white/20">
-            <span className="text-xl font-bold tracking-wider text-blue-400">S</span>
+      {/* ── LEFT PANEL – Institutional branding ── */}
+      <div className="relative hidden lg:flex lg:w-1/2 flex-col items-center justify-center overflow-hidden bg-[#c8102e]">
+
+        {/* Diagonal decorative shapes */}
+        <div className="absolute -top-24 -right-24 size-80 rotate-45 rounded-3xl bg-white/5" />
+        <div className="absolute bottom-0 -left-16 size-64 rotate-12 rounded-3xl bg-black/10" />
+        <div className="absolute top-1/2 right-0 size-48 -translate-y-1/2 rounded-full bg-white/5 blur-2xl" />
+
+        {/* Animated diagonal stripe pattern */}
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
+            backgroundSize: '20px 20px',
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center gap-8 px-12 text-center text-white">
+          {/* Logo */}
+          <div className="flex items-center justify-center size-32 rounded-full bg-white/10 ring-4 ring-white/20 shadow-2xl backdrop-blur-sm p-4">
+            <img
+              src="/logo-uagrm.png"
+              alt="Logo UAGRM"
+              className="size-24 object-contain drop-shadow-lg"
+            />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            SGSEG
-          </h1>
-          <p className="mt-2 text-sm text-neutral-400">
-            Sistema de Gestión de Exámenes de Grado
-          </p>
+
+          {/* Title block */}
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/70 mb-2">
+              Universidad Tecnológica Privada de Santa Cruz
+            </p>
+            <h1 className="text-4xl font-extrabold leading-tight tracking-tight drop-shadow-lg">
+              UTEPSA
+            </h1>
+            <p className="mt-1 text-base font-medium text-white/80 leading-relaxed">
+              Sistema de Gestión de Exámenes de Grado
+            </p>
+            <div className="mt-3 mx-auto h-1 w-16 rounded-full bg-yellow-400" />
+          </div>
+
+          {/* Feature pills */}
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            {[
+              { icon: GraduationCap, label: 'Gestión de sorteos de temas' },
+              { icon: BookOpen,      label: 'Control académico integrado' },
+              { icon: Award,         label: 'Reportes y estadísticas' },
+            ].map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3 text-left backdrop-blur-sm">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/20">
+                  <Icon className="size-4 text-white" />
+                </div>
+                <span className="text-sm font-medium text-white/90">{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Card */}
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl ring-1 ring-white/10">
-          <h2 className="text-lg font-semibold tracking-tight text-white mb-6">
-            Iniciar Sesión
-          </h2>
+        {/* Bottom footer text */}
+        <p className="absolute bottom-6 text-xs text-white/40">
+          UTEPSA · © {new Date().getFullYear()} Todos los derechos reservados.
+        </p>
+      </div>
 
+      {/* ── RIGHT PANEL – Login form ── */}
+      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-white px-6 py-12">
+
+        {/* Mobile-only logo */}
+        <div className="mb-8 flex flex-col items-center gap-3 lg:hidden">
+          <img src="/logo-uagrm.png" alt="Logo UAGRM" className="size-16 object-contain" />
+          <h1 className="text-2xl font-extrabold text-[#c8102e]">UTEPSA</h1>
+          <p className="text-xs text-gray-500 text-center">Sistema de Gestión de Exámenes de Grado</p>
+        </div>
+
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="mb-1 h-1 w-10 rounded-full bg-[#c8102e]" />
+            <h2 className="text-3xl font-extrabold text-gray-900 mt-3">
+              Iniciar Sesión
+            </h2>
+            <p className="mt-2 text-sm text-gray-500">
+              Ingresa tus credenciales institucionales para continuar.
+            </p>
+          </div>
+
+          {/* Error alert */}
           {error && (
-            <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-500/20 bg-red-500/10 p-3.5 text-xs text-red-400">
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <AlertCircle className="size-5 shrink-0 mt-0.5 text-red-500" />
               <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
+            {/* Email */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-xs font-medium text-neutral-300">
+              <label htmlFor="email" className="text-sm font-semibold text-gray-700">
                 Correo Institucional
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-neutral-500">
+                <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
                   <Mail className="size-4" />
                 </span>
                 <input
                   id="email"
                   type="email"
                   required
-                  placeholder="ejemplo@sgseg.com"
+                  placeholder="usuario@uagrm.edu.bo"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-black/20 py-2.5 pl-10 pr-4 text-sm text-white placeholder-neutral-500 outline-none transition-all focus:border-blue-500 focus:bg-black/40 focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
                 />
               </div>
             </div>
 
+            {/* Password */}
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <label htmlFor="password" className="text-xs font-medium text-neutral-300">
-                  Contraseña
-                </label>
-              </div>
+              <label htmlFor="password" className="text-sm font-semibold text-gray-700">
+                Contraseña
+              </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-neutral-500">
+                <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
                   <Lock className="size-4" />
                 </span>
                 <input
@@ -98,15 +164,16 @@ export default function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-black/20 py-2.5 pl-10 pr-4 text-sm text-white placeholder-neutral-500 outline-none transition-all focus:border-blue-500 focus:bg-black/40 focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
                 />
               </div>
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 hover:shadow-blue-500/35 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-[#0a0a0c] disabled:opacity-50"
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-200 transition-all hover:bg-[#a50d26] hover:shadow-red-300 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[#c8102e] focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -118,12 +185,19 @@ export default function Login() {
               )}
             </button>
           </form>
-        </div>
 
-        {/* Footer */}
-        <p className="mt-8 text-center text-xs text-neutral-500">
-          UAGRM · © 2026 Todos los derechos reservados.
-        </p>
+          {/* Divider */}
+          <div className="mt-8 flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-200" />
+            <span className="text-xs text-gray-400">UTEPSA</span>
+            <div className="h-px flex-1 bg-gray-200" />
+          </div>
+
+          <p className="mt-4 text-center text-xs text-gray-400">
+            © {new Date().getFullYear()} Universidad Tecnológica Privada de Santa Cruz.
+            <br />Todos los derechos reservados.
+          </p>
+        </div>
       </div>
     </main>
   );
