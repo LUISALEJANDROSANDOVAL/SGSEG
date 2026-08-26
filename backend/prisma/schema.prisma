@@ -3,6 +3,71 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
+
+model Usuario {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  nombre    String
+  rol       String   // Coordinador General, Secretario de Facultad, Jefe de Carrera, etc.
+  carreraId String?
+  carrera   Carrera? @relation(fields: [carreraId], references: [id])
+  activo    Boolean  @default(true)
+}
+
+model Facultad {
+  id       String    @id @default(uuid())
+  nombre   String    @unique
+  carreras Carrera[]
+}
+
+model Carrera {
+  id         String          @id @default(uuid())
+  nombre     String
+  facultadId String
+  facultad   Facultad        @relation(fields: [facultadId], references: [id])
+  areas      AreaAcademica[]
+  pensums    Pensum[]
+  usuarios   Usuario[]
+  configs    ConfigSorteo[]
+}
+
+model AreaAcademica {
+  id        String       @id @default(uuid())
+  nombre    String
+  carreraId String
+  carrera   Carrera      @relation(fields: [carreraId], references: [id])
+  pensums   AreaPensum[]
+}
+
+model Pensum {
+  id        String       @id @default(uuid())
+  nombre    String
+  carreraId String
+  carrera   Carrera      @relation(fields: [carreraId], references: [id])
+  areas     AreaPensum[]
+}
+
+model AreaPensum {
+  areaId   String
+  area     AreaAcademica @relation(fields: [areaId], references: [id])
+  pensumId String
+  pensum   Pensum        @relation(fields: [pensumId], references: [id])
+
+  @@id([areaId, pensumId])
+}
+
+model ConfigSorteo {
+  id                  String  @id @default(uuid())
+  carreraId           String
+  carrera             Carrera @relation(fields: [carreraId], references: [id])
+  tipoDefensa         String  // INTERNA, EXTERNA
+  mismoMomento        Boolean @default(true)
+  anticipacionDefensa Int     @default(24)
+  plazoResolucion     Int     @default(48)
+  unidadTiempo        String  @default("HORAS") // HORAS, DIAS_CALENDARIO, DIAS_HABILES
+}
+

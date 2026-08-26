@@ -5,15 +5,26 @@ import {
   Settings,
   Shuffle,
   Users,
+  GraduationCap,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
 
-export type Rol = 'Coordinador General' | 'Secretario de Facultad' | 'Jefe de Carrera'
+export type Rol =
+  | 'Coordinador General'
+  | 'Secretario de Facultad'
+  | 'Jefe de Carrera'
+  | 'Vicerrectorado'
+  | 'Registro'
+  | 'Defensas de Grado'
 
 export const roles: Rol[] = [
   'Coordinador General',
   'Secretario de Facultad',
   'Jefe de Carrera',
+  'Vicerrectorado',
+  'Registro',
+  'Defensas de Grado',
 ]
 
 export type ItemNavegacion = {
@@ -34,7 +45,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: LayoutDashboard,
         descripcion:
           'Resumen ejecutivo con estudiantes pendientes, sorteados y filtro por pensum.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera'],
+        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
       },
       {
         nombre: 'Sorteo Digital',
@@ -63,7 +74,23 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: Users,
         descripcion:
           'Padrón de postulantes por carrera y pensum, con estado de habilitación y sorteo.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera'],
+        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
+      },
+      {
+        nombre: 'Estructura Académica',
+        ruta: '/academia',
+        icono: GraduationCap,
+        descripcion:
+          'Gestión de facultades, carreras, áreas académicas y pensums vinculados.',
+        roles: ['Coordinador General', 'Secretario de Facultad'],
+      },
+      {
+        nombre: 'Usuarios y Roles',
+        ruta: '/usuarios',
+        icono: ShieldCheck,
+        descripcion:
+          'Administración de accesos, perfiles de usuario y activación/desactivación de cuentas.',
+        roles: ['Coordinador General'],
       },
     ],
   },
@@ -76,7 +103,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: FileBarChart,
         descripcion:
           'Actas, estadísticas de rendimiento por área y exportación de resultados de defensa.',
-        roles: ['Coordinador General', 'Secretario de Facultad'],
+        roles: ['Coordinador General', 'Secretario de Facultad', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
       },
       {
         nombre: 'Configuración',
