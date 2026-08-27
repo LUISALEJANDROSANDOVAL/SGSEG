@@ -26,31 +26,31 @@ function App() {
           } />
           
           <Route path="/sorteo" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad']}>
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
               <Sorteo />
             </ProtectedRoute>
           } />
           
           <Route path="/casos" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Jefe de Carrera']}>
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Jefe de Carrera', 'Vicerrectorado']}>
               <Casos />
             </ProtectedRoute>
           } />
           
           <Route path="/estudiantes" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera']}>
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
               <Estudiantes />
             </ProtectedRoute>
           } />
           
           <Route path="/reportes" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad']}>
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
               <Reportes />
             </ProtectedRoute>
           } />
           
           <Route path="/configuracion" element={
-            <ProtectedRoute allowedRoles={['Coordinador General']}>
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Vicerrectorado']}>
               <Configuracion />
             </ProtectedRoute>
           } />
@@ -62,7 +62,7 @@ function App() {
           } />
 
           <Route path="/academia" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad']}>
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
               <Academia />
             </ProtectedRoute>
           } />

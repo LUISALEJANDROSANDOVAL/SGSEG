@@ -12,7 +12,7 @@ const ROLES_RAPIDOS: { rol: Rol; label: string; color: string }[] = [
 ];
 
 export default function Login() {
-  const { login, user, loginAsRole } = useAuth();
+  const { login, loginAsRole } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

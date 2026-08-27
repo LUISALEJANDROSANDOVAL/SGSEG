@@ -53,7 +53,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: Shuffle,
         descripcion:
           'Selección aleatoria de áreas y casos para defensa interna y externa, con acta de resultados.',
-        roles: ['Coordinador General', 'Secretario de Facultad'],
+        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado'],
       },
     ],
   },
@@ -66,7 +66,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: ClipboardList,
         descripcion:
           'Inventario de casos de estudio, control del límite de 2 usos y alertas de stock crítico.',
-        roles: ['Coordinador General', 'Jefe de Carrera'],
+        roles: ['Coordinador General', 'Jefe de Carrera', 'Vicerrectorado'],
       },
       {
         nombre: 'Estudiantes',
@@ -82,7 +82,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: GraduationCap,
         descripcion:
           'Gestión de facultades, carreras, áreas académicas y pensums vinculados.',
-        roles: ['Coordinador General', 'Secretario de Facultad'],
+        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado'],
       },
       {
         nombre: 'Usuarios y Roles',
@@ -103,7 +103,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: FileBarChart,
         descripcion:
           'Actas, estadísticas de rendimiento por área y exportación de resultados de defensa.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
+        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
       },
       {
         nombre: 'Configuración',
@@ -111,7 +111,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: Settings,
         descripcion:
           'Parámetros del sorteo, límite de usos, permisos por rol y calendario del semestre.',
-        roles: ['Coordinador General'],
+        roles: ['Coordinador General', 'Vicerrectorado'],
       },
     ],
   },

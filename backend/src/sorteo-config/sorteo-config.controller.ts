@@ -28,7 +28,7 @@ export class SorteoConfigController {
   }
 
   @Post()
-  @Roles('Coordinador General')
+  @Roles('Coordinador General', 'Vicerrectorado')
   upsertConfig(@Body() body: any) {
     return this.sorteoConfigService.upsertConfig(body);
   }

@@ -16,13 +16,13 @@ export class AcademiaController {
   }
 
   @Post('facultades')
-  @Roles('Coordinador General', 'Secretario de Facultad')
+  @Roles('Coordinador General', 'Secretario de Facultad', 'Vicerrectorado')
   createFacultad(@Body() body: any) {
     return this.academiaService.createFacultad(body);
   }
 
   @Put('facultades/:id')
-  @Roles('Coordinador General', 'Secretario de Facultad')
+  @Roles('Coordinador General', 'Secretario de Facultad', 'Vicerrectorado')
   updateFacultad(@Param('id') id: string, @Body() body: any) {
     return this.academiaService.updateFacultad(id, body);
   }
@@ -36,13 +36,13 @@ export class AcademiaController {
   }
 
   @Post('carreras')
-  @Roles('Coordinador General', 'Secretario de Facultad')
+  @Roles('Coordinador General', 'Secretario de Facultad', 'Vicerrectorado')
   createCarrera(@Body() body: any) {
     return this.academiaService.createCarrera(body);
   }
 
   @Put('carreras/:id')
-  @Roles('Coordinador General', 'Secretario de Facultad')
+  @Roles('Coordinador General', 'Secretario de Facultad', 'Vicerrectorado')
   updateCarrera(@Param('id') id: string, @Body() body: any) {
     return this.academiaService.updateCarrera(id, body);
   }
@@ -56,7 +56,7 @@ export class AcademiaController {
   }
 
   @Post('areas')
-  @Roles('Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera')
+  @Roles('Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado')
   createArea(@Request() req, @Body() body: any) {
     const user = req.user;
     if (user.rol === 'Jefe de Carrera' && body.carreraId !== user.carreraId) {
@@ -66,7 +66,7 @@ export class AcademiaController {
   }
 
   @Put('areas/:id')
-  @Roles('Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera')
+  @Roles('Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado')
   updateArea(@Request() req, @Param('id') id: string, @Body() body: any) {
     const user = req.user;
     if (user.rol === 'Jefe de Carrera' && body.carreraId !== user.carreraId) {
@@ -84,7 +84,7 @@ export class AcademiaController {
   }
 
   @Post('pensums')
-  @Roles('Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera')
+  @Roles('Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado')
   createPensum(@Request() req, @Body() body: any) {
     const user = req.user;
     if (user.rol === 'Jefe de Carrera' && body.carreraId !== user.carreraId) {
@@ -94,7 +94,7 @@ export class AcademiaController {
   }
 
   @Put('pensums/:id')
-  @Roles('Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera')
+  @Roles('Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado')
   updatePensum(@Request() req, @Param('id') id: string, @Body() body: any) {
     const user = req.user;
     if (user.rol === 'Jefe de Carrera' && body.carreraId !== user.carreraId) {
