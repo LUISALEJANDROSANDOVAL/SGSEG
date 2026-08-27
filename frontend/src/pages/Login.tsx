@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, AlertCircle, Loader, GraduationCap, BookOpen, Award } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader, GraduationCap, BookOpen, Award, UserCheck } from 'lucide-react';
+import type { Rol } from '../context/AuthContext';
+
+const ROLES_RAPIDOS: { rol: Rol; label: string; color: string }[] = [
+  { rol: 'Coordinador General',   label: 'Coordinadora General',    color: '#c8102e' },
+  { rol: 'Jefe de Carrera',       label: 'Jefe de Carrera',         color: '#9b1c1c' },
+  { rol: 'Secretario de Facultad',label: 'Secretario de Facultad',  color: '#b91c1c' },
+  { rol: 'Vicerrectorado',        label: 'Vicerrectorado',          color: '#7f1d1d' },
+];
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, user, loginAsRole } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -105,6 +113,32 @@ export default function Login() {
         </div>
 
         <div className="w-full max-w-md">
+
+          {/* ── Acceso rápido por rol ── */}
+          <div className="mb-8 rounded-2xl border border-gray-100 bg-gray-50 p-5">
+            <div className="mb-3 flex items-center gap-2">
+              <UserCheck className="size-4 text-[#c8102e]" />
+              <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
+                Ingresar como
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {ROLES_RAPIDOS.map(({ rol, label }) => (
+                <button
+                  key={rol}
+                  type="button"
+                  onClick={() => { loginAsRole(rol); navigate('/'); }}
+                  className="flex items-center gap-2 rounded-xl border border-[#c8102e]/20 bg-white px-3 py-2.5 text-left text-xs font-semibold text-[#c8102e] shadow-sm transition-all hover:bg-[#c8102e] hover:text-white hover:shadow-md active:scale-95"
+                >
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-[#c8102e]/10 text-[10px] font-black group-hover:bg-white/20">
+                    {label.charAt(0)}
+                  </span>
+                  <span className="leading-tight">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Header */}
           <div className="mb-8">
             <div className="mb-1 h-1 w-10 rounded-full bg-[#c8102e]" />
