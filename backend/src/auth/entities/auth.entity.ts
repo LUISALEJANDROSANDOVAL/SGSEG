@@ -1,5 +1,6 @@
 export class AuthEntity {
-  id?: string;
+  idUsuario?: string;
   correoInstitucional?: string;
   rol?: string;
+  accessToken?: string;
 }
