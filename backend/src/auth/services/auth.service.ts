@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from '../dto/login.dto';
@@ -17,15 +14,17 @@ export class AuthService {
   async login(dto: LoginDto) {
     const correoInstitucional = dto.correoInstitucional.trim().toLowerCase();
 
-    const user = await this.authRepository.findByCorreoInstitucional(
-      correoInstitucional,
-    );
+    const user =
+      await this.authRepository.findByCorreoInstitucional(correoInstitucional);
 
     if (!user || !user.passwordHash) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const passwordMatches = await bcrypt.compare(dto.password, user.passwordHash);
+    const passwordMatches = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
 
     if (!passwordMatches) {
       throw new UnauthorizedException('Credenciales inválidas');
@@ -54,10 +53,7 @@ export class AuthService {
     };
   }
 
-  async validateUser(payload: {
-    sub: string;
-    correoInstitucional: string;
-  }) {
+  async validateUser(payload: { sub: string; correoInstitucional: string }) {
     const user = await this.authRepository.findById(Number(payload.sub));
 
     if (!user) {
