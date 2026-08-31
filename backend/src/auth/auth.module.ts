@@ -10,12 +10,14 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [
     PrismaModule,
     JwtModule.register({
+      global: true,
       secret: process.env.JWT_SECRET ?? 'sgseg-dev-secret',
       signOptions: { expiresIn: '8h' },
     }),
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthRepository],
+<<<<<<< HEAD
 =======
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -35,5 +37,8 @@ import { JwtStrategy } from './jwt.strategy';
   controllers: [AuthController],
 >>>>>>> feature/Arnez
   exports: [AuthService],
+=======
+  exports: [AuthService, JwtModule],
+>>>>>>> 22f4a0b6af015bc31c9b0685c828e833ed6a420c
 })
 export class AuthModule {}
