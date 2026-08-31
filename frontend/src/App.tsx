@@ -1,24 +1,74 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { ProtectedRoute } from '@/components/protected-route'
 import Home from '@/pages/Home'
 import Casos from '@/pages/Casos'
 import Configuracion from '@/pages/Configuracion'
 import Estudiantes from '@/pages/Estudiantes'
 import Reportes from '@/pages/Reportes'
 import Sorteo from '@/pages/Sorteo'
+import Usuarios from '@/pages/Usuarios'
+import Academia from '@/pages/Academia'
+import Login from '@/pages/Login'
 import '@/index.css'
+import { AuthProvider as ContextProvider } from '@/context/AuthContext'
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/casos" element={<Casos />} />
-        <Route path="/configuracion" element={<Configuracion />} />
-        <Route path="/estudiantes" element={<Estudiantes />} />
-        <Route path="/reportes" element={<Reportes />} />
-        <Route path="/sorteo" element={<Sorteo />} />
-      </Routes>
-    </Router>
+    <ContextProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/sorteo" element={
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+              <Sorteo />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/casos" element={
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Jefe de Carrera', 'Vicerrectorado']}>
+              <Casos />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/estudiantes" element={
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+              <Estudiantes />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/reportes" element={
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+              <Reportes />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/configuracion" element={
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Vicerrectorado']}>
+              <Configuracion />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/usuarios" element={
+            <ProtectedRoute allowedRoles={['Coordinador General']}>
+              <Usuarios />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/academia" element={
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+              <Academia />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Router>
+    </ContextProvider>
   )
 }
 
