@@ -9,12 +9,13 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [
     PrismaModule,
     JwtModule.register({
+      global: true,
       secret: process.env.JWT_SECRET ?? 'sgseg-dev-secret',
       signOptions: { expiresIn: '8h' },
     }),
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthRepository],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
