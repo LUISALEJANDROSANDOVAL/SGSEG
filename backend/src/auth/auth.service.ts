@@ -42,4 +42,35 @@ export class AuthService {
       },
     };
   }
+
+  async recuperarPassword(email: string) {
+    if (!email || !email.trim()) {
+      throw new UnauthorizedException('Por favor ingresa un correo electrónico válido.');
+    }
+
+    const emailNormalizado = email.trim().toLowerCase();
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { email: emailNormalizado },
+    });
+
+    if (!usuario) {
+      // Mensaje seguro/informativo
+      return {
+        success: true,
+        message: `Si el correo ${emailNormalizado} está registrado en el sistema, recibirás un enlace para restablecer tu contraseña.`,
+      };
+    }
+
+    const tokenRecuperacion = this.jwtService.sign(
+      { sub: usuario.id, email: usuario.email, type: 'password_reset' },
+      { expiresIn: '15m' },
+    );
+
+    return {
+      success: true,
+      message: `Se han enviado las instrucciones de recuperación al correo ${usuario.email}. Revisa tu bandeja de entrada o spam.`,
+      token: tokenRecuperacion,
+    };
+  }
 }
+

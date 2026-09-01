@@ -15,9 +15,15 @@ export class AuthController {
     return this.authService.login(user);
   }
 
+  @Post('recuperar-password')
+  async recuperarPassword(@Body() body: any) {
+    return this.authService.recuperarPassword(body.email);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   getProfile(@Request() req) {
     return req.user;
   }
 }
+

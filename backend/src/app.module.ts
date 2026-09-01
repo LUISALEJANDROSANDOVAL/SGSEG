@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AcademiaModule } from './academia/academia.module';
 import { SorteoConfigModule } from './sorteo-config/sorteo-config.module';
+import { EstudiantesModule } from './estudiantes/estudiantes.module';
 
 @Module({
   imports: [
@@ -15,21 +16,11 @@ import { SorteoConfigModule } from './sorteo-config/sorteo-config.module';
     UsersModule,
     AcademiaModule,
     SorteoConfigModule,
+    EstudiantesModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_PIPE,
-      useValue: new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-        transformOptions: {
-          enableImplicitConversion: true,
-        },
-      }),
-    },
   ],
 })
 export class AppModule {}
