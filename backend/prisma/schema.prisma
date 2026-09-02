@@ -121,6 +121,8 @@ model Estudiante {
   carnetIdentidad String @map("carnet_identidad") @db.VarChar(30)
   nombreCompleto String @map("nombre_completo") @db.VarChar(150)
   correo String @db.VarChar(200)
+  estado String @default("ACTIVO") @db.VarChar(20)
+  fechaRegistro DateTime @default(now()) @map("fecha_registro")
   planEstudio PlanEstudio @relation(fields: [idPlanEstudio], references: [idPlanEstudio], onDelete: Restrict)
   procesos ProcesoExamenGrado[]
   envios EnvioCasoEstudio[]

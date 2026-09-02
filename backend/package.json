@@ -24,6 +24,7 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
+    "db:seed:estudiantes": "ts-node prisma/seed-estudiantes.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
