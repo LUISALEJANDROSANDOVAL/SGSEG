@@ -35,7 +35,9 @@ describe('EstudiantesNormalizerService', () => {
   describe('normalizeNombreCompleto', () => {
     it('debería colapsar espacios y aplicar formato capitalizado con conectores', () => {
       expect(
-        service.normalizeNombreCompleto('   carlos   eduardo   de la barra   gutierrez   '),
+        service.normalizeNombreCompleto(
+          '   carlos   eduardo   de la barra   gutierrez   ',
+        ),
       ).toBe('Carlos Eduardo de la Barra Gutierrez');
 
       expect(
@@ -56,7 +58,12 @@ describe('EstudiantesNormalizerService', () => {
 
     it('debería manejar apellidos simples sin segundo apellido', () => {
       expect(
-        service.normalizeNombreCompleto(undefined, 'Mateo', 'Romero', undefined),
+        service.normalizeNombreCompleto(
+          undefined,
+          'Mateo',
+          'Romero',
+          undefined,
+        ),
       ).toBe('Mateo Romero');
     });
   });

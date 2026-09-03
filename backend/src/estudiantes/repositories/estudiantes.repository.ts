@@ -220,7 +220,9 @@ export class EstudiantesRepository {
   /**
    * Construye la condición WHERE de Prisma para filtros y búsqueda de estudiantes.
    */
-  private buildWhereClause(filter: EstudianteQueryFilter): Prisma.EstudianteWhereInput {
+  private buildWhereClause(
+    filter: EstudianteQueryFilter,
+  ): Prisma.EstudianteWhereInput {
     const where: Prisma.EstudianteWhereInput = {};
 
     if (!filter.incluirEliminados) {

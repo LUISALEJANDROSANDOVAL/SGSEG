@@ -60,7 +60,10 @@ export class EstudiantesService {
       );
       if (carrera) {
         defaultCarreraId = carrera.idCarrera;
-        carreraCache.set(dto.nombreCarreraPorDefecto.toLowerCase(), carrera.idCarrera);
+        carreraCache.set(
+          dto.nombreCarreraPorDefecto.toLowerCase(),
+          carrera.idCarrera,
+        );
       }
     }
 
@@ -104,7 +107,8 @@ export class EstudiantesService {
 
         normalizedRows.push({ index: i, raw, normalized });
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Error de normalización';
+        const msg =
+          err instanceof Error ? err.message : 'Error de normalización';
         result.errores.push({
           indice: i,
           mensaje: `Error al procesar fila: ${msg}`,
@@ -138,7 +142,9 @@ export class EstudiantesService {
             if (carreraCache.has(cacheKey)) {
               carreraId = carreraCache.get(cacheKey);
             } else {
-              const carreraDb = await this.repository.findCarreraByName(norm.nombreCarrera);
+              const carreraDb = await this.repository.findCarreraByName(
+                norm.nombreCarrera,
+              );
               if (carreraDb) {
                 carreraId = carreraDb.idCarrera;
                 carreraCache.set(cacheKey, carreraDb.idCarrera);
@@ -162,13 +168,15 @@ export class EstudiantesService {
           if (planCache.has(planKey)) {
             finalPlanId = planCache.get(planKey);
           } else {
-            const planTargetName = norm.nombrePlanEstudio ?? dto.nombrePlanPorDefecto;
+            const planTargetName =
+              norm.nombrePlanEstudio ?? dto.nombrePlanPorDefecto;
 
             if (planTargetName) {
-              const existingPlan = await this.repository.findPlanByCarreraAndNombre(
-                carreraId,
-                planTargetName,
-              );
+              const existingPlan =
+                await this.repository.findPlanByCarreraAndNombre(
+                  carreraId,
+                  planTargetName,
+                );
 
               if (existingPlan) {
                 finalPlanId = existingPlan.idPlanEstudio;
@@ -189,14 +197,16 @@ export class EstudiantesService {
                 });
               } else {
                 // Si no se deben crear, buscar plan por defecto de la carrera
-                const defaultPlan = await this.repository.findDefaultPlanByCarrera(carreraId);
+                const defaultPlan =
+                  await this.repository.findDefaultPlanByCarrera(carreraId);
                 if (defaultPlan) {
                   finalPlanId = defaultPlan.idPlanEstudio;
                 }
               }
             } else {
               // Buscar plan por defecto o vigente de la carrera
-              const defaultPlan = await this.repository.findDefaultPlanByCarrera(carreraId);
+              const defaultPlan =
+                await this.repository.findDefaultPlanByCarrera(carreraId);
               if (defaultPlan) {
                 finalPlanId = defaultPlan.idPlanEstudio;
               } else if (dto.crearPlanesFaltantes !== false) {
@@ -228,7 +238,8 @@ export class EstudiantesService {
           result.errores.push({
             indice: item.index,
             carnet: norm.carnetEstudiantil,
-            mensaje: 'No se encontró ni pudo crearse un plan de estudio válido.',
+            mensaje:
+              'No se encontró ni pudo crearse un plan de estudio válido.',
           });
           continue;
         }
@@ -243,7 +254,8 @@ export class EstudiantesService {
           idPlanEstudio: finalPlanId,
         });
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Error al resolver plan';
+        const msg =
+          err instanceof Error ? err.message : 'Error al resolver plan';
         result.errores.push({
           indice: item.index,
           carnet: norm.carnetEstudiantil,
@@ -278,7 +290,8 @@ export class EstudiantesService {
           }
         });
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Error en transacción de lote';
+        const msg =
+          err instanceof Error ? err.message : 'Error en transacción de lote';
         for (const failedItem of chunk) {
           result.errores.push({
             indice: failedItem.index,
@@ -336,7 +349,7 @@ export class EstudiantesService {
 
     const { record, isNew } = await this.repository.executeInTransaction((tx) =>
       this.repository.upsertEstudianteInTx(tx, {
-        idPlanEstudio: planId!,
+        idPlanEstudio: planId,
         carnetEstudiantil: norm.carnetEstudiantil,
         carnetIdentidad: norm.carnetIdentidad,
         nombreCompleto: norm.nombreCompleto,
@@ -399,7 +412,8 @@ export class EstudiantesService {
    */
   async findByCarnet(carnetEstudiantil: string) {
     const normalizedCarnet = this.normalizer.normalizeCarnet(carnetEstudiantil);
-    const estudiante = await this.repository.findByCarnetEstudiantil(normalizedCarnet);
+    const estudiante =
+      await this.repository.findByCarnetEstudiantil(normalizedCarnet);
 
     if (!estudiante) {
       throw new NotFoundException(
@@ -428,12 +442,17 @@ export class EstudiantesService {
   /**
    * Actualiza los datos de un estudiante.
    */
-  async update(idEstudiante: number | string | bigint, dto: UpdateEstudianteDto) {
+  async update(
+    idEstudiante: number | string | bigint,
+    dto: UpdateEstudianteDto,
+  ) {
     const id = BigInt(idEstudiante);
     const existing = await this.repository.findById(id);
 
     if (!existing) {
-      throw new NotFoundException(`Estudiante con ID ${idEstudiante} no encontrado`);
+      throw new NotFoundException(
+        `Estudiante con ID ${idEstudiante} no encontrado`,
+      );
     }
 
     const data: {
@@ -445,8 +464,12 @@ export class EstudiantesService {
     } = {};
 
     if (dto.idPlanEstudio) data.idPlanEstudio = BigInt(dto.idPlanEstudio);
-    if (dto.carnetIdentidad) data.carnetIdentidad = this.normalizer.normalizeCi(dto.carnetIdentidad);
-    if (dto.nombreCompleto) data.nombreCompleto = this.normalizer.normalizeNombreCompleto(dto.nombreCompleto);
+    if (dto.carnetIdentidad)
+      data.carnetIdentidad = this.normalizer.normalizeCi(dto.carnetIdentidad);
+    if (dto.nombreCompleto)
+      data.nombreCompleto = this.normalizer.normalizeNombreCompleto(
+        dto.nombreCompleto,
+      );
     if (dto.correo) data.correo = this.normalizer.normalizeCorreo(dto.correo);
     if (dto.estado) data.estado = dto.estado.trim().toUpperCase();
 
@@ -477,7 +500,9 @@ export class EstudiantesService {
     const existing = await this.repository.findById(id);
 
     if (!existing) {
-      throw new NotFoundException(`Estudiante con ID ${idEstudiante} no encontrado`);
+      throw new NotFoundException(
+        `Estudiante con ID ${idEstudiante} no encontrado`,
+      );
     }
 
     const updated = await this.repository.softDelete(id);
@@ -495,7 +520,9 @@ export class EstudiantesService {
     const existing = await this.repository.findById(id);
 
     if (!existing) {
-      throw new NotFoundException(`Estudiante con ID ${idEstudiante} no encontrado`);
+      throw new NotFoundException(
+        `Estudiante con ID ${idEstudiante} no encontrado`,
+      );
     }
 
     const updated = await this.repository.restore(id);

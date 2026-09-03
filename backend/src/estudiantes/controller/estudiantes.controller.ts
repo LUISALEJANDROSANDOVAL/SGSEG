@@ -86,10 +86,7 @@ export class EstudiantesController {
    */
   @Put(':id')
   @Roles('COORDINACION', 'SECRETARIADO')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateEstudianteDto,
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateEstudianteDto) {
     return this.estudiantesService.update(id, dto);
   }
 

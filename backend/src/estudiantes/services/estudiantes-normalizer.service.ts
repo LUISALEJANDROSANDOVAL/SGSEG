@@ -20,10 +20,7 @@ export class EstudiantesNormalizerService {
    */
   normalizeCarnet(carnet?: string): string {
     if (!carnet) return '';
-    return carnet
-      .trim()
-      .replace(/\s+/g, '')
-      .toUpperCase();
+    return carnet.trim().replace(/\s+/g, '').toUpperCase();
   }
 
   /**
@@ -52,7 +49,9 @@ export class EstudiantesNormalizerService {
       raw = nombreCompleto.trim();
     } else {
       const parts = [nombres, primerApellido, segundoApellido]
-        .filter((part): part is string => Boolean(part && part.trim().length > 0))
+        .filter((part): part is string =>
+          Boolean(part && part.trim().length > 0),
+        )
         .map((p) => p.trim());
       raw = parts.join(' ');
     }
@@ -134,18 +133,33 @@ export class EstudiantesNormalizerService {
     const correo = this.normalizeCorreo(raw.correo, carnetEstudiantil);
 
     let idCarrera: bigint | undefined;
-    if (raw.idCarrera !== undefined && raw.idCarrera !== null && raw.idCarrera !== '') {
+    if (
+      raw.idCarrera !== undefined &&
+      raw.idCarrera !== null &&
+      raw.idCarrera !== ''
+    ) {
       idCarrera = BigInt(raw.idCarrera);
     }
 
     let idPlanEstudio: bigint | undefined;
-    if (raw.idPlanEstudio !== undefined && raw.idPlanEstudio !== null && raw.idPlanEstudio !== '') {
+    if (
+      raw.idPlanEstudio !== undefined &&
+      raw.idPlanEstudio !== null &&
+      raw.idPlanEstudio !== ''
+    ) {
       idPlanEstudio = BigInt(raw.idPlanEstudio);
     }
 
-    const nombreCarrera = raw.nombreCarrera ? raw.nombreCarrera.trim() : undefined;
-    const nombrePlanEstudio = raw.nombrePlanEstudio ? raw.nombrePlanEstudio.trim() : undefined;
-    const estado = raw.estado && raw.estado.trim().length > 0 ? raw.estado.trim().toUpperCase() : 'ACTIVO';
+    const nombreCarrera = raw.nombreCarrera
+      ? raw.nombreCarrera.trim()
+      : undefined;
+    const nombrePlanEstudio = raw.nombrePlanEstudio
+      ? raw.nombrePlanEstudio.trim()
+      : undefined;
+    const estado =
+      raw.estado && raw.estado.trim().length > 0
+        ? raw.estado.trim().toUpperCase()
+        : 'ACTIVO';
 
     return {
       carnetEstudiantil,

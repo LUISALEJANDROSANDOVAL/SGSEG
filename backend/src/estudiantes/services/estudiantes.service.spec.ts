@@ -232,8 +232,12 @@ describe('EstudiantesService', () => {
       expect(result.total).toBe(2);
       expect(result.creados).toBe(0);
       expect(result.errores).toHaveLength(2);
-      expect(result.errores[0].mensaje).toContain('Carnet estudiantil no válido');
-      expect(result.errores[1].mensaje).toContain('Carnet de identidad no válido');
+      expect(result.errores[0].mensaje).toContain(
+        'Carnet estudiantil no válido',
+      );
+      expect(result.errores[1].mensaje).toContain(
+        'Carnet de identidad no válido',
+      );
     });
   });
 
@@ -264,7 +268,7 @@ describe('EstudiantesService', () => {
               },
             },
           },
-        } as any,
+        },
       ]);
 
       repository.count.mockResolvedValue(1);
@@ -344,10 +348,10 @@ describe('EstudiantesService', () => {
               estadoVigencia: 'VIGENTE',
             },
           ],
-        } as any,
+        },
       ]);
 
-      const res = (await service.getCarreras()) as any[];
+      const res = await service.getCarreras();
       expect(res).toHaveLength(1);
       expect(res[0].idCarrera).toBe('1');
       expect(res[0].planesEstudio[0].idPlanEstudio).toBe('10');
