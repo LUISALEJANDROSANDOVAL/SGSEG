@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
-  const { user, logout } = useAuth()
+  const { user, logout, checkRole } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const rutaActual = location.pathname
@@ -87,7 +87,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <nav className="relative flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-5">
           {navegacion.map((seccion) => {
             const itemsFiltrados = seccion.items.filter((item) =>
-              item.roles.includes(user.rol)
+              checkRole(item.roles)
             )
             if (itemsFiltrados.length === 0) return null
 

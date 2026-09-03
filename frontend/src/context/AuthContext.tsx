@@ -1,13 +1,76 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 
-export type Rol = 'Coordinador General' | 'Secretario de Facultad' | 'Jefe de Carrera' | 'Vicerrectorado' | 'Registro' | 'Defensas de Grado';
+export type RolCode =
+  | 'COORDINACION'
+  | 'JEFE_CARRERA'
+  | 'SECRETARIADO'
+  | 'VICERRECTORADO'
+  | 'REGISTRO'
+  | 'DEFENSA';
+
+export type RolLabel =
+  | 'Coordinador General'
+  | 'Secretario de Facultad'
+  | 'Jefe de Carrera'
+  | 'Vicerrectorado'
+  | 'Registro'
+  | 'Defensas de Grado';
+
+export type Rol = RolCode | RolLabel;
+
+export const ROL_MAP: Record<RolCode, RolLabel> = {
+  COORDINACION: 'Coordinador General',
+  JEFE_CARRERA: 'Jefe de Carrera',
+  SECRETARIADO: 'Secretario de Facultad',
+  VICERRECTORADO: 'Vicerrectorado',
+  REGISTRO: 'Registro',
+  DEFENSA: 'Defensas de Grado',
+};
+
+export const LABEL_TO_ROL_MAP: Record<RolLabel, RolCode> = {
+  'Coordinador General': 'COORDINACION',
+  'Jefe de Carrera': 'JEFE_CARRERA',
+  'Secretario de Facultad': 'SECRETARIADO',
+  'Vicerrectorado': 'VICERRECTORADO',
+  'Registro': 'REGISTRO',
+  'Defensas de Grado': 'DEFENSA',
+};
+
+export function normalizarRol(rol: string): { code: RolCode; label: RolLabel } {
+  const upper = rol?.toUpperCase()?.trim() || '';
+  if (upper in ROL_MAP) {
+    const code = upper as RolCode;
+    return { code, label: ROL_MAP[code] };
+  }
+  if (rol in LABEL_TO_ROL_MAP) {
+    const code = LABEL_TO_ROL_MAP[rol as RolLabel];
+    return { code, label: rol as RolLabel };
+  }
+  return { code: 'COORDINACION', label: 'Coordinador General' };
+}
+
+export function tieneRolPermitido(userRol: RolCode | RolLabel, allowedRoles?: (RolCode | RolLabel)[]): boolean {
+  if (!allowedRoles || allowedRoles.length === 0) return true;
+  const { code, label } = normalizarRol(userRol);
+  return allowedRoles.some((r) => {
+    const norm = normalizarRol(r);
+    return norm.code === code || r === label || r === code;
+  });
+}
+
+export interface CarreraUsuario {
+  idCarrera: string;
+  nombre: string;
+}
 
 export interface User {
   id: string;
   email: string;
   nombre: string;
-  rol: Rol;
+  rol: RolLabel;
+  rolCode: RolCode;
+  carreras?: CarreraUsuario[];
   carreraId?: string;
 }
 
@@ -15,67 +78,144 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
-  loginAsRole: (rol: Rol) => void;
+  login: (email: string, pass: string) => Promise<User>;
   logout: () => void;
+  checkRole: (allowedRoles?: (RolCode | RolLabel)[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ─── Usuario invitado (acceso sin cuenta) ──────────────────────────────────
-const GUEST_USER: User = {
-  id: 'guest',
-  email: 'invitado@sgseg.com',
-  nombre: 'Invitado',
-  rol: 'Coordinador General',
-};
-// ────────────────────────────────────────────────────────────────────────────
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Modo sin backend: el usuario invitado se establece desde el primer render
-  const [user, setUser] = useState<User | null>(GUEST_USER);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [loading] = useState(false);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('sgseg_user');
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState<boolean>(() => Boolean(localStorage.getItem('token')));
 
-  const login = async (email: string, pass: string) => {
+  // Restaurar y verificar la validez del token al montar la aplicación
+  useEffect(() => {
+    let isMounted = true;
+
+    const verifySession = async () => {
+      const storedToken = localStorage.getItem('token');
+      if (!storedToken) {
+        if (isMounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const res = await api.get('/auth/me');
+        if (!isMounted) return;
+
+        const raw = res.data;
+        const { code, label } = normalizarRol(raw.rol);
+        const validatedUser: User = {
+          id: String(raw.idUsuario),
+          email: raw.correoInstitucional,
+          nombre: `${raw.primerNombre ?? ''} ${raw.primerApellido ?? ''}`.trim() || 'Usuario',
+          rol: label,
+          rolCode: code,
+          carreras: raw.carreras || [],
+          carreraId: raw.carreras?.[0]?.idCarrera || undefined,
+        };
+
+        setUser(validatedUser);
+        localStorage.setItem('sgseg_user', JSON.stringify(validatedUser));
+      } catch {
+        if (!isMounted) return;
+        localStorage.removeItem('token');
+        localStorage.removeItem('sgseg_user');
+        setToken(null);
+        setUser(null);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    verifySession();
+
+    const handleUnauthorized = () => {
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('sgseg_user');
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, []);
+
+  const login = useCallback(async (email: string, pass: string): Promise<User> => {
+    setLoading(true);
     try {
       const res = await api.post('/auth/login', {
-        correoInstitucional: email.trim(),
+        correoInstitucional: email.trim().toLowerCase(),
         password: pass,
       });
+
       const tokenToSave = res.data.accessToken || res.data.access_token;
       const rawUser = res.data.user;
-      const normalizedUser: User = {
-        id: rawUser?.idUsuario || rawUser?.id || 'user',
+      const { code, label } = normalizarRol(rawUser?.rol || '');
+
+      const authenticatedUser: User = {
+        id: String(rawUser?.idUsuario || '1'),
         email: rawUser?.correoInstitucional || email,
         nombre:
           `${rawUser?.primerNombre ?? ''} ${rawUser?.primerApellido ?? ''}`.trim() ||
           rawUser?.nombre ||
           'Usuario',
-        rol: rawUser?.rol || 'Coordinador General',
+        rol: label,
+        rolCode: code,
+        carreras: rawUser?.carreras || [],
+        carreraId: rawUser?.carreras?.[0]?.idCarrera || undefined,
       };
 
       localStorage.setItem('token', tokenToSave);
+      localStorage.setItem('sgseg_user', JSON.stringify(authenticatedUser));
       setToken(tokenToSave);
-      setUser(normalizedUser);
+      setUser(authenticatedUser);
+      return authenticatedUser;
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Error al iniciar sesión';
+      const msg =
+        error.response?.data?.message ||
+        (error.response?.status === 401
+          ? 'Credenciales incorrectas. Verifique su correo y contraseña.'
+          : 'No se pudo conectar con el servidor. Intente nuevamente.');
       throw new Error(msg);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const loginAsRole = (rol: Rol) => {
-    setUser({ id: 'guest', email: 'invitado@sgseg.com', nombre: 'Invitado', rol });
-  };
-
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
+    localStorage.removeItem('sgseg_user');
     setToken(null);
-    setUser(null); // redirige al login para seleccionar rol
-  };
+    setUser(null);
+  }, []);
+
+  const checkRole = useCallback(
+    (allowedRoles?: (RolCode | RolLabel)[]): boolean => {
+      if (!user) return false;
+      return tieneRolPermitido(user.rolCode, allowedRoles);
+    },
+    [user]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, loginAsRole, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, checkRole }}>
       {children}
     </AuthContext.Provider>
   );

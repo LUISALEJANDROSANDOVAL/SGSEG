@@ -10,6 +10,11 @@ export class AuthRepository {
       where: { correoInstitucional },
       include: {
         rol: true,
+        carreras: {
+          include: {
+            carrera: true,
+          },
+        },
       },
     });
   }
@@ -19,6 +24,11 @@ export class AuthRepository {
       where: { idUsuario },
       include: {
         rol: true,
+        carreras: {
+          include: {
+            carrera: true,
+          },
+        },
       },
     });
   }

@@ -49,7 +49,34 @@ export class AuthService {
         correoInstitucional: user.correoInstitucional,
         rol: user.rol.nombre,
         estado: user.estado,
+        carreras: (user.carreras ?? []).map((uc) => ({
+          idCarrera: String(uc.carrera.idCarrera),
+          nombre: uc.carrera.nombre,
+        })),
       },
+    };
+  }
+
+  async getProfile(idUsuario: string) {
+    const user = await this.authRepository.findById(Number(idUsuario));
+
+    if (!user || user.estado !== 'ACTIVO') {
+      throw new UnauthorizedException('Usuario no encontrado o inactivo');
+    }
+
+    return {
+      idUsuario: String(user.idUsuario),
+      primerNombre: user.primerNombre,
+      segundoNombre: user.segundoNombre,
+      primerApellido: user.primerApellido,
+      segundoApellido: user.segundoApellido,
+      correoInstitucional: user.correoInstitucional,
+      rol: user.rol.nombre,
+      estado: user.estado,
+      carreras: (user.carreras ?? []).map((uc) => ({
+        idCarrera: String(uc.carrera.idCarrera),
+        nombre: uc.carrera.nombre,
+      })),
     };
   }
 

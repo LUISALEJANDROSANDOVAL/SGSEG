@@ -1,236 +1,360 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, AlertCircle, Loader, GraduationCap, BookOpen, Award, UserCheck } from 'lucide-react';
-import type { Rol } from '../context/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  Lock,
+  Mail,
+  AlertCircle,
+  Loader2,
+  BookOpen,
+  Award,
+  ShieldCheck,
+  ArrowRight,
+  UserCheck,
+} from 'lucide-react';
 
-const ROLES_RAPIDOS: { rol: Rol; label: string; color: string }[] = [
-  { rol: 'Coordinador General',   label: 'Coordinadora General',    color: '#c8102e' },
-  { rol: 'Jefe de Carrera',       label: 'Jefe de Carrera',         color: '#9b1c1c' },
-  { rol: 'Secretario de Facultad',label: 'Secretario de Facultad',  color: '#b91c1c' },
-  { rol: 'Vicerrectorado',        label: 'Vicerrectorado',          color: '#7f1d1d' },
+interface CuentaDemo {
+  email: string;
+  pass: string;
+  label: string;
+  rol: string;
+  detalle: string;
+}
+
+const CUENTAS_DEMO: CuentaDemo[] = [
+  {
+    email: 'coord@uni.edu.bo',
+    pass: 'Admin123!',
+    label: 'Coordinación General',
+    rol: 'COORDINACION',
+    detalle: 'Acceso total y configuración',
+  },
+  {
+    email: 'jefe.sistemas@uni.edu.bo',
+    pass: 'Admin123!',
+    label: 'Jefe de Carrera',
+    rol: 'JEFE_CARRERA',
+    detalle: 'Ing. Sistemas / Casos y Áreas',
+  },
+  {
+    email: 'secretaria@uni.edu.bo',
+    pass: 'Admin123!',
+    label: 'Secretaría Académica',
+    rol: 'SECRETARIADO',
+    detalle: 'Habilitación de postulantes',
+  },
+  {
+    email: 'vicerrector@uni.edu.bo',
+    pass: 'Admin123!',
+    label: 'Vicerrectorado',
+    rol: 'VICERRECTORADO',
+    detalle: 'Supervisión y auditoría',
+  },
 ];
 
 export default function Login() {
-  const { login, loginAsRole } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [demoSelected, setDemoSelected] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const destination = (location.state as any)?.from?.pathname || '/';
+
+  // Si ya hay un usuario autenticado y no está cargando, redirigir automáticamente
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(destination, { replace: true });
+    }
+  }, [user, authLoading, navigate, destination]);
+
+  const executeLogin = async (userEmail: string, userPass: string) => {
     setError(null);
-    setLoading(true);
+    setSubmitting(true);
 
     try {
-      await login(email, password);
-      navigate('/');
+      await login(userEmail, userPass);
+      navigate(destination, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Error en las credenciales.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  return (
-    <main className="flex min-h-screen font-sans antialiased">
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      setError('Por favor ingresa tu correo institucional y contraseña.');
+      return;
+    }
+    await executeLogin(email, password);
+  };
 
-      {/* ── LEFT PANEL – Institutional branding ── */}
+  const handleSelectDemo = async (cuenta: CuentaDemo) => {
+    setEmail(cuenta.email);
+    setPassword(cuenta.pass);
+    setDemoSelected(cuenta.email);
+    await executeLogin(cuenta.email, cuenta.pass);
+  };
+
+  return (
+    <main className="flex min-h-screen font-sans antialiased bg-[#f8f9fa]">
+
+      {/* ── PANEL IZQUIERDO – Branding Institucional UTEPSA ── */}
       <div className="relative hidden lg:flex lg:w-1/2 flex-col items-center justify-center overflow-hidden bg-[#c8102e]">
 
-        {/* Diagonal decorative shapes */}
-        <div className="absolute -top-24 -right-24 size-80 rotate-45 rounded-3xl bg-white/5" />
-        <div className="absolute bottom-0 -left-16 size-64 rotate-12 rounded-3xl bg-black/10" />
-        <div className="absolute top-1/2 right-0 size-48 -translate-y-1/2 rounded-full bg-white/5 blur-2xl" />
+        {/* Formas geométricas sutiles de fondo */}
+        <div className="absolute -top-28 -right-28 size-96 rotate-45 rounded-3xl bg-white/5" />
+        <div className="absolute -bottom-20 -left-20 size-80 rotate-12 rounded-3xl bg-black/10" />
+        <div className="absolute top-1/2 right-0 size-56 -translate-y-1/2 rounded-full bg-white/5 blur-3xl" />
 
-        {/* Animated diagonal stripe pattern */}
+        {/* Patrón diagonal */}
         <div
-          className="absolute inset-0 opacity-5"
+          className="absolute inset-0 opacity-5 pointer-events-none"
           style={{
             backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
-            backgroundSize: '20px 20px',
+            backgroundSize: '24px 24px',
           }}
         />
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center gap-8 px-12 text-center text-white">
-          {/* Logo */}
-          <div className="flex items-center justify-center size-32 rounded-full bg-white/10 ring-4 ring-white/20 shadow-2xl backdrop-blur-sm p-4">
+        {/* Bloque central de presentación */}
+        <div className="relative z-10 flex flex-col items-center gap-8 px-12 text-center text-white max-w-lg">
+          
+          {/* Logo UTEPSA */}
+          <div className="flex items-center justify-center size-28 rounded-full bg-white/10 ring-4 ring-white/20 shadow-2xl backdrop-blur-md p-4 transition-transform hover:scale-105 duration-300">
             <img
               src="/logo-uagrm.png"
-              alt="Logo UAGRM"
-              className="size-24 object-contain drop-shadow-lg"
+              alt="Logo UTEPSA"
+              className="size-20 object-contain drop-shadow-md"
             />
           </div>
 
-          {/* Title block */}
+          {/* Título institucional */}
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/70 mb-2">
-              Universidad Tecnológica Privada de Santa Cruz
-            </p>
-            <h1 className="text-4xl font-extrabold leading-tight tracking-tight drop-shadow-lg">
-              UTEPSA
+            <span className="inline-block px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest text-white/80 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
+              Plataforma Oficial de Grado
+            </span>
+            <h1 className="text-4xl font-black tracking-tight drop-shadow-sm">
+              SGSEG · UTEPSA
             </h1>
-            <p className="mt-1 text-base font-medium text-white/80 leading-relaxed">
-              Sistema de Gestión de Exámenes de Grado
+            <p className="mt-2 text-sm font-medium text-white/85 leading-relaxed">
+              Sistema de Gestión Integral de Exámenes de Grado, Sorteo Algorítmico y Defensas
             </p>
-            <div className="mt-3 mx-auto h-1 w-16 rounded-full bg-yellow-400" />
+            <div className="mt-4 mx-auto h-1 w-20 rounded-full bg-yellow-400 shadow-sm" />
           </div>
 
-          {/* Feature pills */}
-          <div className="flex flex-col gap-3 w-full max-w-xs">
+          {/* Tarjetas de pilares académicos */}
+          <div className="flex flex-col gap-3 w-full">
             {[
-              { icon: GraduationCap, label: 'Gestión de sorteos de temas' },
-              { icon: BookOpen,      label: 'Control académico integrado' },
-              { icon: Award,         label: 'Reportes y estadísticas' },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3 text-left backdrop-blur-sm">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/20">
-                  <Icon className="size-4 text-white" />
+              {
+                icon: ShieldCheck,
+                titulo: 'Sorteo Criptográfico Auditado',
+                desc: 'Selección pseudoaleatoria CSPRNG con actas inmutables.',
+              },
+              {
+                icon: BookOpen,
+                titulo: 'Control de Casos y Plazos',
+                desc: 'Límite reglamentario de 2 defensas por caso y control de stock.',
+              },
+              {
+                icon: Award,
+                titulo: 'Trazabilidad y Calificaciones',
+                desc: 'Consolidación de notas internas y externas en tiempo real.',
+              },
+            ].map(({ icon: Icon, titulo, desc }) => (
+              <div
+                key={titulo}
+                className="flex items-center gap-3.5 rounded-xl bg-white/10 p-3.5 text-left backdrop-blur-md border border-white/10 shadow-sm"
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/20 shadow-inner">
+                  <Icon className="size-5 text-white" />
                 </div>
-                <span className="text-sm font-medium text-white/90">{label}</span>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white leading-snug">{titulo}</p>
+                  <p className="text-[11px] text-white/75 truncate mt-0.5">{desc}</p>
+                </div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Bottom footer text */}
-        <p className="absolute bottom-6 text-xs text-white/40">
-          UTEPSA · © {new Date().getFullYear()} Todos los derechos reservados.
-        </p>
+          <div className="text-[11px] text-white/50 pt-2">
+            Universidad Tecnológica Privada de Santa Cruz · © {new Date().getFullYear()}
+          </div>
+        </div>
       </div>
 
-      {/* ── RIGHT PANEL – Login form ── */}
-      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-white px-6 py-12">
+      {/* ── PANEL DERECHO – Formulario de Autenticación ── */}
+      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-white px-6 py-10 sm:px-12">
 
-        {/* Mobile-only logo */}
-        <div className="mb-8 flex flex-col items-center gap-3 lg:hidden">
-          <img src="/logo-uagrm.png" alt="Logo UAGRM" className="size-16 object-contain" />
-          <h1 className="text-2xl font-extrabold text-[#c8102e]">UTEPSA</h1>
-          <p className="text-xs text-gray-500 text-center">Sistema de Gestión de Exámenes de Grado</p>
+        {/* Encabezado móvil */}
+        <div className="mb-6 flex flex-col items-center gap-2 lg:hidden">
+          <img src="/logo-uagrm.png" alt="Logo UTEPSA" className="size-14 object-contain" />
+          <h1 className="text-2xl font-black text-[#c8102e]">SGSEG UTEPSA</h1>
+          <p className="text-xs text-gray-500">Gestión de Exámenes de Grado</p>
         </div>
 
         <div className="w-full max-w-md">
 
-          {/* ── Acceso rápido por rol ── */}
-          <div className="mb-8 rounded-2xl border border-gray-100 bg-gray-50 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <UserCheck className="size-4 text-[#c8102e]" />
-              <span className="text-xs font-bold uppercase tracking-widest text-gray-500">
-                Ingresar como
+          {/* Selector de Cuentas de Demostración */}
+          <div className="mb-7 rounded-2xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm">
+            <div className="mb-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCheck className="size-4 text-[#c8102e]" />
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-700">
+                  Acceso Rápido por Actor
+                </span>
+              </div>
+              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                JWT Backend Real
               </span>
             </div>
+
+            <p className="text-[11px] text-gray-500 mb-3">
+              Selecciona un perfil institucional para iniciar sesión automáticamente con credenciales verificadas en la base de datos:
+            </p>
+
             <div className="grid grid-cols-2 gap-2">
-              {ROLES_RAPIDOS.map(({ rol, label }) => (
-                <button
-                  key={rol}
-                  type="button"
-                  onClick={() => { loginAsRole(rol); navigate('/'); }}
-                  className="flex items-center gap-2 rounded-xl border border-[#c8102e]/20 bg-white px-3 py-2.5 text-left text-xs font-semibold text-[#c8102e] shadow-sm transition-all hover:bg-[#c8102e] hover:text-white hover:shadow-md active:scale-95"
-                >
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-[#c8102e]/10 text-[10px] font-black group-hover:bg-white/20">
-                    {label.charAt(0)}
-                  </span>
-                  <span className="leading-tight">{label}</span>
-                </button>
-              ))}
+              {CUENTAS_DEMO.map((c) => {
+                const isActive = demoSelected === c.email && submitting;
+                return (
+                  <button
+                    key={c.email}
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => handleSelectDemo(c)}
+                    className={`group relative flex flex-col justify-between rounded-xl border p-2.5 text-left transition-all duration-150 ${
+                      isActive
+                        ? 'border-[#c8102e] bg-red-50/60 ring-2 ring-[#c8102e]/20'
+                        : 'border-gray-200 bg-white hover:border-[#c8102e]/60 hover:bg-red-50/30 hover:shadow-sm'
+                    } disabled:opacity-60 disabled:cursor-not-allowed`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-gray-900 group-hover:text-[#c8102e]">
+                        {c.label}
+                      </span>
+                      {isActive ? (
+                        <Loader2 className="size-3 animate-spin text-[#c8102e]" />
+                      ) : (
+                        <ArrowRight className="size-3 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-[#c8102e]" />
+                      )}
+                    </div>
+                    <span className="text-[10px] text-gray-500 truncate mt-1">
+                      {c.detalle}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Header */}
-          <div className="mb-8">
-            <div className="mb-1 h-1 w-10 rounded-full bg-[#c8102e]" />
-            <h2 className="text-3xl font-extrabold text-gray-900 mt-3">
+          {/* Título de Formulario */}
+          <div className="mb-6">
+            <div className="h-1 w-10 rounded-full bg-[#c8102e]" />
+            <h2 className="text-2xl font-black text-gray-900 mt-2.5">
               Iniciar Sesión
             </h2>
-            <p className="mt-2 text-sm text-gray-500">
-              Ingresa tus credenciales institucionales para continuar.
+            <p className="mt-1 text-sm text-gray-500">
+              Ingresa tus credenciales institucionales para acceder a tu panel.
             </p>
           </div>
 
-          {/* Error alert */}
+          {/* Alerta de Error */}
           {error && (
-            <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              <AlertCircle className="size-5 shrink-0 mt-0.5 text-red-500" />
-              <span>{error}</span>
+            <div
+              role="alert"
+              className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 animate-in fade-in duration-200"
+            >
+              <AlertCircle className="size-4 shrink-0 mt-0.5 text-red-600" />
+              <div className="flex-1 leading-relaxed">{error}</div>
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {/* Formulario */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-            {/* Email */}
+            {/* Correo */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-sm font-semibold text-gray-700">
+              <label htmlFor="login-email" className="text-xs font-bold text-gray-700">
                 Correo Institucional
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
+                <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
                   <Mail className="size-4" />
                 </span>
                 <input
-                  id="email"
+                  id="login-email"
                   type="email"
                   required
-                  placeholder="usuario@uagrm.edu.bo"
+                  autoComplete="email"
+                  placeholder="usuario@uni.edu.bo"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                  disabled={submitting}
+                  className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/20 disabled:bg-gray-50"
                 />
               </div>
             </div>
 
-            {/* Password */}
+            {/* Contraseña */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="password" className="text-sm font-semibold text-gray-700">
-                Contraseña
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="login-password" className="text-xs font-bold text-gray-700">
+                  Contraseña
+                </label>
+                <span className="text-[11px] text-gray-400">Default: Admin123!</span>
+              </div>
               <div className="relative">
-                <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
+                <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
                   <Lock className="size-4" />
                 </span>
                 <input
-                  id="password"
+                  id="login-password"
                   type="password"
                   required
+                  autoComplete="current-password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                  disabled={submitting}
+                  className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/20 disabled:bg-gray-50"
                 />
               </div>
             </div>
 
-            {/* Submit */}
+            {/* Botón Submit */}
             <button
+              id="btn-login-submit"
               type="submit"
-              disabled={loading}
-              className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-200 transition-all hover:bg-[#a50d26] hover:shadow-red-300 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[#c8102e] focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={submitting}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-bold text-white shadow-md shadow-red-200 transition-all hover:bg-[#a50d26] hover:shadow-lg active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#c8102e] focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {loading ? (
+              {submitting ? (
                 <>
-                  <Loader className="size-4 animate-spin" />
-                  <span>Validando...</span>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Autenticando en SGSEG...</span>
                 </>
               ) : (
-                'Ingresar al Sistema'
+                <>
+                  <span>Ingresar al Sistema</span>
+                  <ArrowRight className="size-4" />
+                </>
               )}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="mt-8 flex items-center gap-3">
-            <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs text-gray-400">UTEPSA</span>
-            <div className="h-px flex-1 bg-gray-200" />
+          {/* Pie informativo */}
+          <div className="mt-8 border-t border-gray-100 pt-4 text-center">
+            <p className="text-xs text-gray-400">
+              SGSEG · Módulo de Autenticación Centralizada UTEPSA
+              <br />
+              Servicios protegidos con JWT Bearer y Roles RBAC
+            </p>
           </div>
-
-          <p className="mt-4 text-center text-xs text-gray-400">
-            © {new Date().getFullYear()} Universidad Tecnológica Privada de Santa Cruz.
-            <br />Todos los derechos reservados.
-          </p>
         </div>
       </div>
     </main>

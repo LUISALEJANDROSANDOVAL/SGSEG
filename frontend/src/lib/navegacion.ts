@@ -11,13 +11,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-export type Rol =
-  | 'Coordinador General'
-  | 'Secretario de Facultad'
-  | 'Jefe de Carrera'
-  | 'Vicerrectorado'
-  | 'Registro'
-  | 'Defensas de Grado'
+import type { Rol } from '@/context/AuthContext'
+export type { Rol }
 
 export const roles: Rol[] = [
   'Coordinador General',
