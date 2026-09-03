@@ -26,8 +26,15 @@ El sistema utiliza **JSON Web Tokens (JWT)** para el manejo de sesiones.
   Devuelve el `accessToken` y los datos del usuario autenticado. El cliente (frontend) debe enviar este token en la cabecera `Authorization: Bearer <token>` en todas las peticiones posteriores.
 
 ## 3. Credenciales de Prueba (Entorno de Desarrollo)
-Al ejecutar el comando `npm run db:seed`, se genera automáticamente un usuario administrador para pruebas E2E y QA.
+Al ejecutar el comando `npm run db:seed`, se generan automáticamente los usuarios oficiales de prueba para todos los roles institucionales:
 
-| Rol Asignado | Correo Institucional | Contraseña | Propósito |
-| :--- | :--- | :--- | :--- |
-| **COORDINACION** | `coord@uni.edu.bo` | `Admin123!` | Pruebas de integración globales y carga de estudiantes (TK-16). |
+| Rol Asignado | Nombre del Usuario | Correo Institucional | Contraseña | Alcance / Propósito |
+| :--- | :--- | :--- | :--- | :--- |
+| **COORDINACION** | Coordinación Académica | `coord@uni.edu.bo` | `Admin123!` | Acceso global, programación de defensas y embudo. |
+| **JEFE_CARRERA** | Ing. Carlos Mendoza | `jefe.sistemas@uni.edu.bo` | `Admin123!` | Exclusivo Ingeniería de Sistemas (Casos y Áreas). |
+| **JEFE_CARRERA** | Dr. Roberto Quinteros | `jefe.derecho@uni.edu.bo` | `Admin123!` | Exclusivo Derecho (Casos y Áreas). |
+| **SECRETARIADO** | Lic. Ana Flores Pérez | `secretaria@uni.edu.bo` | `Admin123!` | Operación del sorteo digital y emisión de actas. |
+| **VICERRECTORADO** | Dra. Beatriz Gutiérrez | `vicerrector@uni.edu.bo` | `Admin123!` | Supervisión general, reportes y exportación CSV. |
+
+Para consultar la guía detallada de flujo de trabajo y pruebas paso a paso por actor, consulte:
+📖 [Guía de Acceso, Actores y Credenciales](file:///c:/proyecto%20integrador/SGSEG/docs/guia_accesos_y_actores.md)

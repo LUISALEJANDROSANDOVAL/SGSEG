@@ -219,6 +219,136 @@ async function main() {
     console.log('Seed de Jefe de Carrera, Áreas y Casos completado con éxito');
   }
 
+  // 6. Poblar usuarios adicionales para otros actores del sistema
+  const secretariaRole = await prisma.rol.findUnique({ where: { nombre: 'SECRETARIADO' } });
+  const vicerrectoradoRole = await prisma.rol.findUnique({ where: { nombre: 'VICERRECTORADO' } });
+
+  if (secretariaRole) {
+    await prisma.usuario.upsert({
+      where: { correoInstitucional: 'secretaria@uni.edu.bo' },
+      update: {
+        primerNombre: 'Ana',
+        primerApellido: 'Flores',
+        segundoApellido: 'Pérez',
+        passwordHash,
+        idRol: secretariaRole.idRol,
+        estado: 'ACTIVO',
+      },
+      create: {
+        primerNombre: 'Ana',
+        primerApellido: 'Flores',
+        segundoApellido: 'Pérez',
+        correoInstitucional: 'secretaria@uni.edu.bo',
+        passwordHash,
+        idRol: secretariaRole.idRol,
+        estado: 'ACTIVO',
+      },
+    });
+  }
+
+  if (vicerrectoradoRole) {
+    await prisma.usuario.upsert({
+      where: { correoInstitucional: 'vicerrector@uni.edu.bo' },
+      update: {
+        primerNombre: 'Dra. Beatriz',
+        primerApellido: 'Gutiérrez',
+        segundoApellido: 'Salinas',
+        passwordHash,
+        idRol: vicerrectoradoRole.idRol,
+        estado: 'ACTIVO',
+      },
+      create: {
+        primerNombre: 'Dra. Beatriz',
+        primerApellido: 'Gutiérrez',
+        segundoApellido: 'Salinas',
+        correoInstitucional: 'vicerrector@uni.edu.bo',
+        passwordHash,
+        idRol: vicerrectoradoRole.idRol,
+        estado: 'ACTIVO',
+      },
+    });
+  }
+
+  // Usuario Jefe de Carrera de Derecho
+  const carreraDerecho = await prisma.carrera.findFirst({
+    where: { nombre: { contains: 'Derecho', mode: 'insensitive' } },
+  });
+
+  if (carreraDerecho && jefeCarreraRole) {
+    const usuarioJefeDerecho = await prisma.usuario.upsert({
+      where: { correoInstitucional: 'jefe.derecho@uni.edu.bo' },
+      update: {
+        primerNombre: 'Dr. Roberto',
+        primerApellido: 'Quinteros',
+        segundoApellido: 'Alarcón',
+        passwordHash,
+        idRol: jefeCarreraRole.idRol,
+        estado: 'ACTIVO',
+      },
+      create: {
+        primerNombre: 'Dr. Roberto',
+        primerApellido: 'Quinteros',
+        segundoApellido: 'Alarcón',
+        correoInstitucional: 'jefe.derecho@uni.edu.bo',
+        passwordHash,
+        idRol: jefeCarreraRole.idRol,
+        estado: 'ACTIVO',
+      },
+    });
+
+    await prisma.usuarioCarrera.upsert({
+      where: {
+        idUsuario_idCarrera: {
+          idUsuario: usuarioJefeDerecho.idUsuario,
+          idCarrera: carreraDerecho.idCarrera,
+        },
+      },
+      update: {},
+      create: {
+        idUsuario: usuarioJefeDerecho.idUsuario,
+        idCarrera: carreraDerecho.idCarrera,
+      },
+    });
+
+    // Áreas para Derecho
+    const areasDerecho = [
+      { nombre: 'Derecho Constitucional y DDHH', umbral: 2 },
+      { nombre: 'Derecho Civil y Procesal Civil', umbral: 2 },
+      { nombre: 'Derecho Penal y Criminología', umbral: 2 },
+    ];
+
+    for (const ad of areasDerecho) {
+      let areaRec = await prisma.areaAcademica.findFirst({
+        where: { idCarrera: carreraDerecho.idCarrera, nombre: ad.nombre },
+      });
+      if (!areaRec) {
+        areaRec = await prisma.areaAcademica.create({
+          data: {
+            idCarrera: carreraDerecho.idCarrera,
+            nombre: ad.nombre,
+            umbralDisponibilidad: ad.umbral,
+            estado: 'ACTIVO',
+          },
+        });
+      }
+
+      // Caso de prueba para cada área de Derecho
+      const existeCaso = await prisma.casoEstudio.findFirst({
+        where: { idArea: areaRec.idArea },
+      });
+      if (!existeCaso) {
+        await prisma.casoEstudio.create({
+          data: {
+            idArea: areaRec.idArea,
+            titulo: `Caso práctico de aplicación para ${ad.nombre}`,
+            contenido: `El postulante debe analizar el litigio planteado con base en la jurisprudencia constitucional boliviana vigente y proponer la estrategia jurídica de fundamentación correspondiente.`,
+            estado: 'DISPONIBLE',
+          },
+        });
+      }
+    }
+  }
+
   // 7. Poblar Defensas de prueba para el calendario y embudo
   const tipoInterna = await prisma.tipoDefensa.findUnique({ where: { nombre: 'INTERNA' } });
   const tipoExterna = await prisma.tipoDefensa.findUnique({ where: { nombre: 'EXTERNA' } });
