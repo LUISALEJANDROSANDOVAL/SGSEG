@@ -30,11 +30,18 @@ const CUENTAS_DEMO: CuentaDemo[] = [
     detalle: 'Acceso total y configuración',
   },
   {
+    email: 'jefe.derecho@uni.edu.bo',
+    pass: 'Admin123!',
+    label: 'Jefe Carrera (Derecho)',
+    rol: 'JEFE_CARRERA',
+    detalle: 'Derecho / Exclusivo FCJS',
+  },
+  {
     email: 'jefe.sistemas@uni.edu.bo',
     pass: 'Admin123!',
-    label: 'Jefe de Carrera',
+    label: 'Jefe Carrera (Sistemas)',
     rol: 'JEFE_CARRERA',
-    detalle: 'Ing. Sistemas / Casos y Áreas',
+    detalle: 'Sistemas / Exclusivo FCT',
   },
   {
     email: 'secretaria@uni.edu.bo',
