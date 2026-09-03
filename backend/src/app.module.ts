@@ -9,6 +9,7 @@ import { CasosModule } from './casos/casos.module';
 import { DefensasModule } from './defensas/defensas.module';
 import { EstudiantesModule } from './estudiantes/estudiantes.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SorteosModule } from './sorteos/sorteos.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PrismaModule } from './prisma/prisma.module';
     EstudiantesModule,
     CasosModule,
     DefensasModule,
+    SorteosModule,
   ],
   controllers: [AppController],
   providers: [
