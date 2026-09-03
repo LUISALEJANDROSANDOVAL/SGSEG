@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Facultad {
@@ -328,3 +329,4 @@ model RegistroAuditoria {
 
   @@map("registro_auditoria")
 }
+
