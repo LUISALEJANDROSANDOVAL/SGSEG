@@ -39,11 +39,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, pass: string) => {
     try {
-      const res = await api.post('/auth/login', { email, password: pass });
-      const { access_token, user: loggedUser } = res.data;
-      localStorage.setItem('token', access_token);
-      setToken(access_token);
-      setUser(loggedUser);
+      const res = await api.post('/auth/login', {
+        correoInstitucional: email.trim(),
+        password: pass,
+      });
+      const tokenToSave = res.data.accessToken || res.data.access_token;
+      const rawUser = res.data.user;
+      const normalizedUser: User = {
+        id: rawUser?.idUsuario || rawUser?.id || 'user',
+        email: rawUser?.correoInstitucional || email,
+        nombre:
+          `${rawUser?.primerNombre ?? ''} ${rawUser?.primerApellido ?? ''}`.trim() ||
+          rawUser?.nombre ||
+          'Usuario',
+        rol: rawUser?.rol || 'Coordinador General',
+      };
+
+      localStorage.setItem('token', tokenToSave);
+      setToken(tokenToSave);
+      setUser(normalizedUser);
     } catch (error: any) {
       const msg = error.response?.data?.message || 'Error al iniciar sesión';
       throw new Error(msg);
