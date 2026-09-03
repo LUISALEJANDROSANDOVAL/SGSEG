@@ -7,7 +7,9 @@ import {
   type Carrera,
   type BulkUpsertResult,
 } from '@/lib/estudiantes.api'
+import { defensasApi } from '@/lib/defensas.api'
 import {
+  Calendar,
   Search,
   Upload,
   RefreshCw,
@@ -51,6 +53,13 @@ export default function PaginaEstudiantes() {
   const [mostrarModalImportacion, setMostrarModalImportacion] = useState(false)
   const [estudianteAEliminar, setEstudianteAEliminar] = useState<Estudiante | null>(null)
   const [accionEnProgreso, setAccionEnProgreso] = useState(false)
+
+  // Estado para Programar Defensa
+  const [estudianteParaDefensa, setEstudianteParaDefensa] = useState<Estudiante | null>(null)
+  const [tipoDefensaModal, setTipoDefensaModal] = useState<'INTERNA' | 'EXTERNA'>('INTERNA')
+  const [fechaDefensaModal, setFechaDefensaModal] = useState<string>('')
+  const [periodoDefensaModal, setPeriodoDefensaModal] = useState<string>('II-2026')
+  const [isProgramandoDefensa, setIsProgramandoDefensa] = useState(false)
 
   // Estado del formulario de importación masiva
   const [importJsonText, setImportJsonText] = useState('')
@@ -190,6 +199,31 @@ export default function PaginaEstudiantes() {
       alert('Error al restaurar estudiante')
     } finally {
       setAccionEnProgreso(false)
+    }
+  }
+
+  // Programar Defensa
+  const handleProgramarDefensa = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!estudianteParaDefensa || !fechaDefensaModal) return
+    setIsProgramandoDefensa(true)
+    try {
+      const resp = await defensasApi.programarDefensa({
+        idEstudiante: estudianteParaDefensa.idEstudiante,
+        tipoDefensa: tipoDefensaModal,
+        fechaDefensa: fechaDefensaModal,
+        periodoAcademico: periodoDefensaModal,
+      })
+      alert(
+        `Defensa programada exitosamente para ${estudianteParaDefensa.nombreCompleto}.\n${resp.reglasSorteo?.descripcionModalidad || ''}`,
+      )
+      setEstudianteParaDefensa(null)
+      setFechaDefensaModal('')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al programar defensa'
+      alert(`Error al programar defensa: ${msg}`)
+    } finally {
+      setIsProgramandoDefensa(false)
     }
   }
 
@@ -648,16 +682,27 @@ export default function PaginaEstudiantes() {
                                 <span>Restaurar</span>
                               </button>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => setEstudianteAEliminar(est)}
-                                disabled={accionEnProgreso}
-                                className="inline-flex items-center gap-1 border border-line bg-white px-2 py-1 text-[11px] font-medium text-neutral-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
-                                title="Desactivar estudiante (Soft Delete)"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                                <span>Desactivar</span>
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setEstudianteParaDefensa(est)}
+                                  className="inline-flex items-center gap-1 border border-line bg-white px-2 py-1 text-[11px] font-medium text-neutral-700 hover:border-crimson hover:text-crimson hover:bg-red-50/40"
+                                  title="Programar fecha de defensa para este postulante"
+                                >
+                                  <Calendar className="h-3 w-3 text-crimson" />
+                                  <span>Programar</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEstudianteAEliminar(est)}
+                                  disabled={accionEnProgreso}
+                                  className="inline-flex items-center gap-1 border border-line bg-white px-2 py-1 text-[11px] font-medium text-neutral-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                                  title="Desactivar estudiante (Soft Delete)"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  <span>Desactivar</span>
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
@@ -891,6 +936,100 @@ export default function PaginaEstudiantes() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL PARA PROGRAMAR DEFENSA DE ESTUDIANTE */}
+        {estudianteParaDefensa && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-lg border border-line bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-line px-6 py-4">
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight text-neutral-900">
+                    Programar Defensa para Postulante
+                  </h3>
+                  <p className="text-xs text-neutral-500">
+                    {estudianteParaDefensa.nombreCompleto} ({estudianteParaDefensa.carnetEstudiantil})
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEstudianteParaDefensa(null)}
+                  className="text-neutral-400 hover:text-neutral-700"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleProgramarDefensa} className="p-6 flex flex-col gap-4">
+                <div className="bg-surface p-3 border border-line text-xs">
+                  <p className="font-semibold text-neutral-800">
+                    Carrera: {estudianteParaDefensa.planEstudio?.carrera?.nombre || '—'}
+                  </p>
+                  <p className="text-neutral-500 text-[11px]">
+                    Facultad: {estudianteParaDefensa.planEstudio?.carrera?.facultad?.nombre || 'UPTECSA'}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                      Tipo de Defensa *
+                    </label>
+                    <select
+                      value={tipoDefensaModal}
+                      onChange={(e) => setTipoDefensaModal(e.target.value as 'INTERNA' | 'EXTERNA')}
+                      className="w-full border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400"
+                    >
+                      <option value="INTERNA">Defensa Interna</option>
+                      <option value="EXTERNA">Defensa Externa</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                      Periodo Académico
+                    </label>
+                    <input
+                      type="text"
+                      value={periodoDefensaModal}
+                      onChange={(e) => setPeriodoDefensaModal(e.target.value)}
+                      className="w-full border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1">
+                    Fecha de Defensa *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={fechaDefensaModal}
+                    onChange={(e) => setFechaDefensaModal(e.target.value)}
+                    className="w-full border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 border-t border-line pt-4 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEstudianteParaDefensa(null)}
+                    className="border border-line bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isProgramandoDefensa}
+                    className="bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 disabled:opacity-50"
+                  >
+                    {isProgramandoDefensa ? 'Programando...' : 'Confirmar Programación'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

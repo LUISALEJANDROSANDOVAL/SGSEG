@@ -1,4 +1,5 @@
 import {
+  Calendar,
   ClipboardList,
   FileBarChart,
   LayoutDashboard,
@@ -75,6 +76,14 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         descripcion:
           'Padrón de postulantes por carrera y pensum, con estado de habilitación y sorteo.',
         roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
+      },
+      {
+        nombre: 'Cronograma y Defensas',
+        ruta: '/defensas',
+        icono: Calendar,
+        descripcion:
+          'Calendario general de defensas, embudo de estados y verificación de plazos reglamentarios.',
+        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado'],
       },
       {
         nombre: 'Estructura Académica',

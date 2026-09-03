@@ -33,6 +33,19 @@ async function main() {
     });
   }
 
+  const tiposDefensa = [
+    { nombre: 'INTERNA', descripcion: 'Defensa de grado interna' },
+    { nombre: 'EXTERNA', descripcion: 'Defensa de grado externa' },
+  ];
+
+  for (const t of tiposDefensa) {
+    await prisma.tipoDefensa.upsert({
+      where: { nombre: t.nombre },
+      update: { descripcion: t.descripcion },
+      create: t,
+    });
+  }
+
   const coordinacionRole = await prisma.rol.findUnique({
     where: { nombre: 'COORDINACION' },
   });
@@ -204,6 +217,71 @@ async function main() {
     }
 
     console.log('Seed de Jefe de Carrera, Áreas y Casos completado con éxito');
+  }
+
+  // 7. Poblar Defensas de prueba para el calendario y embudo
+  const tipoInterna = await prisma.tipoDefensa.findUnique({ where: { nombre: 'INTERNA' } });
+  const tipoExterna = await prisma.tipoDefensa.findUnique({ where: { nombre: 'EXTERNA' } });
+
+  const estudiantesMuestra = await prisma.estudiante.findMany({
+    take: 4,
+    orderBy: { idEstudiante: 'asc' },
+  });
+
+  if (estudiantesMuestra.length > 0 && tipoInterna && tipoExterna) {
+    const ahora = new Date();
+    const fechas = [
+      new Date(ahora.getTime() + 7 * 24 * 3600 * 1000), // En 7 días (Alerta próxima)
+      new Date(ahora.getTime() + 18 * 24 * 3600 * 1000), // En 18 días
+      new Date(ahora.getTime() + 25 * 24 * 3600 * 1000), // En 25 días
+      new Date(ahora.getTime() - 2 * 24 * 3600 * 1000), // Hace 2 días (Defendida)
+    ];
+
+    const estados = ['PROGRAMADA', 'PROGRAMADA', 'AREA_SORTEADA', 'DEFENDIDO'];
+
+    for (let i = 0; i < estudiantesMuestra.length; i++) {
+      const est = estudiantesMuestra[i];
+      const tipo = i % 2 === 0 ? tipoInterna : tipoExterna;
+
+      let proceso = await prisma.procesoExamenGrado.findFirst({
+        where: { idEstudiante: est.idEstudiante },
+      });
+      if (!proceso) {
+        proceso = await prisma.procesoExamenGrado.create({
+          data: { idEstudiante: est.idEstudiante, estadoProceso: 'EN_CURSO' },
+        });
+      }
+
+      let instancia = await prisma.instanciaExamenGrado.findFirst({
+        where: { idProceso: proceso.idProceso, numeroInstancia: 1 },
+      });
+      if (!instancia) {
+        instancia = await prisma.instanciaExamenGrado.create({
+          data: { idProceso: proceso.idProceso, numeroInstancia: 1 },
+        });
+      }
+
+      await prisma.defensaExamenGrado.upsert({
+        where: {
+          idInstancia_idTipoDefensa: {
+            idInstancia: instancia.idInstancia,
+            idTipoDefensa: tipo.idTipoDefensa,
+          },
+        },
+        update: {
+          fechaDefensa: fechas[i],
+          estadoDefensa: estados[i],
+        },
+        create: {
+          idInstancia: instancia.idInstancia,
+          idTipoDefensa: tipo.idTipoDefensa,
+          fechaDefensa: fechas[i],
+          periodoAcademico: 'II-2026',
+          estadoDefensa: estados[i],
+        },
+      });
+    }
+    console.log('Seed de Defensas de muestra programadas correctamente');
   }
 
   console.log('Seed general finalizado correctamente');

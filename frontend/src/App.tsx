@@ -8,6 +8,7 @@ import Reportes from '@/pages/Reportes'
 import Sorteo from '@/pages/Sorteo'
 import Usuarios from '@/pages/Usuarios'
 import Academia from '@/pages/Academia'
+import Defensas from '@/pages/Defensas'
 import Login from '@/pages/Login'
 import '@/index.css'
 import { AuthProvider as ContextProvider } from '@/context/AuthContext'
@@ -40,6 +41,12 @@ function App() {
           <Route path="/estudiantes" element={
             <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
               <Estudiantes />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/defensas" element={
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+              <Defensas />
             </ProtectedRoute>
           } />
           

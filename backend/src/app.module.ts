@@ -6,11 +6,18 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { CasosModule } from './casos/casos.module';
+import { DefensasModule } from './defensas/defensas.module';
 import { EstudiantesModule } from './estudiantes/estudiantes.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, EstudiantesModule, CasosModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    EstudiantesModule,
+    CasosModule,
+    DefensasModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,
