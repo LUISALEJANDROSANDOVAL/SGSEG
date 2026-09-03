@@ -1,596 +1,945 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
-import { useAuth } from '../context/AuthContext'
-import { X, UserPlus, Upload, FileSpreadsheet, Download, AlertCircle } from 'lucide-react'
-
-const filtros = ['Todos los pensum', 'Pensum 2019', 'Pensum 2022', 'Pensum 2024']
-
-const estudiantesIniciales = [
-  {
-    registro: '2019-04812',
-    nombre: 'Mariana Rojas Quiroga',
-    carrera: 'Marketing',
-    pensum: '2019',
-    estado: 'Sorteado',
-  },
-  {
-    registro: '2020-01377',
-    nombre: 'Luis Fernando Céspedes',
-    carrera: 'Administración',
-    pensum: '2019',
-    estado: 'Sorteado',
-  },
-  {
-    registro: '2021-06540',
-    nombre: 'Camila Antelo Suárez',
-    carrera: 'Contaduría',
-    pensum: '2022',
-    estado: 'Pendiente',
-  },
-  {
-    registro: '2021-07188',
-    nombre: 'Diego Mamani Torrico',
-    carrera: 'Ingeniería Comercial',
-    pensum: '2022',
-    estado: 'Pendiente',
-  },
-  {
-    registro: '2022-02904',
-    nombre: 'Valeria Ibáñez Peña',
-    carrera: 'Sistemas',
-    pensum: '2024',
-    estado: 'Observado',
-  },
-  {
-    registro: '2022-03551',
-    nombre: 'Jorge Andrés Vaca',
-    carrera: 'Administración',
-    pensum: '2024',
-    estado: 'Pendiente',
-  },
-]
-
-const estilosEstado: Record<string, string> = {
-  Sorteado: 'bg-ink text-white',
-  Pendiente: 'bg-surface text-neutral-600 ring-1 ring-line',
-  Observado: 'bg-crimson text-white',
-}
+import {
+  estudiantesApi,
+  type Estudiante,
+  type Carrera,
+  type BulkUpsertResult,
+} from '@/lib/estudiantes.api'
+import {
+  Search,
+  Upload,
+  RefreshCw,
+  GraduationCap,
+  Building2,
+  BookOpen,
+  Trash2,
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  FileSpreadsheet,
+  Mail,
+  CreditCard,
+  User,
+} from 'lucide-react'
 
 export default function PaginaEstudiantes() {
-  const { user } = useAuth()
-  const [listaEstudiantes, setListaEstudiantes] = useState(estudiantesIniciales)
-  const [filtroSeleccionado, setFiltroSeleccionado] = useState('Todos los pensum')
-  
-  // Control de modales
-  const [modalAbierto, setModalAbierto] = useState(false)
-  const [modalImportarAbierto, setModalImportarAbierto] = useState(false)
+  // Estado principal de datos
+  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([])
+  const [carreras, setCarreras] = useState<Carrera[]>([])
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Campos del formulario individual
-  const [formRegistro, setFormRegistro] = useState('')
-  const [formNombre, setFormNombre] = useState('')
-  const [formCi, setFormCi] = useState('')
-  const [formCorreo, setFormCorreo] = useState('')
-  const [formCarrera, setFormCarrera] = useState('Sistemas')
-  const [formPensum, setFormPensum] = useState('2024')
-  const [formEstado, setFormEstado] = useState('Pendiente')
+  // Filtros de búsqueda
+  const [carreraSeleccionada, setCarreraSeleccionada] = useState<string>('ALL')
+  const [planSeleccionado, setPlanSeleccionado] = useState<string>('ALL')
+  const [filtroEstado, setFiltroEstado] = useState<string>('ACTIVO')
+  const [busqueda, setBusqueda] = useState<string>('')
+  const [debouncedBusqueda, setDebouncedBusqueda] = useState<string>('')
+  const [paginaActual, setPaginaActual] = useState(1)
+  const [limitePorPagina, setLimitePorPagina] = useState(15)
 
-  // Estados para Importación
-  const [archivoSeleccionado, setArchivoSeleccionado] = useState<File | null>(null)
-  const [previewEstudiantes, setPreviewEstudiantes] = useState<any[]>([])
-  const [errorImportacion, setErrorImportacion] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // Modales
+  const [mostrarModalImportacion, setMostrarModalImportacion] = useState(false)
+  const [estudianteAEliminar, setEstudianteAEliminar] = useState<Estudiante | null>(null)
+  const [accionEnProgreso, setAccionEnProgreso] = useState(false)
 
-  // Roles permitidos: Coordinador General, Jefe de Carrera, Vicerrectorado
-  const tienePermiso = user && ['Coordinador General', 'Jefe de Carrera', 'Vicerrectorado'].includes(user.rol)
+  // Estado del formulario de importación masiva
+  const [importJsonText, setImportJsonText] = useState('')
+  const [carreraImportDefecto, setCarreraImportDefecto] = useState<string>('')
+  const [crearPlanesFaltantes, setCrearPlanesFaltantes] = useState(true)
+  const [resultadoImportacion, setResultadoImportacion] = useState<BulkUpsertResult | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
 
-  const handleAgregarEstudiante = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const nuevoEstudiante = {
-      registro: formRegistro,
-      nombre: formNombre,
-      carrera: formCarrera,
-      pensum: formPensum,
-      estado: formEstado,
-    }
+  // Debounce para el input de búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedBusqueda(busqueda)
+      setPaginaActual(1)
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [busqueda])
 
-    setListaEstudiantes([nuevoEstudiante, ...listaEstudiantes])
-    
-    // Limpiar formulario y cerrar modal
-    setFormRegistro('')
-    setFormNombre('')
-    setFormCi('')
-    setFormCorreo('')
-    setFormCarrera('Sistemas')
-    setFormPensum('2024')
-    setFormEstado('Pendiente')
-    setModalAbierto(false)
-  }
-
-  // Descarga de Plantilla de Ejemplo
-  const descargarPlantilla = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "registro,nombre,carrera,pensum,estado\n"
-      + "2023-11223,Alejandro Sandoval,Sistemas,2024,Pendiente\n"
-      + "2023-44556,Laura Chacon,Marketing,2022,Pendiente\n"
-      + "2023-77889,Mauricio Vargas,Contaduria,2019,Observado"
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", "plantilla_estudiantes.csv")
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  // Carga de datos de prueba para simular archivo
-  const cargarDatosPruebaImport = () => {
-    const mockRows = [
-      { registro: '2023-88123', nombre: 'Andrea Paz Gonzales', carrera: 'Sistemas', pensum: '2024', estado: 'Pendiente' },
-      { registro: '2023-88456', nombre: 'Bruno Diaz Cabrera', carrera: 'Ingeniería Comercial', pensum: '2022', estado: 'Pendiente' },
-      { registro: '2023-88789', nombre: 'Carla Vaca Flores', carrera: 'Marketing', pensum: '2019', estado: 'Observado' },
-    ]
-    setPreviewEstudiantes(mockRows)
-    setArchivoSeleccionado(new File(["registro,nombre,carrera,pensum,estado"], "padron_simulado.csv", { type: "text/csv" }))
-    setErrorImportacion(null)
-  }
-
-  // Lector de archivo CSV
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setArchivoSeleccionado(file)
-    setErrorImportacion(null)
-
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string
-        const lines = text.split('\n')
-        if (lines.length < 2) {
-          setErrorImportacion('El archivo no contiene suficientes filas.')
-          return
-        }
-
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
-        const rows = []
-
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue
-          const values = lines[i].split(',').map(v => v.trim())
-          const rowData: Record<string, string> = {}
-          headers.forEach((header, index) => {
-            rowData[header] = values[index] || ''
-          })
-
-          rows.push({
-            registro: rowData.registro || `REG-${Math.floor(10000 + Math.random() * 90000)}`,
-            nombre: rowData.nombre || 'Desconocido',
-            carrera: rowData.carrera || 'Sistemas',
-            pensum: rowData.pensum || '2024',
-            estado: rowData.estado || 'Pendiente',
-          })
-        }
-        setPreviewEstudiantes(rows)
-      } catch (err) {
-        setErrorImportacion('Error al leer o parsear el archivo CSV.')
+  // Cargar lista de carreras
+  const cargarCarreras = useCallback(async () => {
+    try {
+      const data = await estudiantesApi.getCarreras()
+      setCarreras(data)
+      if (data.length > 0 && !carreraImportDefecto) {
+        setCarreraImportDefecto(data[0].idCarrera)
       }
+    } catch (err) {
+      console.error('Error al cargar carreras:', err)
     }
-    reader.readAsText(file)
+  }, [carreraImportDefecto])
+
+  // Cargar lista de estudiantes con filtros aplicados
+  const cargarEstudiantes = useCallback(async () => {
+    setIsLoading(true)
+    setErrorMsg(null)
+    try {
+      const resp = await estudiantesApi.getEstudiantes({
+        idCarrera: carreraSeleccionada,
+        idPlanEstudio: planSeleccionado,
+        estado: filtroEstado,
+        incluirEliminados: filtroEstado === 'ALL' || filtroEstado === 'ELIMINADO',
+        search: debouncedBusqueda,
+        page: paginaActual,
+        limit: limitePorPagina,
+      })
+      setEstudiantes(resp.items || [])
+      setTotalRegistros(resp.pagination?.total || 0)
+      setTotalPages(resp.pagination?.totalPages || 1)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al conectar con el servidor'
+      setErrorMsg(`No se pudo cargar la lista de estudiantes: ${msg}`)
+      setEstudiantes([])
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [
+    carreraSeleccionada,
+    planSeleccionado,
+    filtroEstado,
+    debouncedBusqueda,
+    paginaActual,
+    limitePorPagina,
+  ])
+
+  // Carga inicial
+  useEffect(() => {
+    cargarCarreras()
+  }, [cargarCarreras])
+
+  useEffect(() => {
+    cargarEstudiantes()
+  }, [cargarEstudiantes])
+
+  // Planes de estudio disponibles para la carrera seleccionada
+  const planesDisponibles = useMemo(() => {
+    if (carreraSeleccionada === 'ALL') {
+      const todosLosPlanes: { id: string; nombre: string; carrera: string }[] = []
+      carreras.forEach((c) => {
+        c.planesEstudio?.forEach((p) => {
+          todosLosPlanes.push({
+            id: p.idPlanEstudio,
+            nombre: `${p.nombre} (${c.nombre})`,
+            carrera: c.nombre,
+          })
+        })
+      })
+      return todosLosPlanes
+    }
+    const c = carreras.find((item) => item.idCarrera === carreraSeleccionada)
+    return (
+      c?.planesEstudio?.map((p) => ({
+        id: p.idPlanEstudio,
+        nombre: p.nombre,
+        carrera: c.nombre,
+      })) || []
+    )
+  }, [carreras, carreraSeleccionada])
+
+  // Limpiar plan seleccionado si cambia la carrera y el plan ya no pertenece
+  const handleCambioCarrera = (nuevaCarrera: string) => {
+    setCarreraSeleccionada(nuevaCarrera)
+    setPlanSeleccionado('ALL')
+    setPaginaActual(1)
   }
 
-  const confirmarImportacion = () => {
-    if (previewEstudiantes.length === 0) return
-    setListaEstudiantes([...previewEstudiantes, ...listaEstudiantes])
-    
-    // Limpiar estados de importación
-    setArchivoSeleccionado(null)
-    setPreviewEstudiantes([])
-    setModalImportarAbierto(false)
+  // Refrescar manualmente
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    cargarCarreras()
+    cargarEstudiantes()
   }
 
-  // Filtrado de estudiantes
-  const estudiantesFiltrados = listaEstudiantes.filter((estudiante) => {
-    if (filtroSeleccionado === 'Todos los pensum') return true
-    const anioPensum = filtroSeleccionado.replace('Pensum ', '')
-    return estudiante.pensum === anioPensum
-  })
+  // Soft Delete
+  const handleConfirmSoftDelete = async () => {
+    if (!estudianteAEliminar) return
+    setAccionEnProgreso(true)
+    try {
+      await estudiantesApi.softDelete(estudianteAEliminar.idEstudiante)
+      setEstudianteAEliminar(null)
+      cargarEstudiantes()
+    } catch (err: unknown) {
+      console.error('Error al desactivar estudiante:', err)
+      alert('Error al desactivar estudiante')
+    } finally {
+      setAccionEnProgreso(false)
+    }
+  }
+
+  // Restaurar Estudiante
+  const handleRestore = async (idEstudiante: string) => {
+    setAccionEnProgreso(true)
+    try {
+      await estudiantesApi.restore(idEstudiante)
+      cargarEstudiantes()
+    } catch (err: unknown) {
+      console.error('Error al restaurar estudiante:', err)
+      alert('Error al restaurar estudiante')
+    } finally {
+      setAccionEnProgreso(false)
+    }
+  }
+
+  // Cargar plantilla de ejemplo para importación
+  const cargarPlantillaEjemplo = () => {
+    const ejemplo = [
+      {
+        carnetEstudiantil: 'SIS-2024001',
+        carnetIdentidad: '8392011 LP',
+        nombreCompleto: 'Gabriel Leonardo Suarez Choque',
+        correo: 'gabriel.suarez@estudiante.edu.bo',
+        nombreCarrera: 'Ingeniería de Sistemas',
+        nombrePlanEstudio: 'Plan 2024',
+      },
+      {
+        carnetEstudiantil: 'INF-2024002',
+        carnetIdentidad: '7482910 CB',
+        nombreCompleto: 'Maria Fernanda Morales Rios',
+        correo: 'maria.morales@estudiante.edu.bo',
+        nombreCarrera: 'Ingeniería Informática',
+        nombrePlanEstudio: 'Plan 2023',
+      },
+      {
+        carnetEstudiantil: 'IND-2024003',
+        carnetIdentidad: '6391024 SC',
+        nombres: 'Jorge Andrés',
+        primerApellido: 'Vaca',
+        segundoApellido: 'Gutiérrez',
+        nombreCarrera: 'Ingeniería Industrial',
+      },
+    ]
+    setImportJsonText(JSON.stringify(ejemplo, null, 2))
+  }
+
+  // Ejecutar importación masiva transaccional
+  const handleEjecutarImportacion = async () => {
+    if (!importJsonText.trim()) {
+      alert('Por favor pegue los datos en formato JSON')
+      return
+    }
+
+    try {
+      const parsedData = JSON.parse(importJsonText)
+      if (!Array.isArray(parsedData)) {
+        alert('El JSON debe ser un arreglo de estudiantes')
+        return
+      }
+
+      setIsImporting(true)
+      setResultadoImportacion(null)
+
+      const result = await estudiantesApi.bulkUpsert({
+        estudiantes: parsedData,
+        idCarreraPorDefecto: carreraImportDefecto || undefined,
+        crearPlanesFaltantes,
+        batchSize: 50,
+      })
+
+      setResultadoImportacion(result)
+      cargarCarreras()
+      cargarEstudiantes()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error de formato JSON o conexión'
+      alert(`Error al procesar importación: ${msg}`)
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  // Formato de fecha
+  const formatearFecha = (fechaIso?: string) => {
+    if (!fechaIso) return '—'
+    try {
+      const d = new Date(fechaIso)
+      return d.toLocaleDateString('es-BO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    } catch {
+      return fechaIso
+    }
+  }
 
   return (
     <DashboardShell>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
+        {/* Encabezado Principal */}
         <EncabezadoPagina
-          titulo="Estudiantes"
-          descripcion="Padrón de postulantes al examen de grado con su estado de habilitación, carrera y plan de estudios vigente."
+          titulo="Padrón de Estudiantes"
+          descripcion="Gestión académica, filtrado por carrera y plan de estudio, normalización e inserción masiva transaccional de postulantes."
           accion={
             <div className="flex items-center gap-2">
-              {tienePermiso && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setModalAbierto(true)}
-                    className="flex items-center gap-2 bg-[#c8102e] text-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-[#a50d26]"
-                  >
-                    <UserPlus className="size-4" />
-                    Agregar estudiante
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setModalImportarAbierto(true)}
-                    className="border border-ink bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-ink hover:text-white"
-                  >
-                    Importar
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
+                title="Actualizar datos"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
+                />
+                <span>Actualizar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setResultadoImportacion(null)
+                  setMostrarModalImportacion(true)
+                }}
+                className="flex items-center gap-1.5 border border-ink bg-ink px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-neutral-800"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                <span>Importar Padrón (Masivo)</span>
+              </button>
             </div>
           }
         />
 
-        <div className="flex flex-wrap items-center gap-2">
-          {filtros.map((filtro) => (
-            <button
-              key={filtro}
-              type="button"
-              onClick={() => setFiltroSeleccionado(filtro)}
-              aria-pressed={filtroSeleccionado === filtro}
-              className={`border px-3.5 py-2 text-xs font-medium transition-colors ${
-                filtroSeleccionado === filtro
-                  ? 'border-ink bg-ink text-white'
-                  : 'border-line bg-white text-neutral-600 hover:border-ink'
-              }`}
-            >
-              {filtro}
-            </button>
-          ))}
+        {/* Tarjetas de Resumen KPI */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="border border-line bg-white p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                Total Registrados
+              </span>
+              <User className="h-4 w-4 text-neutral-400" />
+            </div>
+            <div className="mt-2 text-2xl font-bold tracking-tight text-neutral-900">
+              {totalRegistros}
+            </div>
+            <span className="text-[11px] text-neutral-500">
+              En el padrón institucional
+            </span>
+          </div>
+
+          <div className="border border-line bg-white p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                Carreras Activas
+              </span>
+              <Building2 className="h-4 w-4 text-neutral-400" />
+            </div>
+            <div className="mt-2 text-2xl font-bold tracking-tight text-neutral-900">
+              {carreras.length}
+            </div>
+            <span className="text-[11px] text-neutral-500">
+              Con programas de grado
+            </span>
+          </div>
+
+          <div className="border border-line bg-white p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                Planes Vigentes
+              </span>
+              <BookOpen className="h-4 w-4 text-neutral-400" />
+            </div>
+            <div className="mt-2 text-2xl font-bold tracking-tight text-neutral-900">
+              {carreras.reduce((acc, c) => acc + (c.planesEstudio?.length || 0), 0)}
+            </div>
+            <span className="text-[11px] text-neutral-500">
+              Pensa académicos asociados
+            </span>
+          </div>
+
+          <div className="border border-line bg-white p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                Vista Actual
+              </span>
+              <GraduationCap className="h-4 w-4 text-crimson" />
+            </div>
+            <div className="mt-2 text-2xl font-bold tracking-tight text-crimson">
+              {estudiantes.length}
+            </div>
+            <span className="text-[11px] text-neutral-500">
+              Estudiantes listados en página
+            </span>
+          </div>
         </div>
 
-        <section className="border border-line bg-white">
-          <header className="flex items-center justify-between border-b border-line px-5 py-4">
-            <h2 className="text-sm font-semibold tracking-tight">
-              Padrón semestre 2-2026
-            </h2>
-            <span className="text-xs text-neutral-500">{estudiantesFiltrados.length} registros</span>
+        {/* Barra de Filtros por Carrera, Plan, Estado y Búsqueda */}
+        <div className="flex flex-col gap-3 border border-line bg-white p-4">
+          {/* Fila 1: Pestañas de Carrera */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <span className="flex items-center gap-1 text-xs font-semibold text-neutral-700 uppercase tracking-wider mr-2">
+              <Building2 className="h-3.5 w-3.5" /> Carrera:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleCambioCarrera('ALL')}
+              className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
+                carreraSeleccionada === 'ALL'
+                  ? 'border border-ink bg-ink text-white shadow-xs'
+                  : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
+              }`}
+            >
+              Todas las Carreras
+            </button>
+            {carreras.map((c) => (
+              <button
+                key={c.idCarrera}
+                type="button"
+                onClick={() => handleCambioCarrera(c.idCarrera)}
+                className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
+                  carreraSeleccionada === c.idCarrera
+                    ? 'border border-ink bg-ink text-white shadow-xs'
+                    : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
+                }`}
+              >
+                {c.nombre}
+              </button>
+            ))}
+          </div>
+
+          {/* Fila 2: Filtro por Plan, Estado y Caja de Búsqueda */}
+          <div className="grid grid-cols-1 gap-3 pt-2 border-t border-line sm:grid-cols-12">
+            {/* Selector de Plan */}
+            <div className="sm:col-span-4 flex items-center gap-2">
+              <label htmlFor="select-plan" className="text-xs font-medium text-neutral-600 whitespace-nowrap">
+                Pensum / Plan:
+              </label>
+              <select
+                id="select-plan"
+                value={planSeleccionado}
+                onChange={(e) => {
+                  setPlanSeleccionado(e.target.value)
+                  setPaginaActual(1)
+                }}
+                className="w-full border border-line bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 focus:border-ink focus:outline-hidden"
+              >
+                <option value="ALL">Todos los planes</option>
+                {planesDisponibles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Selector de Estado */}
+            <div className="sm:col-span-3 flex items-center gap-2">
+              <label htmlFor="select-estado" className="text-xs font-medium text-neutral-600 whitespace-nowrap">
+                Estado:
+              </label>
+              <select
+                id="select-estado"
+                value={filtroEstado}
+                onChange={(e) => {
+                  setFiltroEstado(e.target.value)
+                  setPaginaActual(1)
+                }}
+                className="w-full border border-line bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 focus:border-ink focus:outline-hidden"
+              >
+                <option value="ACTIVO">Solo Activos</option>
+                <option value="INACTIVO">Inactivos</option>
+                <option value="ELIMINADO">Eliminados (Soft Delete)</option>
+                <option value="ALL">Todos (incluye históricos)</option>
+              </select>
+            </div>
+
+            {/* Campo de Búsqueda con debounce */}
+            <div className="sm:col-span-5 relative">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="text"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por carnet, CI, nombre o correo..."
+                className="w-full border border-line bg-surface py-1.5 pl-8 pr-8 text-xs text-neutral-800 placeholder-neutral-400 focus:border-ink focus:bg-white focus:outline-hidden"
+              />
+              {busqueda && (
+                <button
+                  type="button"
+                  onClick={() => setBusqueda('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mensaje de Error si ocurre */}
+        {errorMsg && (
+          <div className="flex items-center gap-2 border border-red-200 bg-red-50 p-4 text-xs text-red-700">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Tabla de Estudiantes */}
+        <section className="border border-line bg-white shadow-xs">
+          <header className="flex flex-wrap items-center justify-between border-b border-line px-5 py-3.5 gap-2">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="h-4 w-4 text-neutral-700" />
+              <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
+                Padrón Oficial de Estudiantes
+              </h2>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-neutral-500">
+              <span>
+                Mostrando <strong className="text-neutral-900">{estudiantes.length}</strong> de{' '}
+                <strong className="text-neutral-900">{totalRegistros}</strong> registros
+              </span>
+            </div>
           </header>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[840px] text-left text-sm">
               <thead className="border-b border-line bg-surface">
-                <tr className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
-                  <th scope="col" className="px-5 py-3 font-medium">
-                    Registro
+                <tr className="text-[11px] font-semibold tracking-[0.1em] text-neutral-500 uppercase">
+                  <th scope="col" className="px-5 py-3">
+                    Carnet Estudiantil
                   </th>
-                  <th scope="col" className="px-5 py-3 font-medium">
-                    Estudiante
+                  <th scope="col" className="px-5 py-3">
+                    Estudiante / C.I.
                   </th>
-                  <th scope="col" className="px-5 py-3 font-medium">
+                  <th scope="col" className="px-5 py-3">
+                    Correo Institucional
+                  </th>
+                  <th scope="col" className="px-5 py-3">
                     Carrera
                   </th>
-                  <th scope="col" className="px-5 py-3 font-medium">
-                    Pensum
+                  <th scope="col" className="px-5 py-3">
+                    Plan de Estudios
                   </th>
-                  <th scope="col" className="px-5 py-3 font-medium">
+                  <th scope="col" className="px-5 py-3">
+                    Registro
+                  </th>
+                  <th scope="col" className="px-5 py-3 text-center">
                     Estado
+                  </th>
+                  <th scope="col" className="px-5 py-3 text-right">
+                    Acciones
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {estudiantesFiltrados.map((estudiante, idx) => (
-                  <tr key={`${estudiante.registro}-${idx}`}>
-                    <td className="px-5 py-4 font-mono text-[11px] tracking-wider text-neutral-500">
-                      {estudiante.registro}
-                    </td>
-                    <td className="px-5 py-4 font-medium">{estudiante.nombre}</td>
-                    <td className="px-5 py-4 text-neutral-600">
-                      {estudiante.carrera}
-                    </td>
-                    <td className="px-5 py-4 text-neutral-500">{estudiante.pensum}</td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-block px-2.5 py-1 text-[11px] font-medium ${estilosEstado[estudiante.estado] || 'bg-surface text-neutral-600'}`}
-                      >
-                        {estudiante.estado}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {estudiantesFiltrados.length === 0 && (
+                {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-sm text-neutral-400">
-                      No se encontraron estudiantes para este filtro.
+                    <td colSpan={8} className="py-12 text-center text-neutral-500">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <RefreshCw className="h-6 w-6 animate-spin text-neutral-400" />
+                        <span className="text-xs">Cargando padrón de estudiantes...</span>
+                      </div>
                     </td>
                   </tr>
+                ) : estudiantes.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12 text-center text-neutral-500">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <GraduationCap className="h-8 w-8 text-neutral-300" />
+                        <span className="text-sm font-medium text-neutral-700">
+                          No se encontraron estudiantes
+                        </span>
+                        <p className="text-xs text-neutral-400 max-w-sm">
+                          {busqueda || carreraSeleccionada !== 'ALL' || planSeleccionado !== 'ALL'
+                            ? 'Intenta ajustar o limpiar los filtros de búsqueda y carrera.'
+                            : 'El padrón está vacío. Utiliza el botón "Importar Padrón" para cargar estudiantes.'}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  estudiantes.map((est) => {
+                    const esEliminado = est.estado === 'ELIMINADO'
+                    return (
+                      <tr
+                        key={est.idEstudiante}
+                        className={`transition-colors hover:bg-neutral-50/80 ${
+                          esEliminado ? 'bg-neutral-50/50 opacity-70' : ''
+                        }`}
+                      >
+                        {/* Carnet Estudiantil */}
+                        <td className="px-5 py-3.5">
+                          <span className="font-mono text-xs font-semibold tracking-wider text-ink bg-surface border border-line px-2 py-0.5">
+                            {est.carnetEstudiantil}
+                          </span>
+                        </td>
+
+                        {/* Nombre y CI */}
+                        <td className="px-5 py-3.5">
+                          <div className="font-medium text-neutral-900">
+                            {est.nombreCompleto}
+                          </div>
+                          <div className="flex items-center gap-1 text-[11px] text-neutral-500">
+                            <CreditCard className="h-3 w-3" />
+                            <span>CI: {est.carnetIdentidad}</span>
+                          </div>
+                        </td>
+
+                        {/* Correo */}
+                        <td className="px-5 py-3.5 text-xs text-neutral-600">
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                            <span className="truncate max-w-[180px]">{est.correo}</span>
+                          </div>
+                        </td>
+
+                        {/* Carrera */}
+                        <td className="px-5 py-3.5 text-xs text-neutral-700">
+                          <div className="font-medium">
+                            {est.planEstudio?.carrera?.nombre || '—'}
+                          </div>
+                          <div className="text-[11px] text-neutral-400">
+                            {est.planEstudio?.carrera?.facultad?.nombre || ''}
+                          </div>
+                        </td>
+
+                        {/* Plan de Estudios */}
+                        <td className="px-5 py-3.5 text-xs">
+                          <span className="inline-flex items-center gap-1 bg-surface border border-line px-2 py-0.5 text-[11px] text-neutral-700 font-medium">
+                            <Layers className="h-3 w-3 text-neutral-400" />
+                            {est.planEstudio?.nombre || '—'}
+                          </span>
+                        </td>
+
+                        {/* Fecha Registro */}
+                        <td className="px-5 py-3.5 text-[11px] text-neutral-500 whitespace-nowrap">
+                          {formatearFecha(est.fechaRegistro)}
+                        </td>
+
+                        {/* Estado */}
+                        <td className="px-5 py-3.5 text-center">
+                          {est.estado === 'ACTIVO' ? (
+                            <span className="inline-block border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 tracking-wider uppercase">
+                              Activo
+                            </span>
+                          ) : est.estado === 'ELIMINADO' ? (
+                            <span className="inline-block border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 tracking-wider uppercase">
+                              Eliminado
+                            </span>
+                          ) : (
+                            <span className="inline-block border border-neutral-200 bg-neutral-100 px-2 py-0.5 text-[10px] font-semibold text-neutral-700 tracking-wider uppercase">
+                              {est.estado}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Acciones */}
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {esEliminado ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRestore(est.idEstudiante)}
+                                disabled={accionEnProgreso}
+                                className="inline-flex items-center gap-1 border border-emerald-300 bg-white px-2 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50"
+                                title="Restaurar estudiante a ACTIVO"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                <span>Restaurar</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setEstudianteAEliminar(est)}
+                                disabled={accionEnProgreso}
+                                className="inline-flex items-center gap-1 border border-line bg-white px-2 py-1 text-[11px] font-medium text-neutral-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                                title="Desactivar estudiante (Soft Delete)"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                <span>Desactivar</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
           </div>
-        </section>
-      </div>
 
-      {/* Modal Agregar Estudiante */}
-      {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-white border border-line shadow-2xl p-6 relative">
-            <button
-              onClick={() => setModalAbierto(false)}
-              className="absolute top-4 right-4 text-neutral-400 hover:text-ink"
-            >
-              <X className="size-5" />
-            </button>
-
-            <h3 className="text-base font-semibold tracking-tight mb-4">
-              Agregar Nuevo Estudiante
-            </h3>
-
-            <form onSubmit={handleAgregarEstudiante} className="flex flex-col gap-4">
-              {/* Carnet Estudiantil (Registro) */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-neutral-600">Registro Estudiantil</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: 2023-01984"
-                  value={formRegistro}
-                  onChange={(e) => setFormRegistro(e.target.value)}
-                  className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
-                />
-              </div>
-
-              {/* Nombre Completo */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-neutral-600">Nombre Completo</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: Juan Pérez Gómez"
-                  value={formNombre}
-                  onChange={(e) => setFormNombre(e.target.value)}
-                  className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
-                />
-              </div>
-
-              {/* Carnet Identidad (C.I.) */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-neutral-600">Carnet de Identidad (C.I.)</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: 8976543 SC"
-                  value={formCi}
-                  onChange={(e) => setFormCi(e.target.value)}
-                  className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
-                />
-              </div>
-
-              {/* Correo Electrónico */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-neutral-600">Correo Electrónico</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="Ej: juan.perez@uagrm.edu.bo"
-                  value={formCorreo}
-                  onChange={(e) => setFormCorreo(e.target.value)}
-                  className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Carrera */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-neutral-600">Carrera</label>
-                  <select
-                    value={formCarrera}
-                    onChange={(e) => setFormCarrera(e.target.value)}
-                    className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
-                  >
-                    <option value="Sistemas">Sistemas</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Administración">Administración</option>
-                    <option value="Contaduría">Contaduría</option>
-                    <option value="Ingeniería Comercial">Ingeniería Comercial</option>
-                  </select>
-                </div>
-
-                {/* Pensum */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-neutral-600">Pensum</label>
-                  <select
-                    value={formPensum}
-                    onChange={(e) => setFormPensum(e.target.value)}
-                    className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
-                  >
-                    <option value="2019">Pensum 2019</option>
-                    <option value="2022">Pensum 2022</option>
-                    <option value="2024">Pensum 2024</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Estado */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-neutral-600">Estado de Habilitación</label>
+          {/* Barra de Paginación */}
+          {!isLoading && totalRegistros > 0 && (
+            <footer className="flex flex-wrap items-center justify-between border-t border-line px-5 py-3 gap-3 bg-surface">
+              <div className="flex items-center gap-2 text-xs text-neutral-600">
+                <span>Registros por página:</span>
                 <select
-                  value={formEstado}
-                  onChange={(e) => setFormEstado(e.target.value)}
-                  className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
+                  value={limitePorPagina}
+                  onChange={(e) => {
+                    setLimitePorPagina(Number(e.target.value))
+                    setPaginaActual(1)
+                  }}
+                  className="border border-line bg-white px-2 py-1 text-xs focus:border-ink focus:outline-hidden"
                 >
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="Sorteado">Sorteado</option>
-                  <option value="Observado">Observado</option>
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
                 </select>
               </div>
 
-              {/* Acciones */}
-              <div className="mt-2 flex justify-end gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-neutral-600">
+                  Página <strong className="text-neutral-900">{paginaActual}</strong> de{' '}
+                  <strong className="text-neutral-900">{totalPages}</strong>
+                </span>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPaginaActual((prev) => Math.max(1, prev - 1))}
+                    disabled={paginaActual <= 1}
+                    className="border border-line bg-white p-1.5 text-neutral-700 transition-colors hover:border-ink hover:text-ink disabled:opacity-40 disabled:hover:border-line disabled:hover:text-neutral-700"
+                    title="Página anterior"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaginaActual((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={paginaActual >= totalPages}
+                    className="border border-line bg-white p-1.5 text-neutral-700 transition-colors hover:border-ink hover:text-ink disabled:opacity-40 disabled:hover:border-line disabled:hover:text-neutral-700"
+                    title="Página siguiente"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </footer>
+          )}
+        </section>
+
+        {/* MODAL DE IMPORTACIÓN MASIVA */}
+        {mostrarModalImportacion && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="flex max-h-[90vh] w-full max-w-2xl flex-col border border-line bg-white shadow-2xl">
+              {/* Header Modal */}
+              <div className="flex items-center justify-between border-b border-line px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-neutral-800" />
+                  <h3 className="text-base font-semibold text-neutral-900">
+                    Importación Masiva Transaccional (Upsert)
+                  </h3>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setModalAbierto(false)}
-                  className="border border-line px-4 py-2 text-sm font-medium hover:bg-surface"
+                  onClick={() => setMostrarModalImportacion(false)}
+                  className="text-neutral-400 hover:text-neutral-700"
                 >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="bg-[#c8102e] text-white px-4 py-2 text-sm font-medium hover:bg-[#a50d26]"
-                >
-                  Registrar Estudiante
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Modal Importar Padrón */}
-      {modalImportarAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-white border border-line shadow-2xl p-6 relative">
-            <button
-              onClick={() => {
-                setModalImportarAbierto(false)
-                setArchivoSeleccionado(null)
-                setPreviewEstudiantes([])
-                setErrorImportacion(null)
-              }}
-              className="absolute top-4 right-4 text-neutral-400 hover:text-ink"
-            >
-              <X className="size-5" />
-            </button>
+              {/* Contenido Modal */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+                <p className="text-neutral-600">
+                  Pega un arreglo JSON con los registros de estudiantes. El servicio normalizará
+                  automáticamente los nombres y carnets, asociará o creará los planes de estudio
+                  faltantes y actualizará (upsert) registros existentes con el mismo carnet.
+                </p>
 
-            <h3 className="text-base font-semibold tracking-tight mb-2">
-              Importar Padrón de Estudiantes
-            </h3>
-            <p className="text-xs text-neutral-500 mb-4">
-              Sube un archivo de texto en formato CSV separado por comas para agregar múltiples registros.
-            </p>
-
-            {errorImportacion && (
-              <div className="mb-4 flex items-start gap-2.5 bg-crimson/10 border border-crimson/20 p-3 text-xs text-crimson">
-                <AlertCircle className="size-4 shrink-0 mt-0.5" />
-                <span>{errorImportacion}</span>
-              </div>
-            )}
-
-            {/* Zona de Arrastre / Selección */}
-            {!archivoSeleccionado ? (
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-line p-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-ink transition-colors bg-surface/50"
-              >
-                <Upload className="size-8 text-neutral-400" />
-                <span className="text-sm font-medium text-neutral-600">Arrastra tu archivo CSV aquí o haz clic para buscar</span>
-                <span className="text-[11px] text-neutral-400">Archivos .csv de hasta 5MB</span>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept=".csv" 
-                  className="hidden" 
-                />
-              </div>
-            ) : (
-              <div className="border border-line bg-surface p-4 flex items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <FileSpreadsheet className="size-6 text-[#c8102e]" />
+                {/* Configuración de importación */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 bg-surface p-3 border border-line">
                   <div>
-                    <p className="text-sm font-semibold text-neutral-700">{archivoSeleccionado.name}</p>
-                    <p className="text-xs text-neutral-400">{(archivoSeleccionado.size / 1024).toFixed(1)} KB</p>
+                    <label className="block font-medium text-neutral-700 mb-1">
+                      Carrera por defecto (si se omite en la fila):
+                    </label>
+                    <select
+                      value={carreraImportDefecto}
+                      onChange={(e) => setCarreraImportDefecto(e.target.value)}
+                      className="w-full border border-line bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:border-ink focus:outline-hidden"
+                    >
+                      {carreras.map((c) => (
+                        <option key={c.idCarrera} value={c.idCarrera}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-4">
+                    <input
+                      type="checkbox"
+                      id="check-crear-planes"
+                      checked={crearPlanesFaltantes}
+                      onChange={(e) => setCrearPlanesFaltantes(e.target.checked)}
+                      className="h-4 w-4 border-line text-ink focus:ring-ink"
+                    />
+                    <label htmlFor="check-crear-planes" className="font-medium text-neutral-700 cursor-pointer">
+                      Auto-crear Planes de Estudio no existentes
+                    </label>
                   </div>
                 </div>
-                <button 
-                  onClick={() => {
-                    setArchivoSeleccionado(null)
-                    setPreviewEstudiantes([])
-                    setErrorImportacion(null)
-                  }}
-                  className="text-xs text-neutral-500 hover:text-crimson font-medium underline"
-                >
-                  Quitar archivo
-                </button>
-              </div>
-            )}
 
-            {/* Preview de Datos */}
-            {previewEstudiantes.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
-                  Vista Previa (Primeros {Math.min(3, previewEstudiantes.length)} de {previewEstudiantes.length} registros)
-                </p>
-                <div className="border border-line max-h-40 overflow-y-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-surface border-b border-line text-[10px] uppercase font-bold text-neutral-500">
-                      <tr>
-                        <th className="px-3 py-2">Registro</th>
-                        <th className="px-3 py-2">Nombre</th>
-                        <th className="px-3 py-2">Carrera</th>
-                        <th className="px-3 py-2">Pensum</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-line">
-                      {previewEstudiantes.slice(0, 3).map((est, i) => (
-                        <tr key={i}>
-                          <td className="px-3 py-1.5 font-mono text-[10px]">{est.registro}</td>
-                          <td className="px-3 py-1.5 font-medium">{est.nombre}</td>
-                          <td className="px-3 py-1.5 text-neutral-600">{est.carrera}</td>
-                          <td className="px-3 py-1.5 text-neutral-500">{est.pensum}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                {/* Botón de Plantilla */}
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-neutral-700">JSON de Estudiantes:</span>
+                  <button
+                    type="button"
+                    onClick={cargarPlantillaEjemplo}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-crimson hover:underline"
+                  >
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                    <span>Cargar ejemplo de prueba</span>
+                  </button>
                 </div>
-              </div>
-            )}
 
-            {/* Controles de Acción y Utilidades */}
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-4">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={descargarPlantilla}
-                  className="flex items-center gap-1.5 text-xs text-neutral-600 hover:text-ink font-medium"
-                >
-                  <Download className="size-3.5" />
-                  Descargar Plantilla
-                </button>
-                <button
-                  type="button"
-                  onClick={cargarDatosPruebaImport}
-                  className="text-xs text-[#c8102e] hover:underline font-medium"
-                >
-                  Cargar datos demo
-                </button>
+                {/* Editor de JSON */}
+                <textarea
+                  value={importJsonText}
+                  onChange={(e) => setImportJsonText(e.target.value)}
+                  placeholder="[&#10;  {&#10;    &quot;carnetEstudiantil&quot;: &quot;SIS-2024001&quot;,&#10;    &quot;carnetIdentidad&quot;: &quot;8392011 LP&quot;,&#10;    &quot;nombreCompleto&quot;: &quot;Carlos Perez&quot;,&#10;    &quot;nombreCarrera&quot;: &quot;Ingeniería de Sistemas&quot;&#10;  }&#10;]"
+                  rows={8}
+                  className="w-full border border-line bg-neutral-900 p-3 font-mono text-xs text-neutral-100 placeholder-neutral-500 focus:border-ink focus:outline-hidden"
+                />
+
+                {/* Resumen de Resultados tras ejecución */}
+                {resultadoImportacion && (
+                  <div className="border border-emerald-200 bg-emerald-50/80 p-4 space-y-2">
+                    <div className="flex items-center gap-1.5 font-semibold text-emerald-800">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>Carga Masiva Transaccional Completada Exitosamente</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 pt-1">
+                      <div className="bg-white p-2 border border-emerald-200 text-center">
+                        <span className="text-[10px] text-neutral-500 uppercase">Total</span>
+                        <div className="font-bold text-neutral-900">
+                          {resultadoImportacion.total}
+                        </div>
+                      </div>
+                      <div className="bg-white p-2 border border-emerald-200 text-center">
+                        <span className="text-[10px] text-emerald-600 uppercase">Nuevos</span>
+                        <div className="font-bold text-emerald-700">
+                          {resultadoImportacion.creados}
+                        </div>
+                      </div>
+                      <div className="bg-white p-2 border border-emerald-200 text-center">
+                        <span className="text-[10px] text-blue-600 uppercase">Actualizados</span>
+                        <div className="font-bold text-blue-700">
+                          {resultadoImportacion.actualizados}
+                        </div>
+                      </div>
+                      <div className="bg-white p-2 border border-emerald-200 text-center">
+                        <span className="text-[10px] text-neutral-500 uppercase">Planes Nuevos</span>
+                        <div className="font-bold text-neutral-900">
+                          {resultadoImportacion.planesCreados}
+                        </div>
+                      </div>
+                    </div>
+
+                    {resultadoImportacion.planesCreadosDetalle.length > 0 && (
+                      <div className="text-[11px] text-emerald-900 pt-1">
+                        <strong>Planes auto-creados:</strong>{' '}
+                        {resultadoImportacion.planesCreadosDetalle.map((p) => p.nombre).join(', ')}
+                      </div>
+                    )}
+
+                    {resultadoImportacion.errores.length > 0 && (
+                      <div className="mt-2 border-t border-emerald-200 pt-2 text-red-700 text-[11px]">
+                        <strong>Advertencias / Errores:</strong>
+                        <ul className="list-disc pl-4 space-y-0.5">
+                          {resultadoImportacion.errores.map((err, idx) => (
+                            <li key={idx}>
+                              Fila {err.indice}: {err.mensaje}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="flex gap-2">
+              {/* Footer Modal */}
+              <div className="flex items-center justify-end gap-2 border-t border-line bg-surface px-6 py-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setModalImportarAbierto(false)
-                    setArchivoSeleccionado(null)
-                    setPreviewEstudiantes([])
-                    setErrorImportacion(null)
-                  }}
-                  className="border border-line px-4 py-2 text-sm font-medium hover:bg-surface"
+                  onClick={() => setMostrarModalImportacion(false)}
+                  className="border border-line bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:border-neutral-400"
                 >
-                  Cancelar
+                  Cerrar
                 </button>
                 <button
                   type="button"
-                  disabled={previewEstudiantes.length === 0}
-                  onClick={confirmarImportacion}
-                  className="bg-[#c8102e] text-white px-4 py-2 text-sm font-medium hover:bg-[#a50d26] disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleEjecutarImportacion}
+                  disabled={isImporting || !importJsonText.trim()}
+                  className="flex items-center gap-1.5 border border-ink bg-ink px-4 py-2 text-xs font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
                 >
-                  Importar ({previewEstudiantes.length})
+                  {isImporting ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      <span>Procesando Transacción...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-3.5 w-3.5" />
+                      <span>Ejecutar Carga Masiva</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* MODAL DE CONFIRMACIÓN DE SOFT DELETE */}
+        {estudianteAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-md border border-line bg-white p-6 shadow-2xl">
+              <div className="flex items-center gap-3 text-red-600">
+                <AlertCircle className="h-6 w-6 shrink-0" />
+                <h3 className="text-sm font-bold text-neutral-900">
+                  Confirmar Desactivación (Soft Delete)
+                </h3>
+              </div>
+
+              <p className="mt-3 text-xs text-neutral-600 leading-relaxed">
+                ¿Estás seguro de desactivar al estudiante{' '}
+                <strong className="text-neutral-900">{estudianteAEliminar.nombreCompleto}</strong> (
+                <span className="font-mono">{estudianteAEliminar.carnetEstudiantil}</span>)?
+              </p>
+
+              <div className="mt-2 rounded-xs border border-amber-200 bg-amber-50 p-2.5 text-[11px] text-amber-800">
+                ℹ️ <strong>Conservación Histórica:</strong> La información y los procesos de
+                examen de grado asociados no serán eliminados físicamente de la base de datos.
+                Podrás reactivarlo en cualquier momento.
+              </div>
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEstudianteAEliminar(null)}
+                  disabled={accionEnProgreso}
+                  className="border border-line bg-white px-3.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmSoftDelete}
+                  disabled={accionEnProgreso}
+                  className="border border-red-600 bg-red-600 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {accionEnProgreso ? 'Desactivando...' : 'Sí, desactivar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </DashboardShell>
   )
 }
-
-

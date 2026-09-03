@@ -1,21 +1,15 @@
 import { Module, ValidationPipe } from '@nestjs/common';
-import { APP_PIPE } from '@nestjs/core';
+import { APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { AcademiaModule } from './academia/academia.module';
-import { SorteoConfigModule } from './sorteo-config/sorteo-config.module';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { EstudiantesModule } from './estudiantes/estudiantes.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    AuthModule,
-    UsersModule,
-    AcademiaModule,
-    SorteoConfigModule,
-  ],
+  imports: [PrismaModule, AuthModule, EstudiantesModule],
   controllers: [AppController],
   providers: [
     AppService,
@@ -29,6 +23,14 @@ import { SorteoConfigModule } from './sorteo-config/sorteo-config.module';
           enableImplicitConversion: true,
         },
       }),
+    },
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })
