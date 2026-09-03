@@ -21,6 +21,9 @@ import {
 } from '../dto/estudiante.dto';
 import { EstudiantesService } from '../services/estudiantes.service';
 
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+
 @Controller('estudiantes')
 export class EstudiantesController {
   constructor(private readonly estudiantesService: EstudiantesService) {}
@@ -28,10 +31,9 @@ export class EstudiantesController {
   /**
    * Obtiene la lista de carreras disponibles con sus planes para filtrado.
    */
-  @Public()
   @Get('carreras')
-  async getCarreras() {
-    return this.estudiantesService.getCarreras();
+  async getCarreras(@CurrentUser() user?: AuthenticatedUser) {
+    return this.estudiantesService.getCarreras(user);
   }
 
   /**
@@ -57,10 +59,12 @@ export class EstudiantesController {
   /**
    * Consulta paginada de estudiantes con soporte de filtros por carrera, plan y búsqueda.
    */
-  @Public()
   @Get()
-  async findAll(@Query() query: FilterEstudiantesDto) {
-    return this.estudiantesService.findAll(query);
+  async findAll(
+    @Query() query: FilterEstudiantesDto,
+    @CurrentUser() user?: AuthenticatedUser,
+  ) {
+    return this.estudiantesService.findAll(query, user);
   }
 
   /**

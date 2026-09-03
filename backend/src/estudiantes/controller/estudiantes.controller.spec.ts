@@ -57,8 +57,9 @@ describe('EstudiantesController', () => {
       pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
     });
 
-    const res = await controller.findAll(query);
-    expect(service.findAll).toHaveBeenCalledWith(query);
+    const mockUser = { idUsuario: '1', correoInstitucional: 'test@uni.edu.bo', rol: 'COORDINACION' };
+    const res = await controller.findAll(query, mockUser);
+    expect(service.findAll).toHaveBeenCalledWith(query, mockUser);
     expect(res.pagination.page).toBe(1);
   });
 

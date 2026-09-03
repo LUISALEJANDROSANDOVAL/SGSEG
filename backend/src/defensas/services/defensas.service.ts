@@ -88,24 +88,17 @@ export class DefensasService {
     const diasParaDefensa = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (esFCT || esPsicologia) {
-      // Grupo A: Sorteo conjunto anticipado de Área y Caso
+      // Grupo A: FCT y Psicología (Sorteo conjunto anticipado de Área y Caso)
       let plazoDias = 7;
-      if (
-        carLower.includes('sistema') ||
-        carLower.includes('electrónica') ||
-        carLower.includes('electronica') ||
-        carLower.includes('redes') ||
-        carLower.includes('telecomunic') ||
-        carLower.includes('eléctrica') ||
-        carLower.includes('electrica')
-      ) {
-        plazoDias = 7;
-      } else if (carLower.includes('industrial') || carLower.includes('comercial')) {
+      if (esPsicologia) {
+        plazoDias = 10;
+      } else if (carLower.includes('industrial')) {
         plazoDias = 5;
       } else if (carLower.includes('mecánica') || carLower.includes('mecanica')) {
         plazoDias = 14;
-      } else if (esPsicologia) {
-        plazoDias = 10;
+      } else {
+        // Sistemas, Electrónica y Sistemas, Ingeniería Eléctrica, Redes y Telecomunicaciones
+        plazoDias = 7;
       }
 
       const fechaSorteo = new Date(defensaDate.getTime());

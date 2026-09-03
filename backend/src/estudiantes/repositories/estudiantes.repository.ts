@@ -10,11 +10,23 @@ export interface EstudianteQueryFilter {
   incluirEliminados?: boolean;
   skip?: number;
   take?: number;
+  allowedCarreraIds?: bigint[];
 }
 
 @Injectable()
 export class EstudiantesRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Obtiene los IDs de carreras asignadas al usuario.
+   */
+  async getUserCarreraIds(idUsuario: bigint): Promise<bigint[]> {
+    const uc = await this.prisma.usuarioCarrera.findMany({
+      where: { idUsuario },
+      select: { idCarrera: true },
+    });
+    return uc.map((r) => r.idCarrera);
+  }
 
   /**
    * Ejecuta una serie de operaciones dentro de una transacción aislada de Prisma.
@@ -32,8 +44,14 @@ export class EstudiantesRepository {
   /**
    * Obtiene todas las carreras con sus facultades y planes vigentes.
    */
-  async findCarrerasWithPlans() {
+  async findCarrerasWithPlans(allowedCarreraIds?: bigint[]) {
+    const where: Prisma.CarreraWhereInput = {};
+    if (allowedCarreraIds && allowedCarreraIds.length > 0) {
+      where.idCarrera = { in: allowedCarreraIds };
+    }
+
     return this.prisma.carrera.findMany({
+      where,
       include: {
         facultad: true,
         planesEstudio: {
@@ -239,7 +257,18 @@ export class EstudiantesRepository {
       where.idPlanEstudio = filter.idPlanEstudio;
     }
 
-    if (filter.idCarrera) {
+    if (filter.allowedCarreraIds && filter.allowedCarreraIds.length > 0) {
+      if (filter.idCarrera) {
+        if (filter.allowedCarreraIds.includes(filter.idCarrera)) {
+          where.planEstudio = { idCarrera: filter.idCarrera };
+        } else {
+          where.idEstudiante = BigInt(-1);
+          return where;
+        }
+      } else {
+        where.planEstudio = { idCarrera: { in: filter.allowedCarreraIds } };
+      }
+    } else if (filter.idCarrera) {
       where.planEstudio = {
         idCarrera: filter.idCarrera,
       };

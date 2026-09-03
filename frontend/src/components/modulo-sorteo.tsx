@@ -91,6 +91,14 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
     }, 2800)
   }
 
+  function extractErrorMessage(err: unknown, fallback: string): string {
+    const axiosMsg = (err as any)?.response?.data?.message
+    if (Array.isArray(axiosMsg)) return axiosMsg.join(', ')
+    if (typeof axiosMsg === 'string' && axiosMsg.trim().length > 0) return axiosMsg
+    if (err instanceof Error) return err.message
+    return fallback
+  }
+
   // 1. Sortear Área
   const handleSortearArea = async () => {
     if (!selectedDefensaId || girando) return
@@ -105,11 +113,10 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
         setAreaGanadora(resp.areaGanadora)
         setTokenActa(resp.tokenActa)
         setMensajeExito(resp.mensaje)
-        cargarDefensas()
+        await cargarDefensas()
         onSorteoCompletado?.()
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Error en sorteo de área'
-        setErrorMsg(msg)
+        setErrorMsg(extractErrorMessage(err, 'Error en sorteo de área'))
       }
     })
   }
@@ -128,11 +135,10 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
         setCasoGanador(resp.casoGanador)
         setTokenActa(resp.tokenActa)
         setMensajeExito(resp.mensaje)
-        cargarDefensas()
+        await cargarDefensas()
         onSorteoCompletado?.()
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Error en sorteo de caso'
-        setErrorMsg(msg)
+        setErrorMsg(extractErrorMessage(err, 'Error en sorteo de caso'))
       }
     })
   }
@@ -152,11 +158,10 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
         setCasoGanador(resp.casoGanador)
         setTokenActa(resp.tokenActa)
         setMensajeExito(resp.mensaje)
-        cargarDefensas()
+        await cargarDefensas()
         onSorteoCompletado?.()
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Error en sorteo conjunto'
-        setErrorMsg(msg)
+        setErrorMsg(extractErrorMessage(err, 'Error en sorteo conjunto'))
       }
     })
   }
@@ -370,7 +375,7 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
             </button>
           )}
 
-          {estadoDefensa === 'PROGRAMADA' && (
+          {estadoDefensa === 'PROGRAMADA' && !esFCToPsicologia && (
             <button
               type="button"
               disabled={girando || !selectedDefensaId}

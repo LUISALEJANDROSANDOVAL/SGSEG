@@ -16,6 +16,7 @@ import {
   NormalizedEstudiante,
 } from './estudiantes-normalizer.service';
 import { EstudiantesRepository } from '../repositories/estudiantes.repository';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
 @Injectable()
 export class EstudiantesService {
@@ -367,10 +368,20 @@ export class EstudiantesService {
   /**
    * Obtiene la lista de estudiantes filtrada por carrera, plan, estado y término de búsqueda.
    */
-  async findAll(filter: FilterEstudiantesDto) {
+  async findAll(filter: FilterEstudiantesDto, user?: AuthenticatedUser) {
     const page = Math.max(1, Number(filter.page ?? 1));
     const limit = Math.max(1, Math.min(100, Number(filter.limit ?? 20)));
     const skip = (page - 1) * limit;
+
+    let allowedCarreraIds: bigint[] | undefined;
+    if (user && user.rol === 'JEFE_CARRERA') {
+      allowedCarreraIds = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (allowedCarreraIds.length === 0) {
+        allowedCarreraIds = [BigInt(-1)];
+      }
+    }
 
     const idCarrera = filter.idCarrera ? BigInt(filter.idCarrera) : undefined;
     const idPlanEstudio = filter.idPlanEstudio
@@ -386,6 +397,7 @@ export class EstudiantesService {
         incluirEliminados: filter.incluirEliminados,
         skip,
         take: limit,
+        allowedCarreraIds,
       }),
       this.repository.count({
         idCarrera,
@@ -393,6 +405,7 @@ export class EstudiantesService {
         search: filter.search,
         estado: filter.estado,
         incluirEliminados: filter.incluirEliminados,
+        allowedCarreraIds,
       }),
     ]);
 
@@ -533,10 +546,16 @@ export class EstudiantesService {
   }
 
   /**
-   * Obtiene la lista de todas las carreras con sus facultades y planes vigentes.
+   * Obtiene la lista de carreras con sus facultades y planes vigentes (filtradas si es Jefe de Carrera).
    */
-  async getCarreras() {
-    const carreras = await this.repository.findCarrerasWithPlans();
+  async getCarreras(user?: AuthenticatedUser) {
+    let allowedCarreraIds: bigint[] | undefined;
+    if (user && user.rol === 'JEFE_CARRERA') {
+      allowedCarreraIds = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+    }
+    const carreras = await this.repository.findCarrerasWithPlans(allowedCarreraIds);
     return carreras.map((c) => this.serializeBigInt(c));
   }
 
