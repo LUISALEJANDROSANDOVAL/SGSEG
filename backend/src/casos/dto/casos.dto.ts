@@ -123,3 +123,66 @@ export class UpdateAreaDto {
   @IsString()
   estado?: string;
 }
+
+export class FilterVistaCasosDto {
+  @IsOptional()
+  @IsString()
+  idArea?: string;
+
+  @IsOptional()
+  @IsString()
+  estado?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 20;
+}
+
+export interface VistaCasoItemDto {
+  idCasoEstudio: string;
+  titulo: string;
+  contenido: string;
+  documentoAdjunto?: string | null;
+  estadoBase: string;
+  idArea: string;
+  nombreArea: string;
+  umbralDisponibilidad: number;
+  estadoArea: string;
+  idCarrera: string;
+  nombreCarrera: string;
+  idFacultad: string;
+  nombreFacultad: string;
+  totalUsos: number;
+  totalSorteos: number;
+  estadoEfectivo: string;
+  esDisponibleParaSorteo: boolean;
+}
+
+export interface VistaAreaItemDto {
+  idArea: string;
+  nombreArea: string;
+  umbralDisponibilidad: number;
+  estadoArea: string;
+  idCarrera: string;
+  nombreCarrera: string;
+  idFacultad: string;
+  nombreFacultad: string;
+  totalCasos: number;
+  casosDisponibles: number;
+  casosAgotados: number;
+  casosInactivos: number;
+  stockCritico: boolean;
+  mensajeAlerta: string;
+}

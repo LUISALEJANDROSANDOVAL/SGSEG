@@ -198,4 +198,80 @@ export const casosApi = {
     );
     return data;
   },
+
+  /**
+   * Obtiene la lista optimizada de casos para una carrera mediante vista SQL.
+   */
+  async getCasosPorCarreraVista(
+    idCarrera: string,
+    params: { idArea?: string; estado?: string; search?: string; page?: number; limit?: number } = {},
+  ): Promise<VistaCasosResponse> {
+    const cleanParams: Record<string, string | number> = {};
+    if (params.idArea && params.idArea !== 'ALL') cleanParams.idArea = params.idArea;
+    if (params.estado && params.estado !== 'ALL') cleanParams.estado = params.estado;
+    if (params.search && params.search.trim().length > 0) cleanParams.search = params.search.trim();
+    if (params.page) cleanParams.page = params.page;
+    if (params.limit) cleanParams.limit = params.limit;
+
+    const { data } = await api.get<VistaCasosResponse>(`/casos/vistas/carrera/${idCarrera}/casos`, {
+      params: cleanParams,
+    });
+    return data;
+  },
+
+  /**
+   * Obtiene el resumen consolidado de áreas y stock para una carrera mediante vista SQL.
+   */
+  async getAreasPorCarreraVista(idCarrera: string): Promise<VistaAreaItem[]> {
+    const { data } = await api.get<VistaAreaItem[]>(`/casos/vistas/carrera/${idCarrera}/areas`);
+    return data;
+  },
 };
+
+export interface VistaCasoItem {
+  idCasoEstudio: string;
+  titulo: string;
+  contenido: string;
+  documentoAdjunto?: string | null;
+  estadoBase: string;
+  idArea: string;
+  nombreArea: string;
+  umbralDisponibilidad: number;
+  estadoArea: string;
+  idCarrera: string;
+  nombreCarrera: string;
+  idFacultad: string;
+  nombreFacultad: string;
+  totalUsos: number;
+  totalSorteos: number;
+  estadoEfectivo: string;
+  esDisponibleParaSorteo: boolean;
+}
+
+export interface VistaCasosResponse {
+  items: VistaCasoItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface VistaAreaItem {
+  idArea: string;
+  nombreArea: string;
+  umbralDisponibilidad: number;
+  estadoArea: string;
+  idCarrera: string;
+  nombreCarrera: string;
+  idFacultad: string;
+  nombreFacultad: string;
+  totalCasos: number;
+  casosDisponibles: number;
+  casosAgotados: number;
+  casosInactivos: number;
+  stockCritico: boolean;
+  mensajeAlerta: string;
+}
+

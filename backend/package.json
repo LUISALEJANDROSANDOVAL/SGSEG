@@ -27,6 +27,8 @@
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:estudiantes": "ts-node prisma/seed-estudiantes.ts",
     "db:test:constraints": "ts-node prisma/validate-constraints.ts",
+    "db:views": "ts-node prisma/apply-views.ts",
+    "db:test:views": "ts-node prisma/validate-views.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

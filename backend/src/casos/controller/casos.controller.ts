@@ -18,6 +18,7 @@ import {
   CreateAreaDto,
   CreateCasoDto,
   FilterCasosDto,
+  FilterVistaCasosDto,
   ReactivarCasoEspecialDto,
   UpdateCasoDto,
 } from '../dto/casos.dto';
@@ -92,6 +93,43 @@ export class CasosController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.casosService.findAll(query, user);
+  }
+
+  /**
+   * Obtiene la lista optimizada de casos de estudio para una carrera mediante vista SQL.
+   */
+  @Get('vistas/carrera/:idCarrera/casos')
+  @Roles(
+    'JEFE_CARRERA',
+    'COORDINACION',
+    'SECRETARIADO',
+    'VICERRECTORADO',
+    'SUPER_ADMIN',
+  )
+  async getCasosPorCarreraVista(
+    @Param('idCarrera') idCarrera: string,
+    @Query() query: FilterVistaCasosDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.casosService.getCasosPorCarreraVista(idCarrera, query, user);
+  }
+
+  /**
+   * Obtiene el resumen consolidado de áreas y stock de casos para una carrera mediante vista SQL.
+   */
+  @Get('vistas/carrera/:idCarrera/areas')
+  @Roles(
+    'JEFE_CARRERA',
+    'COORDINACION',
+    'SECRETARIADO',
+    'VICERRECTORADO',
+    'SUPER_ADMIN',
+  )
+  async getAreasPorCarreraVista(
+    @Param('idCarrera') idCarrera: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.casosService.getAreasPorCarreraVista(idCarrera, user);
   }
 
   /**

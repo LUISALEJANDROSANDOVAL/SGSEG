@@ -497,4 +497,68 @@ export class CasosRepository {
       stockCritico,
     };
   }
+
+  /**
+   * Consulta la vista optimizada vista_casos_por_carrera para un idCarrera específico
+   * con soporte de filtros opcionales de idArea, estado, búsqueda y paginación.
+   */
+  async findCasosPorCarreraVista(
+    idCarrera: bigint,
+    options?: {
+      idArea?: bigint;
+      estado?: string;
+      search?: string;
+      skip?: number;
+      take?: number;
+    },
+  ): Promise<{ items: any[]; total: number }> {
+    const params: any[] = [idCarrera];
+    let whereSql = `WHERE id_carrera = $1`;
+
+    if (options?.idArea) {
+      params.push(options.idArea);
+      whereSql += ` AND id_area = $${params.length}`;
+    }
+
+    if (options?.estado && options.estado !== 'ALL') {
+      params.push(options.estado);
+      whereSql += ` AND (estado_efectivo = $${params.length} OR estado_base = $${params.length})`;
+    }
+
+    if (options?.search && options.search.trim().length > 0) {
+      params.push(`%${options.search.trim()}%`);
+      whereSql += ` AND (titulo ILIKE $${params.length} OR contenido ILIKE $${params.length})`;
+    }
+
+    const countQuery = `SELECT COUNT(*)::INT AS total FROM vista_casos_por_carrera ${whereSql};`;
+    const countResult: any = await this.prisma.$queryRawUnsafe(countQuery, ...params);
+    const total = Number(countResult[0]?.total ?? 0);
+
+    let dataQuery = `SELECT * FROM vista_casos_por_carrera ${whereSql} ORDER BY id_caso_estudio DESC`;
+    if (options?.take) {
+      params.push(options.take);
+      dataQuery += ` LIMIT $${params.length}`;
+    }
+    if (options?.skip) {
+      params.push(options.skip);
+      dataQuery += ` OFFSET $${params.length}`;
+    }
+
+    const rows: any[] = await this.prisma.$queryRawUnsafe(dataQuery, ...params);
+
+    return { items: rows, total };
+  }
+
+  /**
+   * Consulta la vista agregada vista_areas_por_carrera para un idCarrera específico.
+   */
+  async findAreasPorCarreraVista(idCarrera: bigint): Promise<any[]> {
+    const query = `
+      SELECT * FROM vista_areas_por_carrera 
+      WHERE id_carrera = $1 
+      ORDER BY nombre_area ASC;
+    `;
+    return this.prisma.$queryRawUnsafe(query, idCarrera);
+  }
 }
+

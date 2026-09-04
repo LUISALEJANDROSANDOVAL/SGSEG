@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import {
   AlertOctagon,
+  AlertTriangle,
+  Building2,
   CheckCircle2,
   Eye,
   Filter,
+  FolderKanban,
+  Layers,
   Pencil,
   Plus,
   Power,
@@ -20,7 +24,10 @@ import type {
   AreaAcademica,
   CasoEstudio,
   MetricasCasos,
+  VistaAreaItem,
 } from '@/lib/casos.api'
+import { estudiantesApi } from '@/lib/estudiantes.api'
+import type { Carrera } from '@/lib/estudiantes.api'
 
 export default function PaginaCasos() {
 
@@ -28,8 +35,12 @@ export default function PaginaCasos() {
   const { user } = useAuth()
 
   // Estados de datos
+  const [carreras, setCarreras] = useState<Carrera[]>([])
+  const [selectedCarrera, setSelectedCarrera] = useState<string>('ALL')
   const [casos, setCasos] = useState<CasoEstudio[]>([])
   const [areas, setAreas] = useState<AreaAcademica[]>([])
+  const [vistaAreasCarrera, setVistaAreasCarrera] = useState<VistaAreaItem[]>([])
+  const [tabActiva, setTabActiva] = useState<'casos' | 'areas'>('casos')
   const [metricas, setMetricas] = useState<MetricasCasos | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [actionLoading, setActionLoading] = useState<boolean>(false)
@@ -70,29 +81,98 @@ export default function PaginaCasos() {
 
   // Formulario nueva área
   const [formArea, setFormArea] = useState({
+    idCarrera: '',
     nombre: '',
     umbralDisponibilidad: 2,
   })
 
-  // Carga inicial y recarga
+  // Inicialización de carreras según el rol del usuario
+  useEffect(() => {
+    const initCarreras = async () => {
+      try {
+        const lista = await estudiantesApi.getCarreras()
+        setCarreras(lista)
+
+        if (user?.rolCode === 'JEFE_CARRERA') {
+          const userCarreraId = user.carreraId || (user.carreras && user.carreras[0]?.idCarrera)
+          if (userCarreraId) {
+            setSelectedCarrera(String(userCarreraId))
+          } else if (lista.length > 0) {
+            setSelectedCarrera(String(lista[0].idCarrera))
+          }
+        }
+      } catch (err) {
+        console.error('Error al inicializar lista de carreras', err)
+      }
+    }
+    initCarreras()
+  }, [user])
+
+  // Carga inicial y recarga optimizada
   const cargarDatos = async () => {
     setLoading(true)
     try {
-      const [metricasData, areasData, casosData] = await Promise.all([
-        casosApi.getMetricas(),
-        casosApi.getAreas(),
-        casosApi.getCasos({
-          page,
-          limit: 10,
-          search: searchTerm,
-          idArea: selectedArea,
-          estado: selectedEstado,
-        }),
+      const idCarreraParam = selectedCarrera !== 'ALL' ? selectedCarrera : undefined
+
+      const [metricasData, areasData, casosData, areasVistaData] = await Promise.all([
+        casosApi.getMetricas(idCarreraParam),
+        casosApi.getAreas(idCarreraParam),
+        idCarreraParam
+          ? casosApi.getCasosPorCarreraVista(idCarreraParam, {
+              page,
+              limit: 10,
+              search: searchTerm,
+              idArea: selectedArea,
+              estado: selectedEstado,
+            })
+          : casosApi.getCasos({
+              page,
+              limit: 10,
+              search: searchTerm,
+              idCarrera: idCarreraParam,
+              idArea: selectedArea,
+              estado: selectedEstado,
+            }),
+        idCarreraParam ? casosApi.getAreasPorCarreraVista(idCarreraParam) : Promise.resolve([]),
       ])
 
       setMetricas(metricasData)
       setAreas(areasData)
-      setCasos(casosData.items)
+      setVistaAreasCarrera(areasVistaData)
+
+      // Unificar estructura de casos para la tabla
+      const itemsMapeados: CasoEstudio[] = casosData.items.map((item: any) => ({
+        idCasoEstudio: String(item.idCasoEstudio),
+        idArea: String(item.idArea),
+        titulo: item.titulo,
+        contenido: item.contenido,
+        documentoAdjunto: item.documentoAdjunto,
+        estado: item.estadoBase ?? item.estado,
+        estadoEfectivo: item.estadoEfectivo ?? item.estado,
+        usos: item.totalUsos ?? item.usos ?? 0,
+        umbral: item.umbralDisponibilidad ?? item.umbral ?? 2,
+        area: item.area || {
+          idArea: String(item.idArea),
+          idCarrera: String(item.idCarrera),
+          nombre: item.nombreArea || '',
+          umbralDisponibilidad: Number(item.umbralDisponibilidad ?? 2),
+          estado: item.estadoArea || 'ACTIVO',
+          carrera: {
+            idCarrera: String(item.idCarrera),
+            nombre: item.nombreCarrera || '',
+            facultad: {
+              idFacultad: String(item.idFacultad || '1'),
+              nombre: item.nombreFacultad || '',
+            },
+          },
+        },
+        _count: item._count || {
+          defensas: item.totalUsos ?? 0,
+          sorteosCaso: item.totalSorteos ?? 0,
+        },
+      }))
+
+      setCasos(itemsMapeados)
       setTotalPages(casosData.pagination.totalPages)
       setTotalCasosCount(casosData.pagination.total)
 
@@ -110,7 +190,7 @@ export default function PaginaCasos() {
 
   useEffect(() => {
     cargarDatos()
-  }, [page, selectedArea, selectedEstado])
+  }, [page, selectedArea, selectedEstado, selectedCarrera])
 
   // Búsqueda con debounce o click
   const handleBuscar = (e: React.FormEvent) => {
@@ -202,8 +282,12 @@ export default function PaginaCasos() {
     e.preventDefault()
     if (!formArea.nombre.trim()) return
 
-    // Tomar la primera carrera disponible de las áreas o '1'
-    const idCarreraDefault = areas[0]?.idCarrera || '1'
+    // Tomar la carrera del formulario, la carrera seleccionada en filtro o la primera disponible
+    const idCarreraDefault =
+      formArea.idCarrera ||
+      (selectedCarrera !== 'ALL'
+        ? selectedCarrera
+        : areas[0]?.idCarrera || (user?.carreras && user.carreras[0]?.idCarrera) || '1')
 
     setActionLoading(true)
     try {
@@ -215,7 +299,7 @@ export default function PaginaCasos() {
 
       setFeedback({ tipo: 'exito', mensaje: `Área "${formArea.nombre}" creada exitosamente.` })
       setModalNuevaArea(false)
-      setFormArea({ nombre: '', umbralDisponibilidad: 2 })
+      setFormArea({ idCarrera: '', nombre: '', umbralDisponibilidad: 2 })
       await cargarDatos()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al crear área académica'
@@ -386,6 +470,38 @@ export default function PaginaCasos() {
               />
             </div>
 
+            {/* Filtro de Carrera */}
+            <div className="flex items-center gap-1.5">
+              <Building2 className="size-3.5 text-neutral-400" />
+              {user?.rolCode === 'JEFE_CARRERA' ? (
+                <div className="border border-line bg-surface px-3 py-2 text-xs font-semibold text-neutral-800 flex items-center gap-1.5">
+                  <span className="text-[10px] text-neutral-500 uppercase tracking-wider">Carrera:</span>
+                  <span>
+                    {carreras.find((c) => String(c.idCarrera) === selectedCarrera)?.nombre ||
+                      user.carreras?.[0]?.nombre ||
+                      'Carrera Asignada'}
+                  </span>
+                </div>
+              ) : (
+                <select
+                  value={selectedCarrera}
+                  onChange={(e) => {
+                    setSelectedCarrera(e.target.value)
+                    setSelectedArea('ALL')
+                    setPage(1)
+                  }}
+                  className="border border-line bg-surface px-3 py-2 text-xs font-medium outline-none focus:border-neutral-400"
+                >
+                  <option value="ALL">Todas las Carreras</option>
+                  {carreras.map((c) => (
+                    <option key={c.idCarrera} value={c.idCarrera}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <Filter className="size-3.5 text-neutral-400" />
               <select
@@ -442,8 +558,44 @@ export default function PaginaCasos() {
           </form>
         </section>
 
+        {/* Pestañas de Vista: Inventario de Casos vs Áreas y Stock */}
+        <div className="flex items-center gap-2 border-b border-line pb-px">
+          <button
+            type="button"
+            onClick={() => setTabActiva('casos')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
+              tabActiva === 'casos'
+                ? 'border-crimson text-crimson font-semibold bg-white'
+                : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
+            }`}
+          >
+            <FolderKanban className="size-3.5" />
+            <span>Inventario de Casos</span>
+            <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-mono text-neutral-600">
+              {totalCasosCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTabActiva('areas')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
+              tabActiva === 'areas'
+                ? 'border-crimson text-crimson font-semibold bg-white'
+                : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
+            }`}
+          >
+            <Layers className="size-3.5" />
+            <span>Áreas Académicas y Stock</span>
+            <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-mono text-neutral-600">
+              {areas.length}
+            </span>
+          </button>
+        </div>
+
         {/* Tabla de Inventario de Casos */}
-        <section className="border border-line bg-white">
+        {tabActiva === 'casos' && (
+          <section className="border border-line bg-white">
           <header className="flex items-center justify-between border-b border-line px-5 py-4">
             <div>
               <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
@@ -629,6 +781,130 @@ export default function PaginaCasos() {
             </footer>
           )}
         </section>
+        )}
+
+        {/* Tabla Optimizada de Áreas Académicas y Stock (Pestaña Áreas) */}
+        {tabActiva === 'areas' && (
+          <section className="border border-line bg-white">
+            <header className="flex items-center justify-between border-b border-line px-5 py-4">
+              <div>
+                <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
+                  {selectedCarrera !== 'ALL'
+                    ? `Áreas Académicas y Stock de ${carreras.find((c) => String(c.idCarrera) === selectedCarrera)?.nombre || 'la Carrera'}`
+                    : 'Áreas Académicas Registradas'}
+                </h2>
+                <p className="text-xs text-neutral-500">
+                  Monitoreo consolidado de disponibilidad, regla de 2 usos y alertas preventivas por área académica.
+                </p>
+              </div>
+              <button
+                onClick={cargarDatos}
+                className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-800"
+                title="Recargar áreas"
+              >
+                <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+                Actualizar
+              </button>
+            </header>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="border-b border-line bg-surface">
+                  <tr className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
+                    <th scope="col" className="px-5 py-3 font-medium">Código</th>
+                    <th scope="col" className="px-5 py-3 font-medium">Área Académica</th>
+                    <th scope="col" className="px-5 py-3 font-medium">Carrera</th>
+                    <th scope="col" className="px-5 py-3 font-medium text-center">Total Casos</th>
+                    <th scope="col" className="px-5 py-3 font-medium text-center">Disponibles</th>
+                    <th scope="col" className="px-5 py-3 font-medium text-center">Agotados</th>
+                    <th scope="col" className="px-5 py-3 font-medium text-center">Umbral Requerido</th>
+                    <th scope="col" className="px-5 py-3 font-medium">Estado de Stock</th>
+                    <th scope="col" className="px-5 py-3 font-medium text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={9} className="px-5 py-8 text-center text-xs text-neutral-400">
+                        Cargando áreas académicas...
+                      </td>
+                    </tr>
+                  ) : (vistaAreasCarrera.length > 0 ? vistaAreasCarrera : areas).length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-5 py-8 text-center text-xs text-neutral-400">
+                        No se encontraron áreas académicas registradas para los filtros seleccionados.
+                      </td>
+                    </tr>
+                  ) : (
+                    (vistaAreasCarrera.length > 0 ? vistaAreasCarrera : areas).map((areaItem: any) => {
+                      const idArea = String(areaItem.idArea)
+                      const idCodigo = `AREA-${idArea.padStart(3, '0')}`
+                      const nombreArea = areaItem.nombreArea || areaItem.nombre
+                      const carreraNombre = areaItem.nombreCarrera || areaItem.carrera?.nombre || '—'
+                      const totalCasos = areaItem.totalCasos ?? areaItem._count?.casos ?? 0
+                      const disponibles = areaItem.casosDisponibles ?? areaItem._count?.casos ?? 0
+                      const agotados = areaItem.casosAgotados ?? 0
+                      const umbral = areaItem.umbralDisponibilidad ?? 2
+                      const esCritico = areaItem.stockCritico ?? (disponibles < umbral)
+
+                      return (
+                        <tr key={idArea} className="hover:bg-neutral-50/70 transition-colors">
+                          <td className="px-5 py-3.5 font-mono text-xs text-neutral-500">
+                            {idCodigo}
+                          </td>
+                          <td className="px-5 py-3.5 font-medium text-xs text-neutral-900">
+                            {nombreArea}
+                          </td>
+                          <td className="px-5 py-3.5 text-xs text-neutral-600">
+                            {carreraNombre}
+                          </td>
+                          <td className="px-5 py-3.5 text-center font-mono text-xs text-neutral-800">
+                            {totalCasos}
+                          </td>
+                          <td className="px-5 py-3.5 text-center font-mono text-xs font-semibold text-emerald-600">
+                            {disponibles}
+                          </td>
+                          <td className="px-5 py-3.5 text-center font-mono text-xs font-medium text-crimson">
+                            {agotados}
+                          </td>
+                          <td className="px-5 py-3.5 text-center font-mono text-xs text-neutral-600">
+                            {umbral}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            {esCritico ? (
+                              <span className="inline-flex items-center gap-1 border border-crimson/30 bg-crimson/10 px-2 py-0.5 text-[11px] font-medium text-crimson">
+                                <AlertTriangle className="size-3" />
+                                Stock Crítico ({disponibles}/{umbral})
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                                <CheckCircle2 className="size-3" />
+                                Stock Adecuado
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedArea(idArea)
+                                setTabActiva('casos')
+                                setPage(1)
+                              }}
+                              className="border border-line bg-white px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                            >
+                              Ver Casos
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </div>
 
       {/* ── MODAL: REGISTRAR NUEVO CASO ── */}
@@ -994,6 +1270,27 @@ export default function PaginaCasos() {
             </header>
 
             <form onSubmit={handleCrearArea} className="p-6 flex flex-col gap-4">
+              {selectedCarrera === 'ALL' && (
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1">
+                    Carrera Académica *
+                  </label>
+                  <select
+                    required
+                    value={formArea.idCarrera}
+                    onChange={(e) => setFormArea({ ...formArea, idCarrera: e.target.value })}
+                    className="w-full border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400"
+                  >
+                    <option value="">Seleccione una carrera...</option>
+                    {carreras.map((c) => (
+                      <option key={c.idCarrera} value={c.idCarrera}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-medium text-neutral-700 mb-1">
                   Nombre del Área del Conocimiento *

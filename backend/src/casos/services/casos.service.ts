@@ -9,6 +9,7 @@ import {
   CreateAreaDto,
   CreateCasoDto,
   FilterCasosDto,
+  FilterVistaCasosDto,
   ReactivarCasoEspecialDto,
   UpdateCasoDto,
 } from '../dto/casos.dto';
@@ -346,6 +347,105 @@ export class CasosService {
     const allowed = await this.resolveAllowedCarreras(user);
     const carreraId = idCarrera ? BigInt(idCarrera) : undefined;
     return this.repository.getMetricas(carreraId, allowed);
+  }
+
+  /**
+   * Obtiene los casos de estudio optimizados pertenecientes a una carrera mediante vista SQL.
+   */
+  async getCasosPorCarreraVista(
+    idCarreraStr: string,
+    filter: FilterVistaCasosDto,
+    user: AuthenticatedUser,
+  ) {
+    const idCarrera = BigInt(idCarreraStr);
+
+    if (user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.resolveAllowedCarreras(user);
+      if (!allowed?.includes(idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para visualizar casos de una carrera distinta a la tuya.',
+        );
+      }
+    }
+
+    const page = Math.max(1, Number(filter.page ?? 1));
+    const limit = Math.max(1, Math.min(100, Number(filter.limit ?? 20)));
+    const skip = (page - 1) * limit;
+
+    const idArea = filter.idArea && filter.idArea !== 'ALL' ? BigInt(filter.idArea) : undefined;
+
+    const { items, total } = await this.repository.findCasosPorCarreraVista(idCarrera, {
+      idArea,
+      estado: filter.estado,
+      search: filter.search,
+      skip,
+      take: limit,
+    });
+
+    const mappedItems = items.map((row) => ({
+      idCasoEstudio: String(row.id_caso_estudio),
+      titulo: row.titulo,
+      contenido: row.contenido,
+      documentoAdjunto: row.documento_adjunto,
+      estadoBase: row.estado_base,
+      idArea: String(row.id_area),
+      nombreArea: row.nombre_area,
+      umbralDisponibilidad: Number(row.umbral_disponibilidad),
+      estadoArea: row.estado_area,
+      idCarrera: String(row.id_carrera),
+      nombreCarrera: row.nombre_carrera,
+      idFacultad: String(row.id_facultad),
+      nombreFacultad: row.nombre_facultad,
+      totalUsos: Number(row.total_usos),
+      totalSorteos: Number(row.total_sorteos),
+      estadoEfectivo: row.estado_efectivo,
+      esDisponibleParaSorteo: Boolean(row.es_disponible_para_sorteo),
+    }));
+
+    return {
+      items: mappedItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Obtiene la agregación optimizada de áreas y su stock pertenecientes a una carrera mediante vista SQL.
+   */
+  async getAreasPorCarreraVista(idCarreraStr: string, user: AuthenticatedUser) {
+    const idCarrera = BigInt(idCarreraStr);
+
+    if (user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.resolveAllowedCarreras(user);
+      if (!allowed?.includes(idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para visualizar áreas de una carrera distinta a la tuya.',
+        );
+      }
+    }
+
+    const rows = await this.repository.findAreasPorCarreraVista(idCarrera);
+
+    return rows.map((row) => ({
+      idArea: String(row.id_area),
+      nombreArea: row.nombre_area,
+      umbralDisponibilidad: Number(row.umbral_disponibilidad),
+      estadoArea: row.estado_area,
+      idCarrera: String(row.id_carrera),
+      nombreCarrera: row.nombre_carrera,
+      idFacultad: String(row.id_facultad),
+      nombreFacultad: row.nombre_facultad,
+      totalCasos: Number(row.total_casos),
+      casosDisponibles: Number(row.casos_disponibles),
+      casosAgotados: Number(row.casos_agotados),
+      casosInactivos: Number(row.casos_inactivos),
+      stockCritico: Boolean(row.stock_critico),
+      mensajeAlerta: row.mensaje_alerta,
+    }));
   }
 
   /**

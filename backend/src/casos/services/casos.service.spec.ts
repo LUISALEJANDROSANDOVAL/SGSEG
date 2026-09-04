@@ -33,6 +33,8 @@ describe('CasosService', () => {
       findAreas: jest.fn(),
       createArea: jest.fn(),
       getMetricas: jest.fn(),
+      findCasosPorCarreraVista: jest.fn(),
+      findAreasPorCarreraVista: jest.fn(),
     } as unknown as jest.Mocked<CasosRepository>;
 
     service = new CasosService(repository);
@@ -238,4 +240,82 @@ describe('CasosService', () => {
       NotFoundException,
     );
   });
+
+  describe('Vistas Optimizadas por idCarrera', () => {
+    it('debe permitir a Coordinación consultar casos mediante vista para cualquier carrera', async () => {
+      repository.findCasosPorCarreraVista.mockResolvedValue({
+        items: [
+          {
+            id_caso_estudio: BigInt(1),
+            titulo: 'Caso Vista 1',
+            contenido: 'Contenido Vista',
+            documento_adjunto: null,
+            estado_base: 'DISPONIBLE',
+            id_area: BigInt(267),
+            nombre_area: 'Desarrollo de Software',
+            umbral_disponibilidad: 2,
+            estado_area: 'ACTIVO',
+            id_carrera: BigInt(98),
+            nombre_carrera: 'Sistemas',
+            id_facultad: BigInt(45),
+            nombre_facultad: 'Tecnología',
+            total_usos: 0,
+            total_sorteos: 0,
+            estado_efectivo: 'DISPONIBLE',
+            es_disponible_para_sorteo: true,
+          },
+        ],
+        total: 1,
+      });
+
+      const res = await service.getCasosPorCarreraVista('98', {}, mockCoordUser);
+
+      expect(res.items).toHaveLength(1);
+      expect(res.items[0].idCasoEstudio).toBe('1');
+      expect(res.items[0].nombreCarrera).toBe('Sistemas');
+      expect(res.items[0].esDisponibleParaSorteo).toBe(true);
+      expect(repository.findCasosPorCarreraVista).toHaveBeenCalledWith(
+        BigInt(98),
+        expect.objectContaining({ skip: 0, take: 20 }),
+      );
+    });
+
+    it('debe denegar a un Jefe de Carrera consultar casos de una carrera distinta a la asignada', async () => {
+      repository.getUserCarreraIds.mockResolvedValue([BigInt(85)]); // Solo asignado a Carrera 85
+
+      await expect(
+        service.getCasosPorCarreraVista('98', {}, mockJefeUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('debe retornar áreas estructuradas con stock crítico mediante vista_areas_por_carrera', async () => {
+      repository.findAreasPorCarreraVista.mockResolvedValue([
+        {
+          id_area: BigInt(267),
+          nombre_area: 'Desarrollo de Software',
+          umbral_disponibilidad: 2,
+          estado_area: 'ACTIVO',
+          id_carrera: BigInt(98),
+          nombre_carrera: 'Sistemas',
+          id_facultad: BigInt(45),
+          nombre_facultad: 'Tecnología',
+          total_casos: 1,
+          casos_disponibles: 1,
+          casos_agotados: 0,
+          casos_inactivos: 0,
+          stock_critico: true,
+          mensaje_alerta: 'Alerta: Stock crítico',
+        },
+      ]);
+
+      const res = await service.getAreasPorCarreraVista('98', mockCoordUser);
+
+      expect(res).toHaveLength(1);
+      expect(res[0].idArea).toBe('267');
+      expect(res[0].stockCritico).toBe(true);
+      expect(res[0].mensajeAlerta).toBe('Alerta: Stock crítico');
+      expect(repository.findAreasPorCarreraVista).toHaveBeenCalledWith(BigInt(98));
+    });
+  });
 });
+
