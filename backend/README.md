@@ -31,6 +31,33 @@
 $ npm install
 ```
 
+## Database setup
+
+From the repository root, start PostgreSQL with Docker:
+
+```bash
+docker compose up -d postgres
+```
+
+Create `backend/.env` from `backend/.env.example`, then create the schema and Prisma client:
+
+```bash
+cd backend
+copy .env.example .env
+npm run db:migrate -- --name init
+npm run db:generate
+```
+
+The database is available at `localhost:5437` with database `sgseg`, user `sgseg`, and password `sgseg`. Each developer gets an isolated local database through the Docker volume.
+
+Useful commands:
+
+```bash
+npm run db:up
+npm run db:down
+npm run db:studio
+```
+
 ## Compile and run the project
 
 ```bash

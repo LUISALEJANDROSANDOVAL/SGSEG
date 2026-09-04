@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sgseg-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sgseg
+      POSTGRES_USER: sgseg
+      POSTGRES_PASSWORD: sgseg
+    ports:
+      - "5437:5432"
+    volumes:
+      - sgseg-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgseg -d sgseg"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  sgseg-postgres-data:
