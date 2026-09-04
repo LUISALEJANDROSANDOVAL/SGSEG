@@ -100,10 +100,21 @@ describe('Módulo Casos (e2e)', () => {
   });
 
   it('5. PATCH /casos/:id/reactivar-especial - Debe reactivar el caso por resolución', async () => {
-    // Como el endpoint pide JEFE_CARRERA, creamos un token de jefe carrera
+    // Temporalmente asignar rol JEFE_CARRERA a coord@uni.edu.bo para que el token lo incluya
+    const jefeRole = await prisma.rol.findFirst({ where: { nombre: 'JEFE_CARRERA' } });
+    const originalUser = await prisma.usuario.findFirst({ where: { correoInstitucional: 'coord@uni.edu.bo' } });
+    await prisma.usuario.update({
+      where: { correoInstitucional: 'coord@uni.edu.bo' },
+      data: { idRol: jefeRole?.idRol }
+    });
+    
+    await prisma.usuarioCarrera.create({
+      data: { idUsuario: originalUser!.idUsuario, idCarrera: BigInt(idCarrera) }
+    });
+
     const resAuthJefe = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ correoInstitucional: 'jefe.fct@uni.edu.bo', password: 'Admin123!' })
+      .send({ correoInstitucional: 'coord@uni.edu.bo', password: 'Admin123!' })
       .expect(200);
     const jefeToken = (resAuthJefe.body as { accessToken: string }).accessToken;
 
@@ -116,6 +127,44 @@ describe('Módulo Casos (e2e)', () => {
       .expect(200);
     
     expect(res.body.caso.estadoEfectivo).toEqual('REACTIVADO_ESPECIAL');
-    expect(res.body.caso.historialReactivaciones).toBeUndefined(); // Assuming it's audited elsewhere now
+    
+    // Validación TK-26: Registro inmutable de auditoría en la base de datos
+    const auditoria = await prisma.registroAuditoria.findFirst({
+      where: {
+        idCasoEstudio: BigInt(idCaso),
+        tipoOperacion: 'REACTIVACION_CASO_ESPECIAL'
+      }
+    });
+
+    expect(auditoria).toBeDefined();
+    expect(auditoria?.motivo).toEqual('Resolución decanal de prueba');
+    const valorNuevo = auditoria?.valorNuevo as { estado: string };
+    expect(valorNuevo?.estado).toEqual('REACTIVADO_ESPECIAL');
+
+    // Restaurar el rol original y remover acceso a carrera para limpiar DB
+    await prisma.usuario.update({
+      where: { correoInstitucional: 'coord@uni.edu.bo' },
+      data: { idRol: originalUser?.idRol }
+    });
+    await prisma.usuarioCarrera.deleteMany({
+      where: { idUsuario: originalUser!.idUsuario, idCarrera: BigInt(idCarrera) }
+    });
+  });
+
+  it('6. POST /casos - Debe rechazar (400) inyección de código duplicado (idCasoEstudio)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/casos')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        idCasoEstudio: Number(idCaso), // Intento de duplicación de código
+        idArea: Number(idArea),
+        titulo: 'Intento de duplicación',
+        contenido: 'Contenido de prueba para inyección'
+      })
+      .expect(400);
+
+    expect(res.body.message).toEqual(
+      expect.arrayContaining(['property idCasoEstudio should not exist'])
+    );
   });
 });

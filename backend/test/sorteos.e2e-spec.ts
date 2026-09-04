@@ -103,11 +103,34 @@ describe('Módulo Sorteos (e2e)', () => {
 
   it('3. GET /sorteos - Debe obtener el historial de sorteos', async () => {
     const res = await request(app.getHttpServer())
-      .get(`/sorteos?search=${idEstudiante}`)
+      .get(`/sorteos?search=Estudiante Sorteo`)
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     
     expect(res.body.items).toBeDefined();
     expect(res.body.items.length).toBeGreaterThanOrEqual(2); // Al menos el de área y el de caso
+  });
+
+  it('4. POST /sorteos/caso - Debe impedir que un caso con 2 usos (AGOTADO) sea sorteado', async () => {
+    // 1. Simular que el caso de estudio alcanzó su límite de 2 usos (AGOTADO)
+    await prisma.casoEstudio.update({
+      where: { idCasoEstudio: Number(idCasoSorteado) },
+      data: { estado: 'AGOTADO' }
+    });
+
+    // 2. Liberar la defensa actual para permitir un nuevo sorteo de caso
+    await prisma.defensaExamenGrado.update({
+      where: { idDefensa: Number(idDefensa) },
+      data: { idCasoUtilizado: null }
+    });
+
+    // 3. Intentar sortear un caso nuevamente. Al ser el único caso en el área y estar agotado, debe fallar.
+    const res = await request(app.getHttpServer())
+      .post('/sorteos/caso')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ idDefensa: idDefensa })
+      .expect(400);
+
+    expect(res.body.message).toContain('Stock crítico agotado');
   });
 });
