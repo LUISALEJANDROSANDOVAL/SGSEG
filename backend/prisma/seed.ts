@@ -13,6 +13,8 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+import { seedEstudiantes } from './seed-estudiantes';
+
 async function main() {
   const roles = [
     { nombre: 'COORDINACION', descripcion: 'Coordinación académica' },
@@ -61,6 +63,9 @@ async function main() {
   });
 
   console.log('Seed de autenticación ejecutado correctamente');
+
+  // Ejecutar población masiva de estudiantes y planes de estudio
+  await seedEstudiantes();
 }
 
 main()
