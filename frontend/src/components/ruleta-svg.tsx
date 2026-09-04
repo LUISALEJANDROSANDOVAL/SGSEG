@@ -54,9 +54,12 @@ function describirArco(
   startAngle: number,
   endAngle: number,
 ) {
-  const start = polarToCartesian(x, y, radius, endAngle);
+  // Ajuste infinitesimal para garantizar estabilidad de renderizado en semicírculos exactos
+  const delta = endAngle - startAngle;
+  const safeEndAngle = delta >= 180 ? endAngle - 0.02 : endAngle;
+  const start = polarToCartesian(x, y, radius, safeEndAngle);
   const end = polarToCartesian(x, y, radius, startAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+  const largeArcFlag = delta > 180 ? '1' : '0';
 
   return [
     'M', x, y,
@@ -97,7 +100,11 @@ export const RuletaSvg: React.FC<RuletaSvgProps> = ({
       >
         <svg
           viewBox="0 0 400 400"
-          className="size-full rounded-full transition-transform duration-[3200ms] cubic-bezier(0.12, 0.8, 0.2, 1)"
+          className={`size-full rounded-full ${
+            girando
+              ? 'transition-transform duration-[3200ms] cubic-bezier(0.12, 0.8, 0.2, 1)'
+              : 'transition-transform duration-700 ease-out'
+          }`}
           style={{
             transform: `rotate(${anguloRotacion}deg)`,
             filter: girando ? 'blur(0.5px)' : 'none',
@@ -121,8 +128,8 @@ export const RuletaSvg: React.FC<RuletaSvgProps> = ({
             const textPos = polarToCartesian(cx, cy, radio * 0.62, midAngle);
             const textRotation = midAngle > 90 && midAngle < 270 ? midAngle + 180 : midAngle;
 
-            // Truncar label si es muy largo para que quepa en el sector
-            const maxChars = numSectores > 5 ? 18 : 26;
+            // Truncar label si es muy largo según la cantidad de sectores
+            const maxChars = numSectores > 6 ? 16 : numSectores > 4 ? 22 : numSectores > 2 ? 28 : 36;
             const labelTexto =
               sector.label.length > maxChars
                 ? `${sector.label.slice(0, maxChars - 2)}...`
@@ -145,7 +152,7 @@ export const RuletaSvg: React.FC<RuletaSvgProps> = ({
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill="#FFFFFF"
-                    fontSize={numSectores > 6 ? '9.5' : numSectores > 4 ? '11' : '13'}
+                    fontSize={numSectores > 6 ? '9' : numSectores > 4 ? '10.5' : numSectores > 2 ? '12' : '13'}
                     fontWeight="700"
                     className="tracking-tight select-none pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                   >

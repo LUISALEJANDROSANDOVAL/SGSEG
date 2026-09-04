@@ -12,7 +12,6 @@ import {
   ShieldAlert,
   ShieldCheck,
   Shuffle,
-  Sparkles,
 } from 'lucide-react'
 import { useAuth, normalizarRol } from '@/context/AuthContext'
 import { defensasApi, type Defensa } from '@/lib/defensas.api'
@@ -35,28 +34,29 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
   const userRolCode = user ? normalizarRol(user.rol).code : 'COORDINACION'
   const esVicerrectorado = userRolCode === 'VICERRECTORADO'
 
-  // Lista de defensas pendientes
+  // Lista de defensas pendientes de sorteo
   const [defensasPendientes, setDefensasPendientes] = useState<Defensa[]>([])
   const [selectedDefensaId, setSelectedDefensaId] = useState<string>('')
   const [loadingDefensas, setLoadingDefensas] = useState<boolean>(true)
 
-  // Presencia del estudiante
+  // Presencia del estudiante reglamentaria
   const [estudiantePresente, setEstudiantePresente] = useState<boolean>(true)
   const [motivoInasistencia, setMotivoInasistencia] = useState<string>('')
 
-  // Control de Fases del Sorteo
+  // Control de Fases del Sorteo (Fase 1: Área -> Fase 2: Caso -> Finalizado)
   const [faseActual, setFaseActual] = useState<FaseSorteo>('FASE_1_AREA')
   const [areasCarrera, setAreasCarrera] = useState<AreaAcademica[]>([])
   const [casosArea, setCasosArea] = useState<CasoEstudio[]>([])
   const [loadingOpciones, setLoadingOpciones] = useState<boolean>(false)
+  const [transicionandoFase, setTransicionandoFase] = useState<boolean>(false)
 
-  // Animación y giro de la Ruleta
+  // Animación y giro angular de la Ruleta
   const [girando, setGirando] = useState<boolean>(false)
   const [angulo, setAngulo] = useState<number>(0)
   const anguloRef = useRef<number>(0)
   anguloRef.current = angulo
 
-  // Resultados
+  // Resultados del sorteo criptográfico
   const [areaGanadora, setAreaGanadora] = useState<AreaResultado | null>(null)
   const [casoGanador, setCasoGanador] = useState<CasoResultado | null>(null)
   const [tokenActa, setTokenActa] = useState<string | null>(null)
@@ -99,7 +99,6 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
   }, [])
 
   const defensaActual = defensasPendientes.find((d) => d.idDefensa === selectedDefensaId)
-  const esFCToPsicologia = defensaActual?.reglasSorteo?.modalidad === 'ANTICIPADO_CONJUNTO'
   const estadoDefensa = defensaActual?.estadoDefensa
 
   // Cargar áreas o casos según la defensa seleccionada y su estado
@@ -110,6 +109,11 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
       return
     }
 
+    // Si ya estamos en transición interna hacia la Fase 2, no sobreescribir el estado
+    if (faseActual === 'FASE_2_CASO' && areaGanadora) {
+      return
+    }
+
     const idCarrera = defensaActual.instancia.proceso.estudiante.planEstudio.carrera.idCarrera
 
     async function cargarContextoDefensa() {
@@ -117,7 +121,7 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
       setErrorMsg(null)
       try {
         if (defensaActual?.estadoDefensa === 'AREA_SORTEADA') {
-          // Obtener detalle completo de la defensa para identificar el área ya sorteada
+          // Obtener detalle completo de la defensa para identificar el área ya sorteada previamente
           const detalle = await defensasApi.getDefensaById(defensaActual.idDefensa)
           const sorteoConArea = detalle.sorteos?.find(
             (s) => s.area && s.area.areaResultado,
@@ -134,6 +138,7 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
             }
             setAreaGanadora(areaPrevia)
             setFaseActual('FASE_2_CASO')
+            setAngulo(0)
 
             // Cargar casos de estudio disponibles para esta área
             const respCasos = await casosApi.getCasos({
@@ -146,13 +151,15 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
             const respAreas = await casosApi.getAreas(idCarrera)
             setAreasCarrera(respAreas)
             setFaseActual('FASE_1_AREA')
+            setAngulo(0)
           }
         } else {
-          // Estado PROGRAMADA: Iniciar en Fase 1 (Sorteo de Área)
+          // Estado PROGRAMADA: Iniciar en Fase 1 (Sorteo de Área Temática)
           setFaseActual('FASE_1_AREA')
           setAreaGanadora(null)
           setCasoGanador(null)
           setCasosArea([])
+          setAngulo(0)
           const respAreas = await casosApi.getAreas(idCarrera)
           setAreasCarrera(respAreas)
         }
@@ -204,11 +211,13 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
     }, 3200)
   }
 
-  // 1. Sortear Área (Fase 1)
+  // 1. Sortear Área Temática (Fase 1)
   const handleSortearArea = async () => {
-    if (!selectedDefensaId || girando || esVicerrectorado) return
+    if (!selectedDefensaId || girando || transicionandoFase || esVicerrectorado) return
 
     try {
+      setErrorMsg(null)
+      setMensajeExito(null)
       const resp = await sorteosApi.sortearArea({
         idDefensa: selectedDefensaId,
         estudiantePresente,
@@ -225,25 +234,40 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
         setAreaGanadora(resp.areaGanadora)
         setTokenActa(resp.tokenActa)
         setMensajeExito(
-          `¡Área sorteada con éxito! Se seleccionó: ${resp.areaGanadora.nombre}. Proceda ahora a la Fase 2 (Sorteo de Caso).`,
+          `¡Área sorteada con éxito! Se seleccionó: "${resp.areaGanadora.nombre}". Transfiriendo a la Ruleta de Casos de Estudio...`,
         )
 
-        // Cargar casos de la nueva área ganadora y pasar a Fase 2
-        setLoadingOpciones(true)
+        // Pausa breve para visualizar el sector ganador bajo el puntero
+        setTransicionandoFase(true)
+        await new Promise((resolve) => setTimeout(resolve, 1800))
+
         try {
+          // Cargar casos de estudio disponibles para el área que acaba de salir ganadora
           const respCasos = await casosApi.getCasos({
             idArea: resp.areaGanadora.idArea,
             estado: 'DISPONIBLE',
           })
           setCasosArea(respCasos.items)
+          setAngulo(0) // Nivelar suavemente la ruleta en 0° para los casos
           setFaseActual('FASE_2_CASO')
+          setMensajeExito(
+            `Fase 1 Concluida: Área "${resp.areaGanadora.nombre}". La ruleta ahora presenta sus casos de estudio correspondientes (${respCasos.items.length} casos disponibles). ¡Gire la ruleta para sortear el caso definitivo!`,
+          )
         } catch (e) {
           console.error('Error al cargar casos del área ganadora:', e)
+          setErrorMsg('Área sorteada, pero ocurrió un error al cargar sus casos de estudio asociados.')
         } finally {
-          setLoadingOpciones(false)
+          setTransicionandoFase(false)
         }
 
-        await cargarDefensas()
+        // Sincronizar estado en la lista local de defensas
+        setDefensasPendientes((prev) =>
+          prev.map((d) =>
+            d.idDefensa === selectedDefensaId
+              ? { ...d, estadoDefensa: 'AREA_SORTEADA' }
+              : d,
+          ),
+        )
         onSorteoCompletado?.()
       })
     } catch (err: unknown) {
@@ -253,9 +277,10 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
 
   // 2. Sortear Caso de Estudio (Fase 2)
   const handleSortearCaso = async () => {
-    if (!selectedDefensaId || girando || esVicerrectorado) return
+    if (!selectedDefensaId || girando || transicionandoFase || esVicerrectorado) return
 
     try {
+      setErrorMsg(null)
       const resp = await sorteosApi.sortearCaso({
         idDefensa: selectedDefensaId,
         estudiantePresente,
@@ -273,7 +298,7 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
         setCasoGanador(resp.casoGanador)
         setTokenActa(resp.tokenActa)
         setMensajeExito(
-          `¡Caso de estudio asignado exitosamente! Caso: "${resp.casoGanador.titulo}". Acta oficial emitida.`,
+          `¡Caso de estudio asignado exitosamente! Caso: "${resp.casoGanador.titulo}". Acta oficial criptográfica emitida.`,
         )
         setFaseActual('FINALIZADO')
         await cargarDefensas()
@@ -281,38 +306,6 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
       })
     } catch (err: unknown) {
       setErrorMsg(extractErrorMessage(err, 'Error al ejecutar sorteo de caso.'))
-    }
-  }
-
-  // 3. Sorteo Conjunto (FCT y Psicología)
-  const handleSorteoConjunto = async () => {
-    if (!selectedDefensaId || girando || esVicerrectorado) return
-
-    try {
-      const resp = await sorteosApi.sorteoConjunto({
-        idDefensa: selectedDefensaId,
-        estudiantePresente,
-        motivoInasistencia: !estudiantePresente ? motivoInasistencia : undefined,
-      })
-
-      const winnerIndex = areasCarrera.findIndex(
-        (a) => a.idArea === resp.areaGanadora.idArea || a.nombre === resp.areaGanadora.nombre,
-      )
-      const validIndex = winnerIndex >= 0 ? winnerIndex : 0
-
-      animarGiroExacto(validIndex, areasCarrera.length, async () => {
-        setAreaGanadora(resp.areaGanadora)
-        setCasoGanador(resp.casoGanador)
-        setTokenActa(resp.tokenActa)
-        setMensajeExito(
-          `¡Sorteo conjunto anticipado completado! Área: ${resp.areaGanadora.nombre} | Caso: "${resp.casoGanador.titulo}".`,
-        )
-        setFaseActual('FINALIZADO')
-        await cargarDefensas()
-        onSorteoCompletado?.()
-      })
-    } catch (err: unknown) {
-      setErrorMsg(extractErrorMessage(err, 'Error al ejecutar sorteo conjunto.'))
     }
   }
 
@@ -328,7 +321,7 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
             </h2>
           </div>
           <p className="mt-1 text-xs text-neutral-500">
-            Fase 1: Sorteo de Área Temática · Fase 2: Asignación de Caso de Estudio específico
+            Fase 1: Sorteo de Área Temática · Fase 2: Asignación de Caso de Estudio específico del Área
           </p>
         </div>
         <button
@@ -404,8 +397,9 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
                 setTokenActa(null)
                 setMensajeExito(null)
                 setErrorMsg(null)
+                setAngulo(0)
               }}
-              disabled={girando}
+              disabled={girando || transicionandoFase}
               className="w-full border border-line bg-surface px-3 py-2 text-xs font-medium outline-none focus:border-neutral-500"
             >
               {defensasPendientes.map((def) => {
@@ -465,7 +459,7 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
                   type="checkbox"
                   checked={estudiantePresente}
                   onChange={(e) => setEstudiantePresente(e.target.checked)}
-                  disabled={girando || esVicerrectorado}
+                  disabled={girando || transicionandoFase || esVicerrectorado}
                   className="rounded-xs border-line text-crimson focus:ring-crimson"
                 />
                 <span className="text-[11px] font-medium text-neutral-700">
@@ -479,7 +473,7 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
                   placeholder="Justificación / Motivo de inasistencia..."
                   value={motivoInasistencia}
                   onChange={(e) => setMotivoInasistencia(e.target.value)}
-                  disabled={girando || esVicerrectorado}
+                  disabled={girando || transicionandoFase || esVicerrectorado}
                   className="w-full border border-line bg-white px-2.5 py-1.5 text-xs outline-none focus:border-neutral-400"
                 />
               )}
@@ -528,35 +522,29 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
           )}
         </div>
 
-        {/* Acciones de Sorteo según Modalidad y Fase */}
+        {/* Acciones de Sorteo según Fase */}
         <div className="flex flex-col gap-2">
           {/* FASE 1: Sorteo de Área */}
-          {faseActual === 'FASE_1_AREA' && !esFCToPsicologia && (
+          {faseActual === 'FASE_1_AREA' && (
             <button
               type="button"
-              disabled={girando || !selectedDefensaId || esVicerrectorado || loadingOpciones}
+              disabled={girando || !selectedDefensaId || esVicerrectorado || loadingOpciones || transicionandoFase}
               onClick={handleSortearArea}
-              className="flex items-center justify-center gap-2 bg-crimson px-4 py-3 text-xs font-bold text-white hover:opacity-95 disabled:opacity-50 transition-opacity"
+              className="flex items-center justify-center gap-2 bg-crimson px-4 py-3 text-xs font-bold text-white hover:opacity-95 disabled:opacity-50 transition-opacity cursor-pointer disabled:cursor-not-allowed"
             >
-              <Shuffle className="size-4" />
-              {esVicerrectorado
-                ? 'Operación no autorizada para Vicerrectorado (Solo Lectura)'
-                : 'Girar Ruleta: Sortear Área Temática (Fase 1)'}
-            </button>
-          )}
-
-          {/* FASE 1: Sorteo Conjunto Anticipado para FCT y Psicología */}
-          {faseActual === 'FASE_1_AREA' && esFCToPsicologia && (
-            <button
-              type="button"
-              disabled={girando || !selectedDefensaId || esVicerrectorado || loadingOpciones}
-              onClick={handleSorteoConjunto}
-              className="flex items-center justify-center gap-2 bg-crimson px-4 py-3 text-xs font-bold text-white hover:opacity-95 disabled:opacity-50 transition-opacity"
-            >
-              <Sparkles className="size-4" />
-              {esVicerrectorado
-                ? 'Operación no autorizada para Vicerrectorado (Solo Lectura)'
-                : 'Ejecutar Sorteo Conjunto Anticipado (Área + Caso)'}
+              {transicionandoFase ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Transfiriendo a Ruleta de Casos de Estudio...</span>
+                </>
+              ) : (
+                <>
+                  <Shuffle className="size-4" />
+                  {esVicerrectorado
+                    ? 'Operación no autorizada para Vicerrectorado (Solo Lectura)'
+                    : 'Girar Ruleta: Sortear Área Temática (Fase 1)'}
+                </>
+              )}
             </button>
           )}
 
@@ -569,16 +557,34 @@ export function ModuloSorteo({ onSorteoCompletado }: ModuloSorteoProps) {
                 !selectedDefensaId ||
                 esVicerrectorado ||
                 loadingOpciones ||
+                transicionandoFase ||
                 casosArea.length === 0
               }
               onClick={handleSortearCaso}
-              className="flex items-center justify-center gap-2 bg-crimson px-4 py-3 text-xs font-bold text-white hover:opacity-95 disabled:opacity-50 transition-opacity"
+              className="flex items-center justify-center gap-2 bg-crimson px-4 py-3 text-xs font-bold text-white hover:opacity-95 disabled:opacity-50 transition-opacity cursor-pointer disabled:cursor-not-allowed"
             >
               <Award className="size-4" />
               {esVicerrectorado
                 ? 'Operación no autorizada para Vicerrectorado (Solo Lectura)'
                 : `Girar Ruleta: Sortear Caso de Estudio de ${areaGanadora?.nombre || 'Área'} (Fase 2)`}
             </button>
+          )}
+
+          {/* FASE FINALIZADA */}
+          {faseActual === 'FINALIZADO' && (
+            <div className="flex items-center justify-between border border-emerald-300 bg-emerald-50 px-4 py-3 text-xs text-emerald-900 font-semibold">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-emerald-600" />
+                <span>Sorteo oficial completado y registrado con éxito.</span>
+              </div>
+              <button
+                type="button"
+                onClick={cargarDefensas}
+                className="bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold hover:bg-emerald-800 transition-colors"
+              >
+                Cargar Siguiente Postulante
+              </button>
+            </div>
           )}
         </div>
 
