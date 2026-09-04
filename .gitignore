@@ -127,3 +127,7 @@ dist
 .claude/
 .devin/
 .cursor/
+
+# Documentation
+docs/
+
