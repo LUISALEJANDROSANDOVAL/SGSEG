@@ -27,13 +27,7 @@ export class SorteosController {
    * Ejecuta el sorteo digital de Área Temática mediante CSPRNG.
    */
   @Post('area')
-  @Roles(
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'VICERRECTORADO',
-    'SUPER_ADMIN',
-  )
+  @Roles('SECRETARIADO', 'JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sortearArea(
     @Body() dto: SortearAreaDto,
@@ -46,13 +40,7 @@ export class SorteosController {
    * Ejecuta el sorteo digital de Caso de Estudio dentro del área asignada.
    */
   @Post('caso')
-  @Roles(
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'VICERRECTORADO',
-    'SUPER_ADMIN',
-  )
+  @Roles('SECRETARIADO', 'JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sortearCaso(
     @Body() dto: SortearCasoDto,
@@ -65,13 +53,7 @@ export class SorteosController {
    * Ejecuta el sorteo conjunto anticipado de Área y Caso (FCT y Psicología).
    */
   @Post('conjunto')
-  @Roles(
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'VICERRECTORADO',
-    'SUPER_ADMIN',
-  )
+  @Roles('SECRETARIADO', 'JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sorteoConjunto(
     @Body() dto: SorteoConjuntoDto,

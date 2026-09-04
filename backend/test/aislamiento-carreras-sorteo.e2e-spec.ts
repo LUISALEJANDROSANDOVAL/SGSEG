@@ -12,6 +12,7 @@ describe('Aislamiento por Carrera y Validación Reglamentaria de Sorteo (e2e)', 
   let tokenDerecho: string;
   let tokenSistemas: string;
   let tokenCoord: string;
+  let tokenVice: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -40,6 +41,12 @@ describe('Aislamiento por Carrera y Validación Reglamentaria de Sorteo (e2e)', 
       .send({ correoInstitucional: 'coord@uni.edu.bo', password: 'Admin123!' })
       .expect(200);
     tokenCoord = loginCoord.body.accessToken;
+
+    const loginVice = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ correoInstitucional: 'vicerrector@uni.edu.bo', password: 'Admin123!' })
+      .expect(200);
+    tokenVice = loginVice.body.accessToken;
   });
 
   afterAll(async () => {
@@ -203,6 +210,52 @@ describe('Aislamiento por Carrera y Validación Reglamentaria de Sorteo (e2e)', 
 
       expect(casoRes.body.tokenActa).toBeDefined();
       expect(casoRes.body.casoGanador).toBeDefined();
+    });
+  });
+
+  describe('5. Restricción Estricta para Vicerrectorado (Solo Lectura, Sin Autorización de Sorteos)', () => {
+    it('Vicerrectorado puede consultar defensas, casos y carreras (acceso global)', async () => {
+      const resCarreras = await request(app.getHttpServer())
+        .get('/estudiantes/carreras')
+        .set('Authorization', `Bearer ${tokenVice}`)
+        .expect(200);
+      expect(resCarreras.body.length).toBe(17);
+
+      const resDefensas = await request(app.getHttpServer())
+        .get('/defensas')
+        .set('Authorization', `Bearer ${tokenVice}`)
+        .expect(200);
+      expect(resDefensas.body.items).toBeDefined();
+    });
+
+    it('Vicerrectorado NO debe tener autorización para sortear área (debe retornar 403 Forbidden)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/sorteos/area')
+        .set('Authorization', `Bearer ${tokenVice}`)
+        .send({ idDefensa: '1', estudiantePresente: true })
+        .expect(403);
+
+      expect(res.body.statusCode).toBe(403);
+    });
+
+    it('Vicerrectorado NO debe tener autorización para sortear caso (debe retornar 403 Forbidden)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/sorteos/caso')
+        .set('Authorization', `Bearer ${tokenVice}`)
+        .send({ idDefensa: '1', estudiantePresente: true })
+        .expect(403);
+
+      expect(res.body.statusCode).toBe(403);
+    });
+
+    it('Vicerrectorado NO debe tener autorización para sorteo conjunto (debe retornar 403 Forbidden)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/sorteos/conjunto')
+        .set('Authorization', `Bearer ${tokenVice}`)
+        .send({ idDefensa: '1', estudiantePresente: true })
+        .expect(403);
+
+      expect(res.body.statusCode).toBe(403);
     });
   });
 });
