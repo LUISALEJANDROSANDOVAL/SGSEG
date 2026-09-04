@@ -295,6 +295,52 @@ export class CasosRepository {
   }
 
   /**
+   * Reactiva de forma extraordinaria un caso agotado bajo potestad del Jefe de Carrera.
+   */
+  async reactivarCasoEspecial(
+    idCasoEstudio: bigint,
+    motivo: string,
+    idUsuario?: bigint,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const anterior = await tx.casoEstudio.findUnique({
+        where: { idCasoEstudio },
+      });
+
+      const updated = await tx.casoEstudio.update({
+        where: { idCasoEstudio },
+        data: { estado: 'REACTIVADO_ESPECIAL' },
+        include: {
+          area: {
+            include: {
+              carrera: {
+                include: { facultad: true },
+              },
+            },
+          },
+          _count: {
+            select: { defensas: true, sorteosCaso: true },
+          },
+        },
+      });
+
+      await tx.registroAuditoria.create({
+        data: {
+          idUsuario: idUsuario ?? null,
+          idCasoEstudio,
+          tipoOperacion: 'REACTIVACION_CASO_ESPECIAL',
+          descripcion: `Reactivación excepcional de caso de estudio ID ${idCasoEstudio} (${updated.titulo}) autorizada por Jefatura de Carrera.`,
+          motivo: motivo.trim(),
+          valorAnterior: anterior ? { estado: anterior.estado } : undefined,
+          valorNuevo: { estado: 'REACTIVADO_ESPECIAL' },
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
    * Busca un área académica por ID con su carrera y facultad.
    */
   async findAreaById(idArea: bigint) {
@@ -414,10 +460,13 @@ export class CasosRepository {
 
       for (const caso of area.casos) {
         totalCasos++;
-        const totalUsos = caso._count.defensas + caso._count.sorteosCaso;
+        const totalUsos = caso._count.defensas;
 
         if (caso.estado === 'INACTIVO') {
           inactivos++;
+        } else if (caso.estado === 'REACTIVADO_ESPECIAL') {
+          disponibles++;
+          areaDisponibles++;
         } else if (caso.estado === 'AGOTADO' || totalUsos >= area.umbralDisponibilidad) {
           agotados++;
         } else {

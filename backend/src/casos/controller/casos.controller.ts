@@ -18,6 +18,7 @@ import {
   CreateAreaDto,
   CreateCasoDto,
   FilterCasosDto,
+  ReactivarCasoEspecialDto,
   UpdateCasoDto,
 } from '../dto/casos.dto';
 import { CasosService } from '../services/casos.service';
@@ -147,6 +148,19 @@ export class CasosController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.casosService.toggleEstado(id, user);
+  }
+
+  /**
+   * Reactivación extraordinaria de un caso agotado por caso especial (Solo Jefe de Carrera).
+   */
+  @Patch(':id/reactivar-especial')
+  @Roles('JEFE_CARRERA')
+  async reactivarCasoEspecial(
+    @Param('id') id: string,
+    @Body() dto: ReactivarCasoEspecialDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.casosService.reactivarCasoEspecial(id, dto, user);
   }
 
   /**

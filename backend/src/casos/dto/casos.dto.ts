@@ -29,6 +29,14 @@ export class CreateCasoDto {
   documentoAdjunto?: string;
 }
 
+export class ReactivarCasoEspecialDto {
+  @IsString({ message: 'El motivo debe ser una cadena de texto.' })
+  @IsNotEmpty({ message: 'La justificación académica o motivo de la reactivación es obligatoria.' })
+  @MinLength(10, { message: 'El motivo debe tener al menos 10 caracteres.' })
+  @MaxLength(500, { message: 'El motivo no puede exceder los 500 caracteres.' })
+  motivo: string;
+}
+
 export class UpdateCasoDto {
   @IsOptional()
   idArea?: string | number;

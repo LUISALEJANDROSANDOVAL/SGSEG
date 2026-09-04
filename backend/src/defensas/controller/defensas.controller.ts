@@ -13,6 +13,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
+  CalificarDefensaDto,
   FilterDefensasDto,
   ProgramarDefensaDto,
   UpdateDefensaDto,
@@ -110,12 +111,25 @@ export class DefensasController {
    * Actualiza los datos de una defensa.
    */
   @Put(':id')
-  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateDefensaDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.defensasService.update(id, dto, user);
+  }
+
+  /**
+   * Registra la calificación formal y dictamen del tribunal para una defensa.
+   */
+  @Put(':id/calificar')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  async calificar(
+    @Param('id') id: string,
+    @Body() dto: CalificarDefensaDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.defensasService.calificarDefensa(id, dto, user);
   }
 }

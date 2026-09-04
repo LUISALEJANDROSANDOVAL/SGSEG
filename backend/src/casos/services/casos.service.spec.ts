@@ -28,6 +28,7 @@ describe('CasosService', () => {
       createCaso: jest.fn(),
       updateCaso: jest.fn(),
       setEstadoCaso: jest.fn(),
+      reactivarCasoEspecial: jest.fn(),
       findAreaById: jest.fn(),
       findAreas: jest.fn(),
       createArea: jest.fn(),
@@ -147,7 +148,7 @@ describe('CasosService', () => {
             facultad: { idFacultad: BigInt(1), nombre: 'Tecnología' },
           },
         },
-        _count: { defensas: 1, sorteosCaso: 1 }, // Total usos: 2
+        _count: { defensas: 2, sorteosCaso: 2 }, // Total usos: 2
       },
     ]);
     repository.countCasos.mockResolvedValue(1);
@@ -156,6 +157,78 @@ describe('CasosService', () => {
 
     expect(res.items[0].usos).toBe(2);
     expect(res.items[0].estadoEfectivo).toBe('AGOTADO');
+  });
+
+  it('debe permitir que un Jefe de Carrera reactive un caso de su carrera por caso especial', async () => {
+    repository.getUserCarreraIds.mockResolvedValue([BigInt(1)]);
+    repository.findCasoById.mockResolvedValue({
+      idCasoEstudio: BigInt(10),
+      idArea: BigInt(1),
+      titulo: 'Caso Agotado',
+      contenido: 'Planteamiento...',
+      documentoAdjunto: null,
+      estado: 'AGOTADO',
+      area: {
+        idArea: BigInt(1),
+        idCarrera: BigInt(1),
+        nombre: 'Ingeniería de Software',
+        umbralDisponibilidad: 2,
+        estado: 'ACTIVO',
+        carrera: {
+          idCarrera: BigInt(1),
+          idFacultad: BigInt(1),
+          nombre: 'Ingeniería de Sistemas',
+          facultad: { idFacultad: BigInt(1), nombre: 'Tecnología' },
+        },
+      },
+      _count: { defensas: 2, sorteosCaso: 2 },
+    });
+
+    repository.reactivarCasoEspecial.mockResolvedValue({
+      idCasoEstudio: BigInt(10),
+      idArea: BigInt(1),
+      titulo: 'Caso Agotado',
+      contenido: 'Planteamiento...',
+      documentoAdjunto: null,
+      estado: 'REACTIVADO_ESPECIAL',
+      area: {
+        idArea: BigInt(1),
+        idCarrera: BigInt(1),
+        nombre: 'Ingeniería de Software',
+        umbralDisponibilidad: 2,
+        estado: 'ACTIVO',
+        carrera: {
+          idCarrera: BigInt(1),
+          idFacultad: BigInt(1),
+          nombre: 'Ingeniería de Sistemas',
+          facultad: { idFacultad: BigInt(1), nombre: 'Tecnología' },
+        },
+      },
+      _count: { defensas: 2, sorteosCaso: 2 },
+    });
+
+    const res = await service.reactivarCasoEspecial(
+      '10',
+      { motivo: 'Excepción académica por estudiante extraordinario' },
+      mockJefeUser,
+    );
+
+    expect(res.caso.estadoEfectivo).toBe('REACTIVADO_ESPECIAL');
+    expect(repository.reactivarCasoEspecial).toHaveBeenCalledWith(
+      BigInt(10),
+      'Excepción académica por estudiante extraordinario',
+      BigInt(10),
+    );
+  });
+
+  it('debe impedir que un rol distinto a Jefe de Carrera reactive un caso por caso especial', async () => {
+    await expect(
+      service.reactivarCasoEspecial(
+        '10',
+        { motivo: 'Intento no autorizado' },
+        mockCoordUser,
+      ),
+    ).rejects.toThrow(ForbiddenException);
   });
 
   it('debe lanzar NotFoundException si se solicita un caso que no existe', async () => {

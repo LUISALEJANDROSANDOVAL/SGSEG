@@ -1,13 +1,6 @@
-import axios from 'axios';
+import api from './api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
-
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+export const apiClient = api;
 
 export interface PlanEstudio {
   idPlanEstudio: string;
@@ -148,6 +141,26 @@ export const estudiantesApi = {
    */
   async bulkUpsert(payload: BulkUpsertPayload): Promise<BulkUpsertResult> {
     const { data } = await apiClient.post<BulkUpsertResult>('/estudiantes/bulk-upsert', payload);
+    return data;
+  },
+
+  /**
+   * Crea o inscribe individualmente a un nuevo estudiante postulante.
+   */
+  async createEstudiante(payload: {
+    carnetEstudiantil: string;
+    carnetIdentidad: string;
+    nombreCompleto: string;
+    correo?: string;
+    idCarrera?: string;
+    idPlanEstudio?: string;
+    nombrePlanEstudio?: string;
+    estado?: string;
+  }): Promise<{ operacion: string; estudiante: Estudiante }> {
+    const { data } = await apiClient.post<{ operacion: string; estudiante: Estudiante }>(
+      '/estudiantes',
+      payload,
+    );
     return data;
   },
 

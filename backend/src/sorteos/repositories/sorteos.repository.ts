@@ -131,8 +131,8 @@ export class SorteosRepository {
       },
     });
 
-    // Filtra casos que tengan menos de 2 defensas asociadas
-    return casos.filter((c) => c.defensas.length < 2);
+    // Filtra casos que tengan menos de 2 defensas asociadas o que hayan sido reactivados especialmente
+    return casos.filter((c) => c.estado === 'REACTIVADO_ESPECIAL' || c.defensas.length < 2);
   }
 
   /**

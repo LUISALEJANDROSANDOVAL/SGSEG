@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -310,7 +311,33 @@ export class EstudiantesService {
   /**
    * Crea o actualiza individualmente un estudiante.
    */
-  async create(dto: CreateEstudianteDto) {
+  async create(dto: CreateEstudianteDto, user?: AuthenticatedUser) {
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+
+      if (dto.idCarrera && !allowed.includes(BigInt(dto.idCarrera))) {
+        throw new ForbiddenException(
+          'No tienes permisos para inscribir estudiantes en una carrera ajena a la tuya.',
+        );
+      }
+
+      if (dto.idPlanEstudio) {
+        const plan = await this.repository.findPlanById(BigInt(dto.idPlanEstudio));
+        if (plan && !allowed.includes(plan.idCarrera)) {
+          throw new ForbiddenException(
+            'El plan de estudio seleccionado no pertenece a tu carrera asignada.',
+          );
+        }
+      }
+
+      // Si no especificó carrera ni plan, asignar automáticamente su primera carrera autorizada
+      if (!dto.idCarrera && !dto.idPlanEstudio && allowed.length > 0) {
+        dto.idCarrera = allowed[0].toString();
+      }
+    }
+
     const norm = this.normalizer.normalizeRecord({
       carnetEstudiantil: dto.carnetEstudiantil,
       carnetIdentidad: dto.carnetIdentidad,

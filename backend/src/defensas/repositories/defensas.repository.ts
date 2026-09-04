@@ -284,6 +284,21 @@ export class DefensasRepository {
             },
           },
         },
+        auditorias: {
+          where: { tipoOperacion: 'REGISTRO_CALIFICACION' },
+          orderBy: { fechaHora: 'desc' },
+          take: 1,
+          include: {
+            usuario: {
+              select: {
+                idUsuario: true,
+                primerNombre: true,
+                primerApellido: true,
+                correoInstitucional: true,
+              },
+            },
+          },
+        },
         instancia: {
           include: {
             proceso: {
@@ -332,6 +347,21 @@ export class DefensasRepository {
             caso: { include: { casoSeleccionado: true } },
           },
         },
+        auditorias: {
+          where: { tipoOperacion: 'REGISTRO_CALIFICACION' },
+          orderBy: { fechaHora: 'desc' },
+          take: 1,
+          include: {
+            usuario: {
+              select: {
+                idUsuario: true,
+                primerNombre: true,
+                primerApellido: true,
+                correoInstitucional: true,
+              },
+            },
+          },
+        },
         instancia: {
           include: {
             proceso: {
@@ -366,6 +396,12 @@ export class DefensasRepository {
       estadoDefensa?: string;
       nota?: number;
       resultado?: string;
+      tribunal?: {
+        presidente?: string;
+        secretario?: string;
+        vocal?: string;
+      };
+      observaciones?: string;
     },
     idUsuario?: bigint,
   ) {
@@ -401,6 +437,115 @@ export class DefensasRepository {
             estadoDefensa: updated.estadoDefensa,
             fechaDefensa: updated.fechaDefensa.toISOString().split('T')[0],
             nota: updated.nota ? updated.nota.toString() : null,
+            resultado: updated.resultado,
+            tribunal: data.tribunal,
+            observaciones: data.observaciones,
+          },
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  /**
+   * Registra la calificación formal emitida por el tribunal examinador,
+   * concluyendo la instancia y actualizando el proceso académico.
+   */
+  async calificarDefensa(
+    idDefensa: bigint,
+    data: {
+      nota: number;
+      resultado: string;
+      estadoDefensa?: string;
+      tribunal?: {
+        presidente?: string;
+        secretario?: string;
+        vocal?: string;
+      };
+      observaciones?: string;
+    },
+    idUsuario?: bigint,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const estadoDefensa = data.estadoDefensa || 'CALIFICADO';
+
+      // 1. Actualizar la defensa con su nota y resultado oficial
+      const updated = await tx.defensaExamenGrado.update({
+        where: { idDefensa },
+        data: {
+          nota: new Prisma.Decimal(data.nota),
+          resultado: data.resultado,
+          estadoDefensa,
+        },
+        include: {
+          tipoDefensa: true,
+          casoUtilizado: {
+            include: { area: true },
+          },
+          sorteos: {
+            include: {
+              area: { include: { areaResultado: true } },
+              caso: { include: { casoSeleccionado: true } },
+            },
+          },
+          instancia: {
+            include: {
+              proceso: {
+                include: {
+                  estudiante: {
+                    include: {
+                      planEstudio: {
+                        include: {
+                          carrera: {
+                            include: { facultad: true },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // 2. Concluir la instancia de examen de grado
+      const resultadoGeneral = data.nota >= 51 ? 'APROBADO' : 'REPROBADO';
+      await tx.instanciaExamenGrado.update({
+        where: { idInstancia: updated.idInstancia },
+        data: {
+          estadoInstancia: 'CONCLUIDA',
+          resultado: resultadoGeneral,
+        },
+      });
+
+      // 3. Concluir el proceso general del estudiante si aprobó
+      if (data.nota >= 51) {
+        await tx.procesoExamenGrado.update({
+          where: { idProceso: updated.instancia.idProceso },
+          data: {
+            estadoProceso: 'CONCLUIDO',
+          },
+        });
+      }
+
+      // 4. Asentar registro inmutable de auditoría
+      await tx.registroAuditoria.create({
+        data: {
+          idUsuario: idUsuario ?? null,
+          idDefensa,
+          idInstancia: updated.idInstancia,
+          idProceso: updated.instancia.idProceso,
+          tipoOperacion: 'REGISTRO_CALIFICACION',
+          descripcion: `Calificación oficial registrada: ${data.nota}/100 pts (${data.resultado})`,
+          valorNuevo: {
+            nota: data.nota,
+            resultado: data.resultado,
+            estadoDefensa,
+            tribunal: data.tribunal,
+            observaciones: data.observaciones,
           },
         },
       });

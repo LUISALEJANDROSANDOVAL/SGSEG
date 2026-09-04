@@ -184,4 +184,18 @@ export const casosApi = {
     );
     return data;
   },
+
+  /**
+   * Reactiva de forma extraordinaria un caso agotado por excepción académica (Solo Jefe de Carrera).
+   */
+  async reactivarCasoEspecial(
+    idCaso: string,
+    motivo: string,
+  ): Promise<{ mensaje: string; caso: CasoEstudio }> {
+    const { data } = await api.patch<{ mensaje: string; caso: CasoEstudio }>(
+      `/casos/${idCaso}/reactivar-especial`,
+      { motivo },
+    );
+    return data;
+  },
 };

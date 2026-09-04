@@ -9,6 +9,7 @@ import {
   CreateAreaDto,
   CreateCasoDto,
   FilterCasosDto,
+  ReactivarCasoEspecialDto,
   UpdateCasoDto,
 } from '../dto/casos.dto';
 import { CasosRepository } from '../repositories/casos.repository';
@@ -67,15 +68,20 @@ export class CasosService {
     ]);
 
     const items = casos.map((caso) => {
-      const usos = (caso._count?.defensas ?? 0) + (caso._count?.sorteosCaso ?? 0);
+      const usos = caso._count?.defensas ?? 0;
       const umbral = caso.area.umbralDisponibilidad ?? 2;
-      const esAgotado = caso.estado === 'AGOTADO' || (caso.estado === 'DISPONIBLE' && usos >= umbral);
+      let estadoEfectivo = caso.estado;
+      if (caso.estado === 'REACTIVADO_ESPECIAL') {
+        estadoEfectivo = 'REACTIVADO_ESPECIAL';
+      } else if (caso.estado === 'AGOTADO' || (caso.estado === 'DISPONIBLE' && usos >= umbral)) {
+        estadoEfectivo = 'AGOTADO';
+      }
 
       return {
         ...this.serializeBigInt(caso),
         usos,
         umbral,
-        estadoEfectivo: esAgotado ? 'AGOTADO' : caso.estado,
+        estadoEfectivo,
       };
     });
 
@@ -109,17 +115,20 @@ export class CasosService {
       }
     }
 
-    const usos = (caso._count?.defensas ?? 0) + (caso._count?.sorteosCaso ?? 0);
+    const usos = caso._count?.defensas ?? 0;
     const umbral = caso.area.umbralDisponibilidad ?? 2;
+    let estadoEfectivo = caso.estado;
+    if (caso.estado === 'REACTIVADO_ESPECIAL') {
+      estadoEfectivo = 'REACTIVADO_ESPECIAL';
+    } else if (caso.estado === 'AGOTADO' || (caso.estado === 'DISPONIBLE' && usos >= umbral)) {
+      estadoEfectivo = 'AGOTADO';
+    }
 
     return {
       ...this.serializeBigInt(caso),
       usos,
       umbral,
-      estadoEfectivo:
-        caso.estado === 'AGOTADO' || (caso.estado === 'DISPONIBLE' && usos >= umbral)
-          ? 'AGOTADO'
-          : caso.estado,
+      estadoEfectivo,
     };
   }
 
@@ -245,6 +254,54 @@ export class CasosService {
     return {
       mensaje: `Caso ${updated.titulo} marcado como ${nuevoEstado}.`,
       caso: this.serializeBigInt(updated),
+    };
+  }
+
+  /**
+   * Reactiva de forma extraordinaria un caso de estudio por caso especial (Exclusivo Jefe de Carrera).
+   */
+  async reactivarCasoEspecial(
+    idCaso: string,
+    dto: ReactivarCasoEspecialDto,
+    user: AuthenticatedUser,
+  ) {
+    if (user.rol !== 'JEFE_CARRERA') {
+      throw new ForbiddenException(
+        'Solo el Jefe de Carrera tiene la potestad reglamentaria de reactivar casos por excepción.',
+      );
+    }
+
+    const id = BigInt(idCaso);
+    const caso = await this.repository.findCasoById(id);
+
+    if (!caso) {
+      throw new NotFoundException(`Caso de estudio con ID ${idCaso} no encontrado.`);
+    }
+
+    const allowed = await this.resolveAllowedCarreras(user);
+    if (!allowed?.includes(caso.area.idCarrera)) {
+      throw new ForbiddenException(
+        'No tienes permisos para reactivar casos de una carrera distinta a la tuya.',
+      );
+    }
+
+    const updated = await this.repository.reactivarCasoEspecial(
+      id,
+      dto.motivo,
+      BigInt(user.idUsuario),
+    );
+
+    const usos = updated._count?.defensas ?? 0;
+    const umbral = updated.area.umbralDisponibilidad ?? 2;
+
+    return {
+      mensaje: `Caso "${updated.titulo}" reactivado excepcionalmente para un nuevo uso.`,
+      caso: {
+        ...this.serializeBigInt(updated),
+        usos,
+        umbral,
+        estadoEfectivo: 'REACTIVADO_ESPECIAL',
+      },
     };
   }
 

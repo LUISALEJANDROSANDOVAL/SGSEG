@@ -8,11 +8,13 @@ import {
   Plus,
   Power,
   RefreshCw,
+  RotateCcw,
   Search,
   X,
 } from 'lucide-react'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
+import { useAuth } from '@/context/AuthContext'
 import { casosApi } from '@/lib/casos.api'
 import type {
   AreaAcademica,
@@ -21,6 +23,9 @@ import type {
 } from '@/lib/casos.api'
 
 export default function PaginaCasos() {
+
+  // Contexto de autenticación
+  const { user } = useAuth()
 
   // Estados de datos
   const [casos, setCasos] = useState<CasoEstudio[]>([])
@@ -43,6 +48,8 @@ export default function PaginaCasos() {
   const [modalDetalleCaso, setModalDetalleCaso] = useState<CasoEstudio | null>(null)
   const [modalEditarCaso, setModalEditarCaso] = useState<CasoEstudio | null>(null)
   const [modalNuevaArea, setModalNuevaArea] = useState<boolean>(false)
+  const [modalReactivar, setModalReactivar] = useState<CasoEstudio | null>(null)
+  const [motivoReactivar, setMotivoReactivar] = useState<string>('')
 
   // Formulario nuevo caso
   const [formNuevo, setFormNuevo] = useState({
@@ -218,6 +225,29 @@ export default function PaginaCasos() {
     }
   }
 
+  // Reactivar caso por excepción extraordinaria (Jefe de Carrera)
+  const handleReactivarCasoEspecial = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!modalReactivar || !motivoReactivar.trim()) return
+
+    setActionLoading(true)
+    try {
+      const res = await casosApi.reactivarCasoEspecial(
+        modalReactivar.idCasoEstudio,
+        motivoReactivar.trim(),
+      )
+      setFeedback({ tipo: 'exito', mensaje: res.mensaje || 'Caso reactivado por caso especial exitosamente.' })
+      setModalReactivar(null)
+      setMotivoReactivar('')
+      await cargarDatos()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al reactivar caso de estudio'
+      setFeedback({ tipo: 'error', mensaje: msg })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   // Abrir modal de edición
   const abrirModalEditar = (caso: CasoEstudio) => {
     setModalEditarCaso(caso)
@@ -385,6 +415,7 @@ export default function PaginaCasos() {
                 <option value="ALL">Todos los Estados</option>
                 <option value="DISPONIBLE">Disponibles</option>
                 <option value="AGOTADO">Agotados</option>
+                <option value="REACTIVADO_ESPECIAL">Reactivados Especiales</option>
                 <option value="INACTIVO">Inactivos</option>
               </select>
 
@@ -499,6 +530,10 @@ export default function PaginaCasos() {
                             <span className="inline-block px-2 py-0.5 text-[11px] font-medium bg-neutral-100 text-neutral-500 border border-neutral-300">
                               Inactivo
                             </span>
+                          ) : caso.estado === 'REACTIVADO_ESPECIAL' ? (
+                            <span className="inline-block px-2 py-0.5 text-[11px] font-medium bg-purple-50 text-purple-800 border border-purple-300">
+                              Reactivado Especial ({caso.usos} usos)
+                            </span>
                           ) : estaAgotado ? (
                             <span className="inline-block px-2 py-0.5 text-[11px] font-medium bg-crimson text-white">
                               Agotado ({caso.usos}/{caso.umbral})
@@ -515,6 +550,20 @@ export default function PaginaCasos() {
                         </td>
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            {user?.rolCode === 'JEFE_CARRERA' && estaAgotado && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setModalReactivar(caso)
+                                  setMotivoReactivar('')
+                                }}
+                                className="flex items-center gap-1 rounded bg-purple-50 border border-purple-200 px-2 py-1 text-[11px] font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+                                title="Reactivar caso por excepción académica (Jefe de Carrera)"
+                              >
+                                <RotateCcw className="size-3" />
+                                <span>Reactivar</span>
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => setModalDetalleCaso(caso)}
@@ -764,6 +813,34 @@ export default function PaginaCasos() {
                 </div>
               )}
 
+              {user?.rolCode === 'JEFE_CARRERA' &&
+                (modalDetalleCaso.estadoEfectivo === 'AGOTADO' ||
+                  modalDetalleCaso.usos >= modalDetalleCaso.umbral) && (
+                  <div className="border border-purple-200 bg-purple-50 p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-purple-900">
+                        Caso Agotado ({modalDetalleCaso.usos}/{modalDetalleCaso.umbral} usos)
+                      </p>
+                      <p className="text-[11px] text-purple-700">
+                        Como Jefe de Carrera, tiene la facultad de reactivar este caso por excepción académica.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const c = modalDetalleCaso
+                        setModalDetalleCaso(null)
+                        setModalReactivar(c)
+                        setMotivoReactivar('')
+                      }}
+                      className="flex items-center gap-1.5 bg-purple-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-800 transition-colors shrink-0"
+                    >
+                      <RotateCcw className="size-3.5" />
+                      Reactivar Especial
+                    </button>
+                  </div>
+                )}
+
               <footer className="mt-2 flex items-center justify-end border-t border-line pt-4">
                 <button
                   type="button"
@@ -963,6 +1040,80 @@ export default function PaginaCasos() {
                   className="bg-crimson px-5 py-2 text-xs font-medium text-white hover:opacity-95 disabled:opacity-50"
                 >
                   {actionLoading ? 'Guardando...' : 'Crear Área'}
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: REACTIVACIÓN EXTRAORDINARIA POR CASO ESPECIAL (JEFE DE CARRERA) ── */}
+      {modalReactivar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg border border-line bg-white shadow-xl">
+            <header className="flex items-center justify-between border-b border-line px-6 py-4 bg-purple-50/70">
+              <div>
+                <span className="inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-purple-200 text-purple-900 mb-1">
+                  Potestad Exclusiva: Jefe de Carrera
+                </span>
+                <h3 className="text-sm font-semibold tracking-tight text-neutral-900">
+                  Reactivación Extraordinaria por Caso Especial
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalReactivar(null)}
+                className="text-neutral-400 hover:text-neutral-700"
+              >
+                <X className="size-5" />
+              </button>
+            </header>
+
+            <form onSubmit={handleReactivarCasoEspecial} className="p-6 flex flex-col gap-4">
+              <div className="border border-line bg-surface p-3 text-xs flex flex-col gap-1.5">
+                <p>
+                  <strong>Caso:</strong> CASO-{String(modalReactivar.idCasoEstudio).padStart(3, '0')} - {modalReactivar.titulo}
+                </p>
+                <p>
+                  <strong>Área:</strong> {modalReactivar.area.nombre} ({modalReactivar.area.carrera?.nombre || 'General'})
+                </p>
+                <p>
+                  <strong>Usos registrados:</strong> {modalReactivar.usos} de {modalReactivar.umbral} (Límite reglamentario alcanzado)
+                </p>
+              </div>
+
+              <div className="border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 leading-relaxed">
+                <strong>Nota Reglamentaria:</strong> Al confirmar, el caso quedará en estado <strong>REACTIVADO ESPECIAL</strong> y volverá a participar en el banco de casos disponibles para ser asignado en una nueva defensa. Esta operación quedará registrada en la auditoría inmutable del sistema con su firma digital y motivo.
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Justificación Académica / Motivo de la Excepción *
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={motivoReactivar}
+                  onChange={(e) => setMotivoReactivar(e.target.value)}
+                  placeholder="Especifique las razones académicas, resolución de carrera o caso fortuito que justifican habilitar este caso nuevamente..."
+                  className="w-full border border-line bg-surface p-3 text-xs leading-relaxed outline-none focus:border-neutral-400"
+                />
+              </div>
+
+              <footer className="mt-2 flex items-center justify-end gap-3 border-t border-line pt-4">
+                <button
+                  type="button"
+                  onClick={() => setModalReactivar(null)}
+                  className="border border-line px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading || !motivoReactivar.trim()}
+                  className="bg-purple-700 px-5 py-2 text-xs font-medium text-white hover:bg-purple-800 disabled:opacity-50 transition-colors"
+                >
+                  {actionLoading ? 'Reactivando...' : 'Confirmar Reactivación Especial'}
                 </button>
               </footer>
             </form>

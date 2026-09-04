@@ -28,7 +28,9 @@ import {
   Mail,
   CreditCard,
   User,
+  UserPlus,
 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 export default function PaginaEstudiantes() {
   // Estado principal de datos
@@ -40,8 +42,17 @@ export default function PaginaEstudiantes() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // Auth y perfil de rol
+  const { user } = useAuth()
+  const esJefeCarrera = user?.rolCode === 'JEFE_CARRERA' || user?.rol === 'Jefe de Carrera'
+
   // Filtros de búsqueda
-  const [carreraSeleccionada, setCarreraSeleccionada] = useState<string>('ALL')
+  const [carreraSeleccionada, setCarreraSeleccionada] = useState<string>(() => {
+    if (user?.rolCode === 'JEFE_CARRERA' || user?.rol === 'Jefe de Carrera') {
+      return user.carreras?.[0]?.idCarrera || ''
+    }
+    return 'ALL'
+  })
   const [planSeleccionado, setPlanSeleccionado] = useState<string>('ALL')
   const [filtroEstado, setFiltroEstado] = useState<string>('ACTIVO')
   const [busqueda, setBusqueda] = useState<string>('')
@@ -60,6 +71,21 @@ export default function PaginaEstudiantes() {
   const [fechaDefensaModal, setFechaDefensaModal] = useState<string>('')
   const [periodoDefensaModal, setPeriodoDefensaModal] = useState<string>('II-2026')
   const [isProgramandoDefensa, setIsProgramandoDefensa] = useState(false)
+
+  // Modal Inscribir Nuevo Estudiante
+  const [mostrarModalNuevoEstudiante, setMostrarModalNuevoEstudiante] = useState(false)
+  const [nuevoCarnetEstudiantil, setNuevoCarnetEstudiantil] = useState('')
+  const [nuevoCarnetIdentidad, setNuevoCarnetIdentidad] = useState('')
+  const [nuevoNombreCompleto, setNuevoNombreCompleto] = useState('')
+  const [nuevoCorreo, setNuevoCorreo] = useState('')
+  const [nuevaCarreraId, setNuevaCarreraId] = useState<string>('')
+  const [nuevoPlanId, setNuevoPlanId] = useState<string>('')
+  const [programarDefensaInmediata, setProgramarDefensaInmediata] = useState(false)
+  const [tipoDefensaNuevo, setTipoDefensaNuevo] = useState<'INTERNA' | 'EXTERNA'>('INTERNA')
+  const [fechaDefensaNuevo, setFechaDefensaNuevo] = useState('')
+  const [periodoDefensaNuevo, setPeriodoDefensaNuevo] = useState('II-2026')
+  const [isInscribiendo, setIsInscribiendo] = useState(false)
+  const [nuevoEstudianteFeedback, setNuevoEstudianteFeedback] = useState<{ tipo: 'exito' | 'error'; mensaje: string } | null>(null)
 
   // Estado del formulario de importación masiva
   const [importJsonText, setImportJsonText] = useState('')
@@ -82,13 +108,18 @@ export default function PaginaEstudiantes() {
     try {
       const data = await estudiantesApi.getCarreras()
       setCarreras(data)
-      if (data.length > 0 && !carreraImportDefecto) {
-        setCarreraImportDefecto(data[0].idCarrera)
+      if (data.length > 0) {
+        if (!carreraImportDefecto) {
+          setCarreraImportDefecto(data[0].idCarrera)
+        }
+        if (esJefeCarrera) {
+          setCarreraSeleccionada(data[0].idCarrera)
+        }
       }
     } catch (err) {
       console.error('Error al cargar carreras:', err)
     }
-  }, [carreraImportDefecto])
+  }, [carreraImportDefecto, esJefeCarrera])
 
   // Cargar lista de estudiantes con filtros aplicados
   const cargarEstudiantes = useCallback(async () => {
@@ -227,6 +258,84 @@ export default function PaginaEstudiantes() {
     }
   }
 
+  // Abrir modal de inscripción
+  const abrirModalNuevoEstudiante = () => {
+    setNuevoEstudianteFeedback(null)
+    const targetCarrera = esJefeCarrera
+      ? (carreras[0]?.idCarrera || '')
+      : (carreraSeleccionada !== 'ALL' ? carreraSeleccionada : (carreras[0]?.idCarrera || ''))
+
+    setNuevaCarreraId(targetCarrera)
+    const c = carreras.find((x) => x.idCarrera === targetCarrera)
+    if (c?.planesEstudio && c.planesEstudio.length > 0) {
+      setNuevoPlanId(c.planesEstudio[0].idPlanEstudio)
+    } else {
+      setNuevoPlanId('')
+    }
+    setMostrarModalNuevoEstudiante(true)
+  }
+
+  // Ejecutar inscripción individual
+  const handleInscribirEstudiante = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!nuevoCarnetEstudiantil.trim() || !nuevoCarnetIdentidad.trim() || !nuevoNombreCompleto.trim()) {
+      setNuevoEstudianteFeedback({ tipo: 'error', mensaje: 'Por favor complete todos los campos obligatorios (*).' })
+      return
+    }
+    if (programarDefensaInmediata && !fechaDefensaNuevo) {
+      setNuevoEstudianteFeedback({ tipo: 'error', mensaje: 'Si activó la opción de defensa, seleccione la fecha de defensa.' })
+      return
+    }
+
+    setIsInscribiendo(true)
+    setNuevoEstudianteFeedback(null)
+
+    try {
+      const resp = await estudiantesApi.createEstudiante({
+        carnetEstudiantil: nuevoCarnetEstudiantil.trim(),
+        carnetIdentidad: nuevoCarnetIdentidad.trim(),
+        nombreCompleto: nuevoNombreCompleto.trim(),
+        correo: nuevoCorreo.trim() || undefined,
+        idCarrera: nuevaCarreraId || undefined,
+        idPlanEstudio: nuevoPlanId || undefined,
+      })
+
+      let mensajeExito = `¡Estudiante ${resp.estudiante?.nombreCompleto || nuevoNombreCompleto} inscrito exitosamente en el padrón!`
+
+      if (programarDefensaInmediata && fechaDefensaNuevo && resp.estudiante?.idEstudiante) {
+        await defensasApi.programarDefensa({
+          idEstudiante: resp.estudiante.idEstudiante,
+          tipoDefensa: tipoDefensaNuevo,
+          fechaDefensa: fechaDefensaNuevo,
+          periodoAcademico: periodoDefensaNuevo,
+        })
+        mensajeExito += ' Además se ha programado su defensa de grado con éxito.'
+      }
+
+      setNuevoEstudianteFeedback({ tipo: 'exito', mensaje: mensajeExito })
+      setNuevoCarnetEstudiantil('')
+      setNuevoCarnetIdentidad('')
+      setNuevoNombreCompleto('')
+      setNuevoCorreo('')
+      setProgramarDefensaInmediata(false)
+      setFechaDefensaNuevo('')
+      cargarEstudiantes()
+
+      setTimeout(() => {
+        setMostrarModalNuevoEstudiante(false)
+        setNuevoEstudianteFeedback(null)
+      }, 1600)
+    } catch (err: any) {
+      const responseMessage = err?.response?.data?.message
+      const msg = Array.isArray(responseMessage)
+        ? responseMessage.join(', ')
+        : (responseMessage || err?.message || 'Error al inscribir al estudiante')
+      setNuevoEstudianteFeedback({ tipo: 'error', mensaje: msg })
+    } finally {
+      setIsInscribiendo(false)
+    }
+  }
+
   // Cargar plantilla de ejemplo para importación
   const cargarPlantillaEjemplo = () => {
     const ejemplo = [
@@ -335,10 +444,18 @@ export default function PaginaEstudiantes() {
                   setResultadoImportacion(null)
                   setMostrarModalImportacion(true)
                 }}
-                className="flex items-center gap-1.5 border border-ink bg-ink px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-neutral-800"
+                className="flex items-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink"
               >
                 <Upload className="h-3.5 w-3.5" />
-                <span>Importar Padrón (Masivo)</span>
+                <span>Importar Padrón</span>
+              </button>
+              <button
+                type="button"
+                onClick={abrirModalNuevoEstudiante}
+                className="flex items-center gap-1.5 border border-ink bg-ink px-3.5 py-2 text-xs font-medium text-white transition-colors hover:bg-neutral-800 shadow-xs"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>+ Inscribir Estudiante</span>
               </button>
             </div>
           }
@@ -364,15 +481,15 @@ export default function PaginaEstudiantes() {
           <div className="border border-line bg-white p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                Carreras Activas
+                {esJefeCarrera ? 'Mi Carrera' : 'Carreras Activas'}
               </span>
               <Building2 className="h-4 w-4 text-neutral-400" />
             </div>
             <div className="mt-2 text-2xl font-bold tracking-tight text-neutral-900">
-              {carreras.length}
+              {esJefeCarrera ? (carreras[0]?.nombre || 'Sistemas') : carreras.length}
             </div>
             <span className="text-[11px] text-neutral-500">
-              Con programas de grado
+              {esJefeCarrera ? 'Gestión académica exclusiva' : 'Con programas de grado'}
             </span>
           </div>
 
@@ -414,31 +531,47 @@ export default function PaginaEstudiantes() {
             <span className="flex items-center gap-1 text-xs font-semibold text-neutral-700 uppercase tracking-wider mr-2">
               <Building2 className="h-3.5 w-3.5" /> Carrera:
             </span>
-            <button
-              type="button"
-              onClick={() => handleCambioCarrera('ALL')}
-              className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
-                carreraSeleccionada === 'ALL'
-                  ? 'border border-ink bg-ink text-white shadow-xs'
-                  : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
-              }`}
-            >
-              Todas las Carreras
-            </button>
-            {carreras.map((c) => (
-              <button
-                key={c.idCarrera}
-                type="button"
-                onClick={() => handleCambioCarrera(c.idCarrera)}
-                className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
-                  carreraSeleccionada === c.idCarrera
-                    ? 'border border-ink bg-ink text-white shadow-xs'
-                    : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
-                }`}
-              >
-                {c.nombre}
-              </button>
-            ))}
+            {esJefeCarrera ? (
+              // Modo Jefe de Carrera: Únicamente su carrera asignada, sin opción de "Todas las Carreras"
+              carreras.map((c) => (
+                <span
+                  key={c.idCarrera}
+                  className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-semibold text-white shadow-xs"
+                >
+                  <Building2 className="h-3.5 w-3.5 text-neutral-300" />
+                  <span>{c.nombre}</span>
+                </span>
+              ))
+            ) : (
+              // Modo Coordinación / Secretariado: Todas las Carreras y selector global
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleCambioCarrera('ALL')}
+                  className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
+                    carreraSeleccionada === 'ALL'
+                      ? 'border border-ink bg-ink text-white shadow-xs'
+                      : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
+                  }`}
+                >
+                  Todas las Carreras
+                </button>
+                {carreras.map((c) => (
+                  <button
+                    key={c.idCarrera}
+                    type="button"
+                    onClick={() => handleCambioCarrera(c.idCarrera)}
+                    className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
+                      carreraSeleccionada === c.idCarrera
+                        ? 'border border-ink bg-ink text-white shadow-xs'
+                        : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
+                    }`}
+                  >
+                    {c.nombre}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Fila 2: Filtro por Plan, Estado y Caja de Búsqueda */}
@@ -586,8 +719,18 @@ export default function PaginaEstudiantes() {
                         <p className="text-xs text-neutral-400 max-w-sm">
                           {busqueda || carreraSeleccionada !== 'ALL' || planSeleccionado !== 'ALL'
                             ? 'Intenta ajustar o limpiar los filtros de búsqueda y carrera.'
-                            : 'El padrón está vacío. Utiliza el botón "Importar Padrón" para cargar estudiantes.'}
+                            : 'El padrón está vacío. Inscribe al primer estudiante o importa un archivo masivo.'}
                         </p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={abrirModalNuevoEstudiante}
+                            className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
+                          >
+                            <UserPlus className="h-3.5 w-3.5" />
+                            <span>Inscribir Estudiante</span>
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -801,17 +944,24 @@ export default function PaginaEstudiantes() {
                     <label className="block font-medium text-neutral-700 mb-1">
                       Carrera por defecto (si se omite en la fila):
                     </label>
-                    <select
-                      value={carreraImportDefecto}
-                      onChange={(e) => setCarreraImportDefecto(e.target.value)}
-                      className="w-full border border-line bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:border-ink focus:outline-hidden"
-                    >
-                      {carreras.map((c) => (
-                        <option key={c.idCarrera} value={c.idCarrera}>
-                          {c.nombre}
-                        </option>
-                      ))}
-                    </select>
+                    {esJefeCarrera ? (
+                      <div className="flex items-center gap-2 border border-blue-200 bg-blue-50/70 px-2.5 py-1.5 text-xs font-semibold text-blue-900">
+                        <Building2 className="h-3.5 w-3.5 text-blue-700 shrink-0" />
+                        <span>{carreras[0]?.nombre || 'Sistemas'}</span>
+                      </div>
+                    ) : (
+                      <select
+                        value={carreraImportDefecto}
+                        onChange={(e) => setCarreraImportDefecto(e.target.value)}
+                        className="w-full border border-line bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:border-ink focus:outline-hidden"
+                      >
+                        {carreras.map((c) => (
+                          <option key={c.idCarrera} value={c.idCarrera}>
+                            {c.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 pt-4">
@@ -1027,6 +1177,282 @@ export default function PaginaEstudiantes() {
                     className="bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 disabled:opacity-50"
                   >
                     {isProgramandoDefensa ? 'Programando...' : 'Confirmar Programación'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL PARA INSCRIBIR NUEVO ESTUDIANTE */}
+        {mostrarModalNuevoEstudiante && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-xl border border-line bg-white shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between border-b border-line bg-surface px-6 py-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 border border-line bg-white">
+                    <UserPlus className="h-4 w-4 text-ink" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold tracking-tight text-neutral-900">
+                      Inscribir Nuevo Postulante
+                    </h3>
+                    <p className="text-xs text-neutral-500">
+                      Registro oficial en el padrón para habilitación a defensa de grado
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalNuevoEstudiante(false)}
+                  className="text-neutral-400 hover:text-neutral-700"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {nuevoEstudianteFeedback && (
+                <div
+                  className={`mx-6 mt-4 flex items-center gap-2 p-3 text-xs border ${
+                    nuevoEstudianteFeedback.tipo === 'exito'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                      : 'border-red-200 bg-red-50 text-red-800'
+                  }`}
+                >
+                  {nuevoEstudianteFeedback.tipo === 'exito' ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                  )}
+                  <span>{nuevoEstudianteFeedback.mensaje}</span>
+                </div>
+              )}
+
+              {esJefeCarrera && (
+                <div className="mx-6 mt-4 border border-blue-200 bg-blue-50/60 p-3 text-xs text-blue-900 flex items-start gap-2">
+                  <GraduationCap className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold">Modo Jefe de Carrera:</span> El postulante quedará
+                    inscrito bajo tu carrera académica autorizada.
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleInscribirEstudiante} className="p-6 flex flex-col gap-4">
+                {/* Datos de Identificación */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                      Carnet Estudiantil (Código) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={nuevoCarnetEstudiantil}
+                      onChange={(e) => setNuevoCarnetEstudiantil(e.target.value.toUpperCase())}
+                      placeholder="ej. SIS-2024099"
+                      className="w-full border border-line bg-surface px-3 py-2 text-xs font-mono font-medium outline-hidden focus:border-ink focus:bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                      C.I. (Carnet de Identidad) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={nuevoCarnetIdentidad}
+                      onChange={(e) => setNuevoCarnetIdentidad(e.target.value)}
+                      placeholder="ej. 8392011 SC"
+                      className="w-full border border-line bg-surface px-3 py-2 text-xs outline-hidden focus:border-ink focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1">
+                    Nombre Completo del Postulante *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={nuevoNombreCompleto}
+                    onChange={(e) => setNuevoNombreCompleto(e.target.value)}
+                    placeholder="ej. Gabriel Leonardo Suarez Choque"
+                    className="w-full border border-line bg-surface px-3 py-2 text-xs outline-hidden focus:border-ink focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1">
+                    Correo Institucional o de Contacto
+                  </label>
+                  <input
+                    type="email"
+                    value={nuevoCorreo}
+                    onChange={(e) => setNuevoCorreo(e.target.value)}
+                    placeholder="ej. gabriel.suarez@estudiante.edu.bo"
+                    className="w-full border border-line bg-surface px-3 py-2 text-xs outline-hidden focus:border-ink focus:bg-white"
+                  />
+                </div>
+
+                {/* Carrera y Plan */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-line">
+                  {esJefeCarrera ? (
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">
+                        Carrera Académica *
+                      </label>
+                      <div className="flex items-center gap-2 border border-blue-200 bg-blue-50/70 px-3 py-2 text-xs font-semibold text-blue-900">
+                        <Building2 className="h-4 w-4 text-blue-700 shrink-0" />
+                        <span>
+                          {carreras.find((x) => x.idCarrera === nuevaCarreraId)?.nombre || carreras[0]?.nombre || 'Sistemas'}
+                        </span>
+                        <span className="ml-auto rounded-xs bg-blue-200/80 px-1.5 py-0.5 text-[10px] font-medium text-blue-800">
+                          Tu Carrera Asignada
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1">
+                        Carrera Académica * <span className="text-[11px] font-normal text-neutral-500">(Asignación Global)</span>
+                      </label>
+                      <select
+                        value={nuevaCarreraId}
+                        onChange={(e) => {
+                          const cid = e.target.value
+                          setNuevaCarreraId(cid)
+                          const selCarrera = carreras.find((x) => x.idCarrera === cid)
+                          if (selCarrera?.planesEstudio && selCarrera.planesEstudio.length > 0) {
+                            setNuevoPlanId(selCarrera.planesEstudio[0].idPlanEstudio)
+                          } else {
+                            setNuevoPlanId('')
+                          }
+                        }}
+                        className="w-full border border-line bg-surface px-3 py-2 text-xs font-medium text-neutral-800 outline-hidden focus:border-ink focus:bg-white"
+                      >
+                        <option value="" disabled>-- Selecciona la carrera del postulante --</option>
+                        {carreras.map((c) => (
+                          <option key={c.idCarrera} value={c.idCarrera}>
+                            {c.nombre} {c.facultad?.nombre ? `(${c.facultad.nombre})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                      Plan de Estudios *
+                    </label>
+                    <select
+                      value={nuevoPlanId}
+                      onChange={(e) => setNuevoPlanId(e.target.value)}
+                      className="w-full border border-line bg-surface px-3 py-2 text-xs outline-hidden focus:border-ink focus:bg-white"
+                    >
+                      {(() => {
+                        const c = carreras.find((x) => x.idCarrera === nuevaCarreraId)
+                        if (!c || !c.planesEstudio || c.planesEstudio.length === 0) {
+                          return <option value="">Plan General Automático</option>
+                        }
+                        return c.planesEstudio.map((p) => (
+                          <option key={p.idPlanEstudio} value={p.idPlanEstudio}>
+                            {p.nombre}
+                          </option>
+                        ))
+                      })()}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Sección opcional de Programación de Defensa */}
+                <div className="border border-line bg-neutral-50/70 p-3.5 mt-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={programarDefensaInmediata}
+                      onChange={(e) => setProgramarDefensaInmediata(e.target.checked)}
+                      className="h-4 w-4 rounded-xs border-neutral-300 text-crimson focus:ring-crimson"
+                    />
+                    <span className="text-xs font-semibold text-neutral-800">
+                      ¿Habilitar y programar defensa de grado inmediatamente?
+                    </span>
+                  </label>
+                  <p className="text-[11px] text-neutral-500 mt-1 pl-6">
+                    Genera la inscripción y agenda de inmediato el examen de grado sin salir de esta pantalla.
+                  </p>
+
+                  {programarDefensaInmediata && (
+                    <div className="mt-3 pl-6 grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-line/60">
+                      <div>
+                        <label className="block text-[11px] font-medium text-neutral-600 mb-1">
+                          Tipo de Defensa *
+                        </label>
+                        <select
+                          value={tipoDefensaNuevo}
+                          onChange={(e) => setTipoDefensaNuevo(e.target.value as 'INTERNA' | 'EXTERNA')}
+                          className="w-full border border-line bg-white px-2 py-1.5 text-xs outline-hidden focus:border-ink"
+                        >
+                          <option value="INTERNA">Interna</option>
+                          <option value="EXTERNA">Externa</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-neutral-600 mb-1">
+                          Fecha Defensa *
+                        </label>
+                        <input
+                          type="date"
+                          required={programarDefensaInmediata}
+                          value={fechaDefensaNuevo}
+                          onChange={(e) => setFechaDefensaNuevo(e.target.value)}
+                          className="w-full border border-line bg-white px-2 py-1.5 text-xs outline-hidden focus:border-ink"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-neutral-600 mb-1">
+                          Periodo Académico
+                        </label>
+                        <input
+                          type="text"
+                          value={periodoDefensaNuevo}
+                          onChange={(e) => setPeriodoDefensaNuevo(e.target.value)}
+                          className="w-full border border-line bg-white px-2 py-1.5 text-xs outline-hidden focus:border-ink"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 border-t border-line pt-4 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalNuevoEstudiante(false)}
+                    disabled={isInscribiendo}
+                    className="border border-line bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isInscribiendo}
+                    className="flex items-center gap-1.5 bg-ink px-5 py-2 text-xs font-medium text-white hover:bg-neutral-800 disabled:opacity-50 shadow-xs"
+                  >
+                    {isInscribiendo ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        <span>Inscribiendo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-3.5 w-3.5" />
+                        <span>Inscribir Postulante</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

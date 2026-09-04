@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import {
+  CalificarDefensaDto,
   FilterDefensasDto,
   ProgramarDefensaDto,
   UpdateDefensaDto,
@@ -337,12 +338,76 @@ export class DefensasService {
         estadoDefensa: dto.estadoDefensa,
         nota: dto.nota,
         resultado: dto.resultado,
+        tribunal: dto.tribunal,
+        observaciones: dto.observaciones,
       },
       BigInt(user.idUsuario),
     );
 
     return {
       mensaje: 'Defensa actualizada exitosamente.',
+      defensa: this.serializeBigInt(updated),
+    };
+  }
+
+  /**
+   * Registra formalmente la calificación y dictamen del tribunal examinador para una defensa.
+   */
+  async calificarDefensa(
+    idDefensa: string,
+    dto: CalificarDefensaDto,
+    user: AuthenticatedUser,
+  ) {
+    const id = BigInt(idDefensa);
+    const existing = await this.repository.findDefensaById(id);
+
+    if (!existing) {
+      throw new NotFoundException(`Defensa con ID ${idDefensa} no encontrada.`);
+    }
+
+    if (user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.resolveAllowedCarreras(user);
+      if (
+        !allowed?.includes(
+          existing.instancia.proceso.estudiante.planEstudio.idCarrera,
+        )
+      ) {
+        throw new ForbiddenException(
+          'No tienes permisos para calificar defensas de otra carrera.',
+        );
+      }
+    }
+
+    const nota = Number(dto.nota);
+    if (isNaN(nota) || nota < 0 || nota > 100) {
+      throw new BadRequestException(
+        'La nota final debe ser un valor numérico entre 0 y 100.',
+      );
+    }
+
+    // Determinar/normalizar resultado oficial
+    let resultado = dto.resultado ? dto.resultado.trim().toUpperCase() : '';
+    if (!resultado) {
+      if (nota < 51) resultado = 'REPROBADO';
+      else if (nota >= 95) resultado = 'APROBADO_CON_MENCION';
+      else if (nota >= 85) resultado = 'APROBADO_CON_FELICITACION';
+      else resultado = 'APROBADO';
+    }
+
+    const updated = await this.repository.calificarDefensa(
+      id,
+      {
+        nota,
+        resultado,
+        estadoDefensa: dto.estadoDefensa || 'CALIFICADO',
+        tribunal: dto.tribunal,
+        observaciones: dto.observaciones,
+      },
+      BigInt(user.idUsuario),
+    );
+
+    return {
+      mensaje: `Calificación registrada exitosamente (${nota}/100 - ${resultado}).`,
       defensa: this.serializeBigInt(updated),
     };
   }

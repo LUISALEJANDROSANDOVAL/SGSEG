@@ -7,6 +7,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 
@@ -33,6 +34,44 @@ export class ProgramarDefensaDto {
   periodoAcademico?: string;
 }
 
+export class TribunalDto {
+  @IsOptional()
+  @IsString()
+  presidente?: string;
+
+  @IsOptional()
+  @IsString()
+  secretario?: string;
+
+  @IsOptional()
+  @IsString()
+  vocal?: string;
+}
+
+export class CalificarDefensaDto {
+  @IsNotEmpty({ message: 'La nota numérica es obligatoria.' })
+  @Type(() => Number)
+  @IsNumber({}, { message: 'La nota debe ser un número válido.' })
+  @Min(0, { message: 'La nota mínima es 0.' })
+  @Max(100, { message: 'La nota máxima es 100.' })
+  nota: number;
+
+  @IsNotEmpty({ message: 'El resultado oficial es obligatorio.' })
+  @IsString()
+  resultado: string;
+
+  @IsOptional()
+  @IsString()
+  estadoDefensa?: string;
+
+  @IsOptional()
+  @IsString()
+  observaciones?: string;
+
+  @IsOptional()
+  tribunal?: TribunalDto;
+}
+
 export class UpdateDefensaDto {
   @IsOptional()
   @IsDateString(
@@ -56,11 +95,20 @@ export class UpdateDefensaDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(0)
+  @Max(100)
   nota?: number;
 
   @IsOptional()
   @IsString()
   resultado?: string;
+
+  @IsOptional()
+  @IsString()
+  observaciones?: string;
+
+  @IsOptional()
+  tribunal?: TribunalDto;
 }
 
 export class FilterDefensasDto {

@@ -50,10 +50,13 @@ export class EstudiantesController {
    * Creación individual o upsert de un estudiante.
    */
   @Post()
-  @Roles('COORDINACION', 'SECRETARIADO')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA')
   @HttpCode(HttpStatus.CREATED)
-  async create(@Body() dto: CreateEstudianteDto) {
-    return this.estudiantesService.create(dto);
+  async create(
+    @Body() dto: CreateEstudianteDto,
+    @CurrentUser() user?: AuthenticatedUser,
+  ) {
+    return this.estudiantesService.create(dto, user);
   }
 
   /**
