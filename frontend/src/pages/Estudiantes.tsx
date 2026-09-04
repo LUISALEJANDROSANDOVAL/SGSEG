@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
+import { useAuth } from '@/context/AuthContext'
 import {
   estudiantesApi,
   type Estudiante,
@@ -26,9 +27,15 @@ import {
   Mail,
   CreditCard,
   User,
+  ShieldCheck,
+  Lock,
 } from 'lucide-react'
 
 export default function PaginaEstudiantes() {
+  const { user } = useAuth()
+  const esJefe = user?.rol === 'Jefe de Carrera'
+  const jefeCarreraId = user?.carreraId || '1'
+
   // Estado principal de datos
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([])
   const [carreras, setCarreras] = useState<Carrera[]>([])
@@ -38,8 +45,10 @@ export default function PaginaEstudiantes() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Filtros de búsqueda
-  const [carreraSeleccionada, setCarreraSeleccionada] = useState<string>('ALL')
+  // Filtros de búsqueda (Si es Jefe de Carrera, se fuerza a su carrera asignada)
+  const [carreraSeleccionada, setCarreraSeleccionada] = useState<string>(
+    esJefe ? jefeCarreraId : 'ALL'
+  )
   const [planSeleccionado, setPlanSeleccionado] = useState<string>('ALL')
   const [filtroEstado, setFiltroEstado] = useState<string>('ACTIVO')
   const [busqueda, setBusqueda] = useState<string>('')
@@ -54,10 +63,20 @@ export default function PaginaEstudiantes() {
 
   // Estado del formulario de importación masiva
   const [importJsonText, setImportJsonText] = useState('')
-  const [carreraImportDefecto, setCarreraImportDefecto] = useState<string>('')
+  const [carreraImportDefecto, setCarreraImportDefecto] = useState<string>(
+    esJefe ? jefeCarreraId : ''
+  )
   const [crearPlanesFaltantes, setCrearPlanesFaltantes] = useState(true)
   const [resultadoImportacion, setResultadoImportacion] = useState<BulkUpsertResult | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+
+  // Sincronizar restricción si el usuario cambia dinámicamente de rol
+  useEffect(() => {
+    if (esJefe) {
+      setCarreraSeleccionada(jefeCarreraId)
+      setCarreraImportDefecto(jefeCarreraId)
+    }
+  }, [esJefe, jefeCarreraId])
 
   // Debounce para el input de búsqueda
   useEffect(() => {
@@ -373,38 +392,85 @@ export default function PaginaEstudiantes() {
           </div>
         </div>
 
+        {/* Insignia de Aislamiento Estricto para Jefe de Carrera (RNF-01, RNF-02) */}
+        {esJefe && (
+          <div className="flex items-center justify-between border-l-4 border-l-crimson border border-line bg-surface p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center bg-crimson/10 text-crimson">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-widest text-crimson uppercase">
+                    Aislamiento Estricto por Carrera (RNF-02)
+                  </span>
+                  <span className="inline-flex items-center gap-1 bg-neutral-200 px-1.5 py-0.5 text-[10px] font-medium text-neutral-800">
+                    <Lock className="h-2.5 w-2.5" /> Contexto Restringido
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs font-semibold text-neutral-900">
+                  Visualizando únicamente el padrón de:{' '}
+                  <span className="text-crimson font-bold">
+                    {carreras.find((c) => c.idCarrera === carreraSeleccionada)?.nombre || 'Ingeniería de Sistemas'}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-block text-[11px] text-neutral-500 font-mono">
+              carreraId: {carreraSeleccionada}
+            </span>
+          </div>
+        )}
+
         {/* Barra de Filtros por Carrera, Plan, Estado y Búsqueda */}
         <div className="flex flex-col gap-3 border border-line bg-white p-4">
-          {/* Fila 1: Pestañas de Carrera */}
+          {/* Fila 1: Pestañas de Carrera (Bloqueadas si es Jefe de Carrera) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             <span className="flex items-center gap-1 text-xs font-semibold text-neutral-700 uppercase tracking-wider mr-2">
               <Building2 className="h-3.5 w-3.5" /> Carrera:
             </span>
-            <button
-              type="button"
-              onClick={() => handleCambioCarrera('ALL')}
-              className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
-                carreraSeleccionada === 'ALL'
-                  ? 'border border-ink bg-ink text-white shadow-xs'
-                  : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
-              }`}
-            >
-              Todas las Carreras
-            </button>
-            {carreras.map((c) => (
-              <button
-                key={c.idCarrera}
-                type="button"
-                onClick={() => handleCambioCarrera(c.idCarrera)}
-                className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
-                  carreraSeleccionada === c.idCarrera
-                    ? 'border border-ink bg-ink text-white shadow-xs'
-                    : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
-                }`}
-              >
-                {c.nombre}
-              </button>
-            ))}
+
+            {esJefe ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 border border-crimson bg-crimson/5 px-3 py-1.5 text-xs font-bold text-crimson shadow-xs">
+                  <Lock className="h-3 w-3" />
+                  <span>
+                    {carreras.find((c) => c.idCarrera === carreraSeleccionada)?.nombre || 'Ingeniería de Sistemas'}
+                  </span>
+                </div>
+                <span className="text-[11px] text-neutral-400 italic">
+                  (Selector fijado por rol institucional)
+                </span>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleCambioCarrera('ALL')}
+                  className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
+                    carreraSeleccionada === 'ALL'
+                      ? 'border border-ink bg-ink text-white shadow-xs'
+                      : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
+                  }`}
+                >
+                  Todas las Carreras
+                </button>
+                {carreras.map((c) => (
+                  <button
+                    key={c.idCarrera}
+                    type="button"
+                    onClick={() => handleCambioCarrera(c.idCarrera)}
+                    className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
+                      carreraSeleccionada === c.idCarrera
+                        ? 'border border-ink bg-ink text-white shadow-xs'
+                        : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
+                    }`}
+                  >
+                    {c.nombre}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Fila 2: Filtro por Plan, Estado y Caja de Búsqueda */}
@@ -758,15 +824,21 @@ export default function PaginaEstudiantes() {
                     </label>
                     <select
                       value={carreraImportDefecto}
+                      disabled={esJefe}
                       onChange={(e) => setCarreraImportDefecto(e.target.value)}
-                      className="w-full border border-line bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:border-ink focus:outline-hidden"
+                      className="w-full border border-line bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:border-ink focus:outline-hidden disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed"
                     >
                       {carreras.map((c) => (
                         <option key={c.idCarrera} value={c.idCarrera}>
-                          {c.nombre}
+                          {c.nombre} {esJefe && c.idCarrera === carreraImportDefecto ? '(Fijado)' : ''}
                         </option>
                       ))}
                     </select>
+                    {esJefe && (
+                      <span className="mt-1 block text-[10px] text-neutral-500 italic">
+                        Los registros importados se asignarán obligatoriamente a su carrera.
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 pt-4">

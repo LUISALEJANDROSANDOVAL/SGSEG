@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { EncabezadoPagina } from '@/components/encabezado-pagina';
 import api from '../lib/api';
-import { GraduationCap, Landmark, BookOpen, Layers, Plus, X, ChevronRight, Check } from 'lucide-react';
+import { GraduationCap, Landmark, BookOpen, Layers, Plus, X, ChevronRight, Check, ShieldCheck, Lock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function PaginaAcademia() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'facultades' | 'carreras' | 'areas' | 'pensums'>('facultades');
+  const esJefe = user?.rol === 'Jefe de Carrera';
+  const jefeCarreraId = user?.carreraId || '1';
+
+  // Si es Jefe de Carrera, inicia directamente en 'areas' y no puede ver facultades ni carreras
+  const [activeTab, setActiveTab] = useState<'facultades' | 'carreras' | 'areas' | 'pensums'>(
+    esJefe ? 'areas' : 'facultades'
+  );
   const [facultades, setFacultades] = useState<any[]>([]);
   const [carreras, setCarreras] = useState<any[]>([]);
   const [areas, setAreas] = useState<any[]>([]);
@@ -21,8 +27,16 @@ export default function PaginaAcademia() {
   // Campos de formulario
   const [formNombre, setFormNombre] = useState('');
   const [selectedFacultadId, setSelectedFacultadId] = useState('');
-  const [selectedCarreraId, setSelectedCarreraId] = useState('');
+  const [selectedCarreraId, setSelectedCarreraId] = useState(esJefe ? jefeCarreraId : '');
   const [selectedPensumIds, setSelectedPensumIds] = useState<string[]>([]);
+
+  // Sincronizar si cambia el rol a Jefe
+  useEffect(() => {
+    if (esJefe) {
+      setActiveTab('areas');
+      setSelectedCarreraId(jefeCarreraId);
+    }
+  }, [esJefe, jefeCarreraId]);
 
   const fetchDatos = async () => {
     setLoading(true);
@@ -48,11 +62,26 @@ export default function PaginaAcademia() {
     fetchDatos();
   }, []);
 
+  // Filtrar áreas y pensums para que el Jefe de Carrera solo vea los de su carrera
+  const areasFiltradas = useMemo(() => {
+    if (!esJefe) return areas;
+    return areas.filter((a) => String(a.carreraId) === String(jefeCarreraId));
+  }, [areas, esJefe, jefeCarreraId]);
+
+  const pensumsFiltrados = useMemo(() => {
+    if (!esJefe) return pensums;
+    return pensums.filter((p) => String(p.carreraId) === String(jefeCarreraId));
+  }, [pensums, esJefe, jefeCarreraId]);
+
+  const carreraActualJefe = useMemo(() => {
+    return carreras.find((c) => String(c.id) === String(jefeCarreraId))?.nombre || 'Ingeniería de Sistemas';
+  }, [carreras, jefeCarreraId]);
+
   const abrirCrear = () => {
     setEditId(null);
     setFormNombre('');
     setSelectedFacultadId('');
-    setSelectedCarreraId(user?.rol === 'Jefe de Carrera' ? user.carreraId || '' : '');
+    setSelectedCarreraId(esJefe ? jefeCarreraId : '');
     setSelectedPensumIds([]);
     setModalAbierto(true);
   };
@@ -64,7 +93,7 @@ export default function PaginaAcademia() {
       setSelectedFacultadId(item.facultadId);
     } else if (activeTab === 'areas') {
       setSelectedCarreraId(item.carreraId);
-      setSelectedPensumIds(item.pensums.map((ap: any) => ap.pensumId));
+      setSelectedPensumIds(item.pensums?.map((ap: any) => ap.pensumId) || []);
     } else if (activeTab === 'pensums') {
       setSelectedCarreraId(item.carreraId);
     }
@@ -108,8 +137,7 @@ export default function PaginaAcademia() {
     );
   };
 
-  // Filtrar áreas y pensums según rol para vista de Jefe de Carrera
-  const esJefe = user?.rol === 'Jefe de Carrera';
+  // Título del modal dinámico según pestaña activa
   const getModalTitle = () => {
     const accion = editId ? 'Editar' : 'Registrar';
     switch (activeTab) {
@@ -139,30 +167,62 @@ export default function PaginaAcademia() {
           }
         />
 
-        {/* Pestañas (Tabs) */}
+        {/* Insignia de Aislamiento Estricto para Jefe de Carrera (RNF-01, RNF-02) */}
+        {esJefe && (
+          <div className="flex items-center justify-between border-l-4 border-l-crimson border border-line bg-surface p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center bg-crimson/10 text-crimson">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-widest text-crimson uppercase">
+                    Aislamiento Estricto por Carrera (RNF-02)
+                  </span>
+                  <span className="inline-flex items-center gap-1 bg-neutral-200 px-1.5 py-0.5 text-[10px] font-medium text-neutral-800">
+                    <Lock className="h-2.5 w-2.5" /> Contexto Restringido
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs font-semibold text-neutral-900">
+                  Visualizando y administrando únicamente la estructura de:{' '}
+                  <span className="text-crimson font-bold">{carreraActualJefe}</span>
+                </p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-block text-[11px] text-neutral-500 font-mono">
+              carreraId: {jefeCarreraId}
+            </span>
+          </div>
+        )}
+
+        {/* Pestañas (Tabs) - Facultades y Carreras no visibles para Jefe de Carrera */}
         <div className="flex border-b border-line bg-white px-2">
-          <button
-            onClick={() => setActiveTab('facultades')}
-            className={`flex items-center gap-2 px-5 py-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'facultades'
-                ? 'border-ink text-ink font-bold'
-                : 'border-transparent text-neutral-400 hover:text-ink'
-            }`}
-          >
-            <Landmark className="size-4" />
-            Facultades
-          </button>
-          <button
-            onClick={() => setActiveTab('carreras')}
-            className={`flex items-center gap-2 px-5 py-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'carreras'
-                ? 'border-ink text-ink font-bold'
-                : 'border-transparent text-neutral-400 hover:text-ink'
-            }`}
-          >
-            <GraduationCap className="size-4" />
-            Carreras
-          </button>
+          {!esJefe && (
+            <>
+              <button
+                onClick={() => setActiveTab('facultades')}
+                className={`flex items-center gap-2 px-5 py-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
+                  activeTab === 'facultades'
+                    ? 'border-ink text-ink font-bold'
+                    : 'border-transparent text-neutral-400 hover:text-ink'
+                }`}
+              >
+                <Landmark className="size-4" />
+                Facultades
+              </button>
+              <button
+                onClick={() => setActiveTab('carreras')}
+                className={`flex items-center gap-2 px-5 py-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
+                  activeTab === 'carreras'
+                    ? 'border-ink text-ink font-bold'
+                    : 'border-transparent text-neutral-400 hover:text-ink'
+                }`}
+              >
+                <GraduationCap className="size-4" />
+                Carreras
+              </button>
+            </>
+          )}
           <button
             onClick={() => setActiveTab('areas')}
             className={`flex items-center gap-2 px-5 py-4 text-xs font-semibold uppercase tracking-wider border-b-2 transition-colors cursor-pointer ${
@@ -172,7 +232,7 @@ export default function PaginaAcademia() {
             }`}
           >
             <Layers className="size-4" />
-            Áreas Académicas
+            Áreas Académicas ({areasFiltradas.length})
           </button>
           <button
             onClick={() => setActiveTab('pensums')}
@@ -183,7 +243,7 @@ export default function PaginaAcademia() {
             }`}
           >
             <BookOpen className="size-4" />
-            Pensums
+            Pensums ({pensumsFiltrados.length})
           </button>
         </div>
 
@@ -194,7 +254,7 @@ export default function PaginaAcademia() {
         ) : (
           <div className="grid grid-cols-1 gap-6">
             {/* VISTA FACULTADES */}
-            {activeTab === 'facultades' && (
+            {!esJefe && activeTab === 'facultades' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {facultades.map((f) => (
                   <div key={f.id} className="border border-line bg-white p-5 flex flex-col justify-between shadow-sm">
@@ -217,7 +277,7 @@ export default function PaginaAcademia() {
             )}
 
             {/* VISTA CARRERAS */}
-            {activeTab === 'carreras' && (
+            {!esJefe && activeTab === 'carreras' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {carreras.map((c) => (
                   <div key={c.id} className="border border-line bg-white p-5 flex flex-col justify-between shadow-sm">
@@ -255,7 +315,7 @@ export default function PaginaAcademia() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
-                      {areas.map((a) => (
+                      {areasFiltradas.map((a) => (
                         <tr key={a.id} className="hover:bg-neutral-50/50 transition-colors">
                           <td className="px-5 py-4 font-medium text-neutral-900">{a.nombre}</td>
                           <td className="px-5 py-4 text-neutral-600">{a.carrera?.nombre}</td>
@@ -281,6 +341,13 @@ export default function PaginaAcademia() {
                           </td>
                         </tr>
                       ))}
+                      {areasFiltradas.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="px-5 py-8 text-center text-xs text-neutral-500">
+                            No hay áreas académicas registradas para esta carrera.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -300,7 +367,7 @@ export default function PaginaAcademia() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-line">
-                      {pensums.map((p) => (
+                      {pensumsFiltrados.map((p) => (
                         <tr key={p.id} className="hover:bg-neutral-50/50 transition-colors">
                           <td className="px-5 py-4 font-medium text-neutral-900">{p.nombre}</td>
                           <td className="px-5 py-4 text-neutral-600">{p.carrera?.nombre}</td>
@@ -314,6 +381,13 @@ export default function PaginaAcademia() {
                           </td>
                         </tr>
                       ))}
+                      {pensumsFiltrados.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="px-5 py-8 text-center text-xs text-neutral-500">
+                            No hay planes de estudio registrados para esta carrera.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -366,19 +440,33 @@ export default function PaginaAcademia() {
 
                 {(activeTab === 'areas' || activeTab === 'pensums') && (
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold text-neutral-600">Carrera Vinculada</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-neutral-600">Carrera Vinculada</label>
+                      {esJefe && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-crimson">
+                          <Lock className="size-2.5" /> Bloqueado por Rol
+                        </span>
+                      )}
+                    </div>
                     <select
                       value={selectedCarreraId}
                       required
                       disabled={esJefe}
                       onChange={(e) => setSelectedCarreraId(e.target.value)}
-                      className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white disabled:opacity-75"
+                      className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-600 disabled:cursor-not-allowed"
                     >
                       <option value="">Seleccionar carrera...</option>
                       {carreras.map((c) => (
-                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                        <option key={c.id} value={c.id}>
+                          {c.nombre} {esJefe && String(c.id) === String(jefeCarreraId) ? '(Asignada)' : ''}
+                        </option>
                       ))}
                     </select>
+                    {esJefe && (
+                      <span className="text-[10px] text-neutral-500 italic">
+                        Los nuevos registros se enlazarán automáticamente a su carrera designada.
+                      </span>
+                    )}
                   </div>
                 )}
 
