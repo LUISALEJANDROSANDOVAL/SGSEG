@@ -51,7 +51,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginAsRole = (rol: Rol) => {
-    setUser({ id: 'guest', email: 'invitado@sgseg.com', nombre: 'Invitado', rol });
+    setUser({
+      id: 'guest',
+      email: rol === 'Jefe de Carrera' ? 'jefe.sistemas@utepsa.edu.bo' : 'invitado@sgseg.com',
+      nombre: rol === 'Jefe de Carrera' ? 'Ing. Carlos Mendoza (Jefe de Carrera)' : 'Invitado',
+      rol,
+      carreraId: rol === 'Jefe de Carrera' ? '1' : undefined,
+    });
   };
 
   const logout = () => {
