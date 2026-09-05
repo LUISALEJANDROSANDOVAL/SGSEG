@@ -1,5 +1,3 @@
-'use client'
-
 import { useEffect, useState } from 'react'
 import {
   Eye,
@@ -10,12 +8,18 @@ import {
   X,
 } from 'lucide-react'
 import { sorteosApi, type SorteoItem } from '@/lib/sorteos.api'
+import { useAuth } from '@/context/AuthContext'
+import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
 
 interface HistorialSorteosProps {
   refreshTrigger?: number
 }
 
 export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
+  const { user } = useAuth()
+  const isJefe = esJefeCarrera(user)
+  const carreraId = getJefeCarreraId(user)
+
   const [sorteos, setSorteos] = useState<SorteoItem[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [total, setTotal] = useState<number>(0)
@@ -24,7 +28,8 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
   const cargarHistorial = async () => {
     setLoading(true)
     try {
-      const data = await sorteosApi.getHistorial({ limit: 20 })
+      const idCarreraFiltro = isJefe && carreraId ? carreraId : undefined
+      const data = await sorteosApi.getHistorial({ limit: 20, idCarrera: idCarreraFiltro })
       setSorteos(data.items)
       setTotal(data.pagination.total)
     } catch (e) {
@@ -36,7 +41,7 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
 
   useEffect(() => {
     cargarHistorial()
-  }, [refreshTrigger])
+  }, [refreshTrigger, user, isJefe, carreraId])
 
   return (
     <section className="flex flex-col border border-line bg-white shadow-xs">

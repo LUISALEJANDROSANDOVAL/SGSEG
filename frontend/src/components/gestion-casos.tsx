@@ -1,10 +1,14 @@
-'use client'
-
 import { useEffect, useState } from 'react'
 import { AlertOctagon, BookOpen, CheckCircle2, Loader2 } from 'lucide-react'
 import { casosApi, type CasoEstudio, type MetricasCasos } from '@/lib/casos.api'
+import { useAuth } from '@/context/AuthContext'
+import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
 
 export function GestionCasos() {
+  const { user } = useAuth()
+  const isJefe = esJefeCarrera(user)
+  const carreraId = getJefeCarreraId(user)
+
   const [casos, setCasos] = useState<CasoEstudio[]>([])
   const [metricas, setMetricas] = useState<MetricasCasos | null>(null)
   const [loading, setLoading] = useState(true)
@@ -14,9 +18,10 @@ export function GestionCasos() {
     async function fetchData() {
       try {
         setLoading(true)
+        const idCarreraFiltro = isJefe && carreraId ? carreraId : undefined
         const [casosResp, metricasResp] = await Promise.all([
-          casosApi.getCasos({ limit: 5 }),
-          casosApi.getMetricas(),
+          casosApi.getCasos({ limit: 5, idCarrera: idCarreraFiltro }),
+          casosApi.getMetricas(idCarreraFiltro),
         ])
         if (isMounted) {
           setCasos(casosResp.items)
@@ -32,7 +37,7 @@ export function GestionCasos() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [user, isJefe, carreraId])
 
   const totalCasos = metricas?.totalCasos ?? casos.length
   const alertaStock = metricas?.stockCritico && metricas.stockCritico.length > 0 ? metricas.stockCritico[0] : null

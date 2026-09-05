@@ -28,11 +28,14 @@ import type {
 } from '@/lib/casos.api'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Carrera } from '@/lib/estudiantes.api'
+import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
 
 export default function PaginaCasos() {
 
   // Contexto de autenticación
   const { user } = useAuth()
+  const isJefe = esJefeCarrera(user)
+  const jefeCarreraId = getJefeCarreraId(user)
 
   // Estados de datos
   const [carreras, setCarreras] = useState<Carrera[]>([])
@@ -93,10 +96,9 @@ export default function PaginaCasos() {
         const lista = await estudiantesApi.getCarreras()
         setCarreras(lista)
 
-        if (user?.rolCode === 'JEFE_CARRERA') {
-          const userCarreraId = user.carreraId || (user.carreras && user.carreras[0]?.idCarrera)
-          if (userCarreraId) {
-            setSelectedCarrera(String(userCarreraId))
+        if (isJefe) {
+          if (jefeCarreraId) {
+            setSelectedCarrera(String(jefeCarreraId))
           } else if (lista.length > 0) {
             setSelectedCarrera(String(lista[0].idCarrera))
           }
@@ -106,7 +108,7 @@ export default function PaginaCasos() {
       }
     }
     initCarreras()
-  }, [user])
+  }, [user, isJefe, jefeCarreraId])
 
   // Carga inicial y recarga optimizada
   const cargarDatos = async () => {
@@ -312,7 +314,10 @@ export default function PaginaCasos() {
   // Reactivar caso por excepción extraordinaria (Jefe de Carrera)
   const handleReactivarCasoEspecial = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!modalReactivar || !motivoReactivar.trim()) return
+    if (!modalReactivar || motivoReactivar.trim().length < 10) {
+      setFeedback({ tipo: 'error', mensaje: 'Debe ingresar una justificación técnica o resolución de al menos 10 caracteres.' })
+      return
+    }
 
     setActionLoading(true)
     try {
@@ -1392,9 +1397,14 @@ export default function PaginaCasos() {
                   rows={4}
                   value={motivoReactivar}
                   onChange={(e) => setMotivoReactivar(e.target.value)}
-                  placeholder="Especifique las razones académicas, resolución de carrera o caso fortuito que justifican habilitar este caso nuevamente..."
+                  placeholder="Especifique las razones académicas, resolución de carrera o caso fortuito que justifican habilitar este caso nuevamente (mínimo 10 caracteres)..."
                   className="w-full border border-line bg-surface p-3 text-xs leading-relaxed outline-none focus:border-neutral-400"
                 />
+                {motivoReactivar.trim().length > 0 && motivoReactivar.trim().length < 10 && (
+                  <p className="mt-1 text-[11px] text-amber-700">
+                    Ingrese al menos 10 caracteres para fundamentar la excepción reglamentaria ({motivoReactivar.trim().length}/10).
+                  </p>
+                )}
               </div>
 
               <footer className="mt-2 flex items-center justify-end gap-3 border-t border-line pt-4">
@@ -1407,7 +1417,7 @@ export default function PaginaCasos() {
                 </button>
                 <button
                   type="submit"
-                  disabled={actionLoading || !motivoReactivar.trim()}
+                  disabled={actionLoading || motivoReactivar.trim().length < 10}
                   className="bg-purple-700 px-5 py-2 text-xs font-medium text-white hover:bg-purple-800 disabled:opacity-50 transition-colors"
                 >
                   {actionLoading ? 'Reactivando...' : 'Confirmar Reactivación Especial'}

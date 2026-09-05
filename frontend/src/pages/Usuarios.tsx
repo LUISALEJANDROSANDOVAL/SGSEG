@@ -73,6 +73,10 @@ export default function PaginaUsuarios() {
 
   const guardarUsuario = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formRol === 'Jefe de Carrera' && !formCarreraId) {
+      alert('Debe asignar obligatoriamente una Carrera al usuario con rol "Jefe de Carrera".');
+      return;
+    }
     try {
       const payload: any = {
         nombre: formNombre,

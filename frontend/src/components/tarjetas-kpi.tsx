@@ -3,8 +3,15 @@ import { AlertTriangle, BookOpen, GraduationCap, TrendingUp, Users } from 'lucid
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import { defensasApi, type EmbudoEstados } from '@/lib/defensas.api'
 import { casosApi, type MetricasCasos } from '@/lib/casos.api'
+import { useAuth } from '@/context/AuthContext'
+import { esJefeCarrera, getJefeCarreraId, getJefeCarreraNombre } from '@/lib/auth-helpers'
 
 export function TarjetasKpi() {
+  const { user } = useAuth()
+  const isJefe = esJefeCarrera(user)
+  const carreraId = getJefeCarreraId(user)
+  const carreraNombre = getJefeCarreraNombre(user)
+
   const [totalEstudiantes, setTotalEstudiantes] = useState<number>(0)
   const [embudo, setEmbudo] = useState<EmbudoEstados | null>(null)
   const [metricasCasos, setMetricasCasos] = useState<MetricasCasos | null>(null)
@@ -13,10 +20,11 @@ export function TarjetasKpi() {
   useEffect(() => {
     const fetchKpis = async () => {
       try {
+        const idCarreraFiltro = isJefe && carreraId ? carreraId : undefined
         const [estudiantesData, embudoData, casosData] = await Promise.all([
-          estudiantesApi.getEstudiantes({ limit: 1 }),
+          estudiantesApi.getEstudiantes({ idCarrera: idCarreraFiltro, limit: 1 }),
           defensasApi.getEmbudo(),
-          casosApi.getMetricas(),
+          casosApi.getMetricas(idCarreraFiltro),
         ])
         setTotalEstudiantes(estudiantesData.pagination.total)
         setEmbudo(embudoData)
@@ -29,7 +37,7 @@ export function TarjetasKpi() {
     }
 
     fetchKpis()
-  }, [])
+  }, [user, isJefe, carreraId])
 
   const casosTotal = metricasCasos?.totalCasos || 0
   const casosDisp = metricasCasos?.disponibles || 0
@@ -48,7 +56,9 @@ export function TarjetasKpi() {
         <p className="text-3xl font-semibold tracking-tight tabular-nums text-neutral-900">
           {loading ? '—' : totalEstudiantes.toLocaleString()}
         </p>
-        <p className="text-xs text-neutral-500">Postulantes registrados en UPTECSA</p>
+        <p className="text-xs text-neutral-500">
+          {isJefe ? `Postulantes de ${carreraNombre || 'tu carrera'}` : 'Postulantes registrados en UPTECSA'}
+        </p>
       </article>
 
       {/* 2. Defensas Activas */}

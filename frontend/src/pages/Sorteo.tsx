@@ -4,6 +4,7 @@ import { EncabezadoPagina } from '@/components/encabezado-pagina'
 import { RuletaCanvas, type RuletaItem } from '@/components/RuletaCanvas'
 import { estudiantesApi, type Estudiante } from '@/lib/estudiantes.api'
 import { useAuth } from '@/context/AuthContext'
+import { esJefeCarrera, getJefeCarreraId, getJefeCarreraNombre } from '@/lib/auth-helpers'
 import {
   UserCheck,
   UserX,
@@ -33,7 +34,9 @@ export interface PostulanteSorteo {
   carnetIdentidad: string
   correo: string
   carrera: string
+  carreraId?: string
   planEstudio: string
+  planEstudioId?: string
   tipoDefensa: 'Interna' | 'Externa'
   fechaDefensa: string
   horaDefensa: string
@@ -85,6 +88,7 @@ const POSTULANTES_CATALOGO: PostulanteSorteo[] = [
     carnetIdentidad: '8942104 SC',
     correo: 'm.rojas.qui@estudiantes.utepsa.edu.bo',
     carrera: 'Derecho',
+    carreraId: '2',
     planEstudio: 'Plan 2022 (Vigente)',
     tipoDefensa: 'Externa',
     fechaDefensa: '04/09/2026',
@@ -98,6 +102,7 @@ const POSTULANTES_CATALOGO: PostulanteSorteo[] = [
     carnetIdentidad: '7821903 SC',
     correo: 'l.cespedes.al@estudiantes.utepsa.edu.bo',
     carrera: 'Administración de Empresas',
+    carreraId: '3',
     planEstudio: 'Plan 2021 (Vigente)',
     tipoDefensa: 'Interna',
     fechaDefensa: '04/09/2026',
@@ -111,6 +116,7 @@ const POSTULANTES_CATALOGO: PostulanteSorteo[] = [
     carnetIdentidad: '9012384 SC',
     correo: 'c.antelo.su@estudiantes.utepsa.edu.bo',
     carrera: 'Ingeniería Comercial',
+    carreraId: '4',
     planEstudio: 'Plan 2023 (Vigente)',
     tipoDefensa: 'Externa',
     fechaDefensa: '04/09/2026',
@@ -124,6 +130,7 @@ const POSTULANTES_CATALOGO: PostulanteSorteo[] = [
     carnetIdentidad: '6543219 LP',
     correo: 'd.mamani.to@estudiantes.utepsa.edu.bo',
     carrera: 'Auditoría y Finanzas',
+    carreraId: '5',
     planEstudio: 'Plan 2020 (Vigente)',
     tipoDefensa: 'Interna',
     fechaDefensa: '04/09/2026',
@@ -137,16 +144,71 @@ const POSTULANTES_CATALOGO: PostulanteSorteo[] = [
     carnetIdentidad: '8345672 SC',
     correo: 'v.justiniano.ag@estudiantes.utepsa.edu.bo',
     carrera: 'Derecho',
+    carreraId: '2',
     planEstudio: 'Plan 2022 (Vigente)',
     tipoDefensa: 'Externa',
     fechaDefensa: '04/09/2026',
     horaDefensa: '15:30 PM',
     promedioAcademico: 94.0,
   },
+  {
+    id: '6',
+    nombreCompleto: 'Alejandro Morales Vaca',
+    carnetEstudiantil: '202118231',
+    carnetIdentidad: '7891234 SC',
+    correo: 'a.morales.va@estudiantes.utepsa.edu.bo',
+    carrera: 'Ingeniería de Sistemas',
+    carreraId: '1',
+    planEstudio: 'Plan 2022 (Vigente)',
+    tipoDefensa: 'Externa',
+    fechaDefensa: '04/09/2026',
+    horaDefensa: '16:30 PM',
+    promedioAcademico: 92.5,
+  },
+  {
+    id: '7',
+    nombreCompleto: 'Beatriz Claudia Pinto',
+    carnetEstudiantil: '202029481',
+    carnetIdentidad: '6821459 SC',
+    correo: 'b.pinto.cl@estudiantes.utepsa.edu.bo',
+    carrera: 'Ingeniería de Sistemas',
+    carreraId: '1',
+    planEstudio: 'Plan 2022 (Vigente)',
+    tipoDefensa: 'Interna',
+    fechaDefensa: '04/09/2026',
+    horaDefensa: '17:45 PM',
+    promedioAcademico: 89.0,
+  },
 ]
 
 // Áreas académicas disponibles
 const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
+  'Ingeniería de Sistemas': [
+    {
+      id: 'area-sis-1',
+      codigo: 'SIS-SOF',
+      nombre: 'Ingeniería de Software y Arquitectura Cloud',
+      descripcion: 'Microservicios, patrones de diseño y escalabilidad transaccional.',
+      color: '#0F172A',
+      casosDisponibles: 4,
+    },
+    {
+      id: 'area-sis-2',
+      codigo: 'SIS-SEG',
+      nombre: 'Ciberseguridad y Auditoría de Sistemas',
+      descripcion: 'Criptografía aplicada, seguridad perimetral y pentesting.',
+      color: '#9E1B32',
+      casosDisponibles: 3,
+    },
+    {
+      id: 'area-sis-3',
+      codigo: 'SIS-DAT',
+      nombre: 'Bases de Datos y Analítica Avanzada',
+      descripcion: 'Modelado relacional, Big Data e Inteligencia Artificial.',
+      color: '#047857',
+      casosDisponibles: 3,
+    },
+  ],
   Derecho: [
     {
       id: 'area-der-1',
@@ -430,6 +492,9 @@ const CASOS_CATALOGO: CasoEstudioSorteo[] = [
 
 export default function PaginaSorteo() {
   const { user } = useAuth()
+  const isJefe = esJefeCarrera(user)
+  const jefeCarreraId = getJefeCarreraId(user)
+  const carreraNombre = getJefeCarreraNombre(user)
 
   // ── ESTADO GENERAL DEL FLUJO EN 4 PASOS ──
   // 1 = Postulante & Asistencia, 2 = Área, 3 = Caso, 4 = Despacho
@@ -502,7 +567,9 @@ export default function PaginaSorteo() {
             carnetIdentidad: est.carnetIdentidad || `${est.carnetEstudiantil} SC`,
             correo: est.correo || `${est.carnetEstudiantil}@estudiantes.utepsa.edu.bo`,
             carrera: est.planEstudio?.carrera?.nombre || 'Derecho',
+            carreraId: String(est.planEstudio?.carrera?.idCarrera || ''),
             planEstudio: est.planEstudio?.nombre || 'Plan Vigente',
+            planEstudioId: String(est.planEstudio?.idPlanEstudio || ''),
             tipoDefensa: idx % 2 === 0 ? 'Externa' : 'Interna',
             fechaDefensa: '04/09/2026',
             horaDefensa: `${9 + idx}:00 AM`,
@@ -520,18 +587,31 @@ export default function PaginaSorteo() {
     loadApiEstudiantes()
   }, [])
 
-  // Filtrado de postulantes según búsqueda
+  // Filtrado de postulantes según rol y búsqueda
   const postulantesFiltrados = useMemo(() => {
-    if (!busquedaPostulante.trim()) return postulantes
+    let list = postulantes
+    if (isJefe && jefeCarreraId) {
+      list = list.filter((p) => String(p.carreraId) === String(jefeCarreraId))
+    }
+    if (!busquedaPostulante.trim()) return list
     const query = busquedaPostulante.toLowerCase()
-    return postulantes.filter(
+    return list.filter(
       (p) =>
         p.nombreCompleto.toLowerCase().includes(query) ||
         p.carnetEstudiantil.toLowerCase().includes(query) ||
         p.carnetIdentidad.toLowerCase().includes(query) ||
         p.carrera.toLowerCase().includes(query),
     )
-  }, [postulantes, busquedaPostulante])
+  }, [postulantes, busquedaPostulante, isJefe, jefeCarreraId])
+
+  // Sincronizar postulante seleccionado cuando se filtra la lista por rol
+  useEffect(() => {
+    if (postulantesFiltrados.length > 0) {
+      if (!postulantesFiltrados.some((p) => p.id === postulanteSeleccionado?.id)) {
+        setPostulanteSeleccionado(postulantesFiltrados[0])
+      }
+    }
+  }, [postulantesFiltrados, postulanteSeleccionado])
 
   // Áreas correspondientes a la carrera del postulante seleccionado
   const areasParaCarrera = useMemo(() => {
@@ -700,6 +780,37 @@ export default function PaginaSorteo() {
           titulo="Sorteo Digital de Grado"
           descripcion="Flujo institucional de 4 pasos para la asignación transparente, auditable y en tiempo real de áreas y casos de estudio."
         />
+
+        {/* Insignia de Aislamiento para Jefe de Carrera */}
+        {isJefe && (
+          <div className="flex items-center justify-between border-l-4 border-l-crimson border border-line bg-surface p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center bg-crimson/10 text-crimson">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-widest text-crimson uppercase">
+                    Aislamiento Estricto por Carrera (RNF-02)
+                  </span>
+                  <span className="bg-amber-100 text-amber-900 text-[10px] font-semibold px-2 py-0.5">
+                    Modo Consulta / Supervisión
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-neutral-900 mt-0.5">
+                  Visualizando únicamente postulantes de:{' '}
+                  <span className="text-crimson font-bold">{carreraNombre || 'Tu Carrera'}</span>
+                  <span className="text-neutral-500 font-normal ml-2">
+                    (Nota: El acto solemne de sorteo es operado por la Secretaría de Facultad o Defensas de Grado).
+                  </span>
+                </p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-block text-[11px] text-neutral-500 font-mono">
+              carreraId: {jefeCarreraId}
+            </span>
+          </div>
+        )}
 
         {/* ── STEPPER DE PROGRESO EN 4 PASOS ── */}
         <section className="border border-line bg-white shadow-xs">

@@ -4,11 +4,12 @@ import { EncabezadoPagina } from '@/components/encabezado-pagina';
 import api from '../lib/api';
 import { GraduationCap, Landmark, BookOpen, Layers, Plus, X, ChevronRight, Check, ShieldCheck, Lock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers';
 
 export default function PaginaAcademia() {
   const { user } = useAuth();
-  const esJefe = user?.rol === 'Jefe de Carrera';
-  const jefeCarreraId = user?.carreraId || '1';
+  const esJefe = esJefeCarrera(user);
+  const jefeCarreraId = getJefeCarreraId(user) || '';
 
   // Si es Jefe de Carrera, inicia directamente en 'areas' y no puede ver facultades ni carreras
   const [activeTab, setActiveTab] = useState<'facultades' | 'carreras' | 'areas' | 'pensums'>(

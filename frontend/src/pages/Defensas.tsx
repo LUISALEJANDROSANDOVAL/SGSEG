@@ -23,11 +23,14 @@ import {
 import type { Defensa, EmbudoEstados } from '@/lib/defensas.api'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Estudiante } from '@/lib/estudiantes.api'
+import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
 
 export default function PaginaDefensas() {
   // Rol de usuario autenticado
   const { user } = useAuth()
-  const esSoloLectura = user?.rol === 'Vicerrectorado'
+  const isJefe = esJefeCarrera(user)
+  const jefeCarreraId = getJefeCarreraId(user)
+  const esSoloLectura = user?.rol === 'Vicerrectorado' || isJefe
 
   // Datos
   const [defensas, setDefensas] = useState<Defensa[]>([])
@@ -70,6 +73,7 @@ export default function PaginaDefensas() {
   const cargarDatos = async () => {
     setLoading(true)
     try {
+      const idCarreraFiltro = isJefe && jefeCarreraId ? jefeCarreraId : undefined
       const [embudoData, alertasData, defensasData] = await Promise.all([
         defensasApi.getEmbudo(),
         defensasApi.getAlertas(15),
@@ -79,6 +83,7 @@ export default function PaginaDefensas() {
           search: searchTerm,
           estadoDefensa: selectedEstado,
           tipoDefensa: selectedTipo,
+          idCarrera: idCarreraFiltro,
         }),
       ])
 
@@ -233,16 +238,45 @@ export default function PaginaDefensas() {
           titulo="Cronograma y Embudo de Defensas"
           descripcion="Gestión integral de fechas para examen de grado. Monitoreo del embudo de postulantes, verificación automatizada de plazos reglamentarios por carrera y alertas de sorteo."
           accion={
-            <button
-              type="button"
-              onClick={abrirModalProgramar}
-              className="flex items-center gap-1.5 bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 transition-opacity"
-            >
-              <Plus className="size-3.5" />
-              Programar Fecha de Defensa
-            </button>
+            !isJefe && (
+              <button
+                type="button"
+                onClick={abrirModalProgramar}
+                className="flex items-center gap-1.5 bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 transition-opacity cursor-pointer"
+              >
+                <Plus className="size-3.5" />
+                Programar Fecha de Defensa
+              </button>
+            )
           }
         />
+
+        {/* Insignia de Aislamiento para Jefe de Carrera */}
+        {isJefe && (
+          <div className="flex items-center justify-between border-l-4 border-l-crimson border border-line bg-surface p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center bg-crimson/10 text-crimson">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-widest text-crimson uppercase">
+                    Aislamiento Estricto por Carrera (RNF-02)
+                  </span>
+                  <span className="bg-neutral-200 text-neutral-800 text-[10px] font-semibold px-2 py-0.5">
+                    Modo Supervisión Académica
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-neutral-900 mt-0.5">
+                  Supervisando el cronograma de defensas y tribunales asignados a su carrera.
+                </p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-block text-[11px] text-neutral-500 font-mono">
+              carreraId: {jefeCarreraId}
+            </span>
+          </div>
+        )}
 
         {/* Feedback alert */}
         {feedback && (
