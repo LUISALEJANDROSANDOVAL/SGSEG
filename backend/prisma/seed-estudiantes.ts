@@ -1,16 +1,14 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
-import * as dotenv from 'dotenv';
 
-dotenv.config();
-
-const connectionString =
-  process.env.DATABASE_URL ??
-  'postgresql://sgseg:sgseg@localhost:5437/sgseg?schema=public';
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url:
+        process.env.DATABASE_URL ??
+        'postgresql://sgseg:sgseg@localhost:5437/sgseg?schema=public',
+    },
+  },
+});
 
 /**
  * Normaliza nombres, CIs y carnets

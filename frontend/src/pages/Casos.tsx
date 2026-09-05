@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   Building2,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Eye,
   Filter,
   FolderKanban,
@@ -56,6 +58,7 @@ export default function PaginaCasos() {
   const [page, setPage] = useState<number>(1)
   const [totalPages, setTotalPages] = useState<number>(1)
   const [totalCasosCount, setTotalCasosCount] = useState<number>(0)
+  const [mostrarTodasAlertas, setMostrarTodasAlertas] = useState<boolean>(false)
 
   // Modales
   const [modalNuevoCaso, setModalNuevoCaso] = useState<boolean>(false)
@@ -400,29 +403,97 @@ export default function PaginaCasos() {
           </div>
         )}
 
-        {/* Banner de Stock Crítico dinámico */}
+        {/* Banner de Stock Crítico dinámico estructurado en lista */}
         {metricas && metricas.stockCritico.length > 0 && (
-          <div
+          <section
             role="alert"
-            className="flex flex-col gap-2 border border-crimson bg-crimson px-5 py-4 text-white shadow-sm"
+            className="rounded-2xl border border-red-200/80 bg-gradient-to-r from-red-50/70 via-red-50/40 to-orange-50/30 p-5 shadow-xs"
           >
-            <div className="flex items-center gap-2">
-              <AlertOctagon className="size-5 shrink-0" />
-              <span className="font-bold tracking-wide text-xs uppercase">
-                ALERTA DE STOCK CRÍTICO EN BANCO DE CASOS
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700 shadow-2xs">
+                  <AlertOctagon className="size-4.5" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-red-950">
+                      Alerta de Stock Crítico en Banco de Casos
+                    </h3>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100/90 border border-red-200 px-2.5 py-0.5 text-[11px] font-bold text-red-800">
+                      <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                      {metricas.stockCritico.length} áreas con stock bajo
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-red-800/80 mt-0.5">
+                    Áreas con menos de 2 casos disponibles. Se requiere incorporar nuevos casos antes de iniciar sorteos.
+                  </p>
+                </div>
+              </div>
+
+              {metricas.stockCritico.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => setMostrarTodasAlertas(!mostrarTodasAlertas)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-800 bg-white/95 hover:bg-white border border-red-200 px-3 py-1.5 rounded-lg transition-all shadow-2xs hover:shadow-xs"
+                >
+                  {mostrarTodasAlertas ? (
+                    <>
+                      <ChevronUp className="size-3.5" />
+                      Mostrar menos
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="size-3.5" />
+                      Ver todas ({metricas.stockCritico.length})
+                    </>
+                  )}
+                </button>
+              )}
             </div>
-            <div className="mt-1 flex flex-col gap-1.5 pl-7 text-xs leading-relaxed opacity-95">
-              {metricas.stockCritico.map((alerta) => (
-                <p key={alerta.idArea}>
-                  • <strong>{alerta.nombreArea}</strong> ({alerta.carrera}): cuenta con solo{' '}
-                  <span className="underline font-semibold">{alerta.casosDisponibles} caso(s) disponible(s)</span> frente
-                  al umbral mínimo reglamentario de {alerta.umbralRequerido}. Se requiere reposición de casos antes de
-                  iniciar los sorteos.
-                </p>
+
+            {/* Lista organizada en tarjetas limpias */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {(mostrarTodasAlertas ? metricas.stockCritico : metricas.stockCritico.slice(0, 6)).map((alerta) => (
+                <div
+                  key={alerta.idArea}
+                  className="group relative flex items-center justify-between gap-3 rounded-xl border border-red-200/70 bg-white/95 p-3 shadow-2xs transition-all duration-150 hover:border-red-300 hover:shadow-xs"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-gray-900 truncate group-hover:text-red-900 transition-colors">
+                      {alerta.nombreArea}
+                    </p>
+                    <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                      {alerta.carrera}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${
+                        alerta.casosDisponibles === 0
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}
+                    >
+                      {alerta.casosDisponibles} de {alerta.umbralRequerido} disp.
+                    </span>
+
+                    <button
+                      type="button"
+                      title={`Registrar nuevo caso en ${alerta.nombreArea}`}
+                      onClick={() => {
+                        setFormNuevo((prev) => ({ ...prev, idArea: String(alerta.idArea) }))
+                        setModalNuevoCaso(true)
+                      }}
+                      className="flex size-6.5 items-center justify-center rounded-lg bg-gray-50 text-gray-600 border border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors"
+                    >
+                      <Plus className="size-3" />
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Tarjetas de Resumen (KPIs) */}

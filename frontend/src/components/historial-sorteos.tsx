@@ -44,40 +44,42 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
   }, [refreshTrigger, user, isJefe, carreraId])
 
   return (
-    <section className="flex flex-col border border-line bg-white shadow-xs">
-      <header className="flex items-center justify-between border-b border-line px-5 py-4">
+    <section className="flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <header className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <FileCheck2 className="size-4 text-neutral-700" />
-            <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <FileCheck2 className="size-4" />
+            </span>
+            <h2 className="text-sm font-bold tracking-tight text-gray-900">
               Historial de Sorteos y Actas
             </h2>
           </div>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="text-xs text-gray-500 mt-0.5">
             {total} actos de sorteo registrados con validez reglamentaria
           </p>
         </div>
         <button
           type="button"
           onClick={cargarHistorial}
-          className="flex items-center gap-1 border border-line px-2.5 py-1 text-xs font-medium text-neutral-600 hover:bg-surface"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
         >
-          <RefreshCw className={`size-3 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`size-3 ${loading ? 'animate-spin text-[#c8102e]' : ''}`} />
           <span>Actualizar</span>
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto max-h-[520px]">
+      <div className="flex-1 overflow-y-auto max-h-[480px]">
         {loading ? (
-          <div className="p-8 text-center text-xs text-neutral-400">
+          <div className="py-10 text-center text-xs text-gray-400">
             Cargando historial de sorteos...
           </div>
         ) : sorteos.length === 0 ? (
-          <div className="p-8 text-center text-xs text-neutral-400">
+          <div className="py-10 text-center text-xs text-gray-400">
             No se han registrado sorteos en este periodo aún.
           </div>
         ) : (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-gray-100">
             {sorteos.map((sorteo) => {
               const est = sorteo.defensa?.instancia?.proceso?.estudiante
               const def = sorteo.defensa
@@ -92,31 +94,35 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
               return (
                 <li
                   key={sorteo.idSorteo}
-                  className="flex items-start justify-between gap-3 px-5 py-3.5 hover:bg-neutral-50/70 transition-colors"
+                  className="flex items-start justify-between gap-3 py-3.5 hover:bg-gray-50/80 rounded-xl px-2 transition-colors"
                 >
                   <div className="flex items-start gap-3 min-w-0">
-                    <div className="text-center shrink-0 pt-0.5">
-                      <span className="font-mono text-xs font-bold text-neutral-800 block">
+                    <div className="text-center shrink-0 pt-0.5 bg-gray-50 rounded-lg px-2 py-1 border border-gray-100">
+                      <span className="font-mono text-xs font-bold text-gray-800 block">
                         {fechaHora}
                       </span>
-                      <span className="text-[10px] text-neutral-400 block">{fechaDia}</span>
+                      <span className="text-[10px] text-gray-400 block">{fechaDia}</span>
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-neutral-900">
+                      <p className="truncate text-xs font-bold text-gray-900">
                         {est ? est.nombreCompleto : 'Postulante'}
                       </p>
-                      <p className="text-[11px] text-neutral-500 truncate">
+                      <p className="text-[11px] text-gray-500 truncate">
                         {est?.planEstudio?.carrera?.nombre || 'Carrera'} · Carnet: {est?.carnetEstudiantil}
                       </p>
                       <div className="mt-1 flex items-center gap-1.5 flex-wrap text-[11px]">
-                        <span className="bg-surface border border-line px-1.5 py-0.5 text-neutral-700 font-medium">
-                          {tipoSorteo}: <strong>{valorResultado}</strong>
+                        <span className="bg-gray-100 border border-gray-200 px-2 py-0.5 text-gray-800 rounded font-medium text-[10px]">
+                          {tipoSorteo}: <strong className="text-gray-900">{valorResultado}</strong>
                         </span>
                         {sorteo.estudiantePresente ? (
-                          <span className="text-emerald-700 font-medium">✓ Presente</span>
+                          <span className="text-emerald-700 font-semibold text-[10px] flex items-center gap-0.5">
+                            ✓ Presente
+                          </span>
                         ) : (
-                          <span className="text-amber-700 font-medium">⚠️ Inasistencia</span>
+                          <span className="text-amber-700 font-semibold text-[10px]">
+                            ⚠️ Inasistencia
+                          </span>
                         )}
                       </div>
                     </div>
@@ -124,10 +130,10 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
 
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <span
-                      className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
+                      className={`px-2 py-0.5 text-[9px] font-extrabold uppercase rounded border ${
                         def?.tipoDefensa?.nombre === 'EXTERNA'
-                          ? 'bg-purple-50 text-purple-800 border-purple-200'
-                          : 'bg-blue-50 text-blue-800 border-blue-200'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
                       }`}
                     >
                       {def?.tipoDefensa?.nombre || 'INTERNA'}
@@ -136,7 +142,7 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
                     <button
                       type="button"
                       onClick={() => setActaSeleccionada(sorteo)}
-                      className="inline-flex items-center gap-1 text-[11px] text-neutral-600 hover:text-crimson transition-colors"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 hover:text-[#c8102e] transition-colors"
                       title="Ver Acta Oficial de Sorteo"
                     >
                       <Eye className="size-3" />

@@ -24,17 +24,26 @@ interface RuletaCanvasProps {
   accentColor?: string
 }
 
-// Paleta institucional por defecto
+// Paleta institucional UTEPSA por defecto (Rojo, Negro y Blanco)
 const COLORES_DEFAULT = [
-  '#9E1B32', // Carmín Institucional
-  '#1E293B', // Pizarra Profundo
-  '#0F172A', // Tinta / Onyx
-  '#B45309', // Ámbar Académico
-  '#047857', // Esmeralda
-  '#4338CA', // Índigo Real
-  '#831843', // Borgoña
-  '#0E7490', // Cyan Oscuro
+  '#C8102E', // Rojo Institucional UTEPSA
+  '#121316', // Negro Obsidiana
+  '#FFFFFF', // Blanco Perlado
+  '#9E1B32', // Carmín Oscuro
+  '#1E293B', // Pizarra Carbón
+  '#F4F4F5', // Blanco Platino
 ]
+
+function isColorLight(hex: string): boolean {
+  if (!hex) return false
+  let c = hex.replace('#', '')
+  if (c.length === 3) c = c.split('').map((x) => x + x).join('')
+  const r = parseInt(c.substring(0, 2), 16) || 0
+  const g = parseInt(c.substring(2, 4), 16) || 0
+  const b = parseInt(c.substring(4, 6), 16) || 0
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  return brightness > 165
+}
 
 export function RuletaCanvas({
   items,
@@ -227,7 +236,8 @@ export function RuletaCanvas({
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
 
-      const textColor = item.textColor || '#FFFFFF'
+      const isLight = isColorLight(baseColor)
+      const textColor = item.textColor || (isLight ? '#121316' : '#FFFFFF')
       ctx.fillStyle = textColor
 
       // Ajuste tipográfico dinámico según cantidad de elementos
@@ -238,9 +248,9 @@ export function RuletaCanvas({
       }
 
       const fontSize = numSlices > 12 ? 11 : numSlices > 8 ? 12 : 13
-      ctx.font = `600 ${fontSize}px Inter, sans-serif`
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
-      ctx.shadowBlur = 4
+      ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+      ctx.shadowColor = isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.65)'
+      ctx.shadowBlur = 3
       ctx.shadowOffsetX = 1
       ctx.shadowOffsetY = 1
 
@@ -250,8 +260,8 @@ export function RuletaCanvas({
 
       // Subetiqueta / Badge si existe
       if (item.sublabel && numSlices <= 8) {
-        ctx.font = '500 10px Inter, sans-serif'
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+        ctx.font = `600 10px "Plus Jakarta Sans", Inter, sans-serif`
+        ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.85)' : 'rgba(255, 255, 255, 0.9)'
         ctx.fillText(item.sublabel, textRadius, 14)
       }
 
@@ -469,11 +479,12 @@ export function RuletaCanvas({
             >
               <path
                 d="M18 40L6 10C5 7 7 4 10 4H26C29 4 31 7 30 10L18 40Z"
-                fill="#C5A059"
+                fill="#C8102E"
                 stroke="#FFFFFF"
-                strokeWidth="2"
+                strokeWidth="2.5"
               />
-              <circle cx="18" cy="11" r="5" fill="#9E1B32" />
+              <circle cx="18" cy="11" r="5" fill="#FFFFFF" />
+              <circle cx="18" cy="11" r="2.5" fill="#121316" />
             </svg>
           </div>
         </div>

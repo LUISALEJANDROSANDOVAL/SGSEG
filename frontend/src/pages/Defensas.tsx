@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   Award,
+  Calendar,
   CheckCircle2,
   Eye,
   Filter,
@@ -371,34 +372,53 @@ export default function PaginaDefensas() {
 
         {/* Alertas Operativas de Sorteo Próximo */}
         {alertas.length > 0 && (
-          <section className="border border-amber-300 bg-amber-50 p-4">
-            <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs mb-2">
-              <AlertTriangle className="size-4 text-amber-700" />
-              <span>
-                ALERTAS OPERATIVAS: {alertas.length} POSTULANTE(S) CON DEFENSA PRÓXIMA SIN SORTEO
+          <section className="rounded-2xl border border-amber-200/70 bg-gradient-to-r from-amber-50/70 via-amber-50/40 to-orange-50/30 p-5 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-100/90 text-amber-700 shadow-2xs">
+                  <AlertTriangle className="size-4" />
+                </span>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-950">
+                    Alertas Operativas
+                  </h3>
+                  <p className="text-[11px] text-amber-800/80">
+                    {alertas.length} postulante(s) con fecha de defensa próxima y sorteo pendiente
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/80 border border-amber-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
+                <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Acción Requerida
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-amber-900">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {alertas.slice(0, 4).map((alerta) => (
                 <div
                   key={alerta.idDefensa}
-                  className="bg-white/80 p-2.5 border border-amber-200 flex items-center justify-between"
+                  className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-200/60 bg-white/95 p-3.5 shadow-2xs transition-all duration-150 hover:border-amber-300 hover:shadow-xs"
                 >
-                  <div>
-                    <p className="font-semibold text-neutral-900">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-gray-900 truncate group-hover:text-amber-900 transition-colors">
                       {alerta.instancia.proceso.estudiante.nombreCompleto}
                     </p>
-                    <p className="text-[11px] text-neutral-600">
-                      {alerta.instancia.proceso.estudiante.planEstudio.carrera.nombre} ·{' '}
-                      {alerta.tipoDefensa.nombre}
-                    </p>
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                      <span className="truncate">{alerta.instancia.proceso.estudiante.planEstudio.carrera.nombre}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="inline-block rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+                        {alerta.tipoDefensa.nombre}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[11px] font-medium bg-amber-100 text-amber-800 px-2 py-0.5 border border-amber-300">
+
+                  <div className="shrink-0 text-right flex flex-col items-end gap-1">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-50/90 border border-amber-200/70 px-2.5 py-1 text-[11px] font-semibold text-amber-900">
+                      <Calendar className="size-3 text-amber-600" />
                       Fecha: {new Date(alerta.fechaDefensa).toLocaleDateString()}
                     </span>
-                    <p className="text-[10px] text-neutral-500 mt-0.5">
-                      Sorteo sugerido: {alerta.reglasSorteo?.fechaSorteoAreaRecomendada || 'Pendiente'}
+                    <p className="text-[10px] text-gray-400">
+                      Sorteo sugerido: <span className="font-medium text-gray-600">{alerta.reglasSorteo?.fechaSorteoAreaRecomendada || 'Pendiente'}</span>
                     </p>
                   </div>
                 </div>

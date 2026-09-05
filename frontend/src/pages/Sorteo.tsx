@@ -181,7 +181,7 @@ const POSTULANTES_CATALOGO: PostulanteSorteo[] = [
   },
 ]
 
-// Áreas académicas disponibles
+// Áreas académicas disponibles con paleta institucional UTEPSA (Rojo, Negro, Blanco)
 const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
   'Ingeniería de Sistemas': [
     {
@@ -189,7 +189,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'SIS-SOF',
       nombre: 'Ingeniería de Software y Arquitectura Cloud',
       descripcion: 'Microservicios, patrones de diseño y escalabilidad transaccional.',
-      color: '#0F172A',
+      color: '#121316',
       casosDisponibles: 4,
     },
     {
@@ -197,7 +197,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'SIS-SEG',
       nombre: 'Ciberseguridad y Auditoría de Sistemas',
       descripcion: 'Criptografía aplicada, seguridad perimetral y pentesting.',
-      color: '#9E1B32',
+      color: '#C8102E',
       casosDisponibles: 3,
     },
     {
@@ -205,7 +205,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'SIS-DAT',
       nombre: 'Bases de Datos y Analítica Avanzada',
       descripcion: 'Modelado relacional, Big Data e Inteligencia Artificial.',
-      color: '#047857',
+      color: '#FFFFFF',
       casosDisponibles: 3,
     },
   ],
@@ -215,7 +215,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'DER-PEN',
       nombre: 'Derecho Penal y Procesal Penal',
       descripcion: 'Teoría del delito, garantías constitucionales y litigación oral penal.',
-      color: '#9E1B32',
+      color: '#C8102E',
       casosDisponibles: 4,
     },
     {
@@ -223,7 +223,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'DER-CIV',
       nombre: 'Derecho Civil y Contratos',
       descripcion: 'Obligaciones civiles, responsabilidad extracontractual y derecho sucesorio.',
-      color: '#1E293B',
+      color: '#121316',
       casosDisponibles: 3,
     },
     {
@@ -231,7 +231,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'DER-CON',
       nombre: 'Derecho Constitucional y DDHH',
       descripcion: 'Acciones de defensa, control de convencionalidad y tutela judicial.',
-      color: '#B45309',
+      color: '#FFFFFF',
       casosDisponibles: 3,
     },
     {
@@ -239,7 +239,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'DER-LAB',
       nombre: 'Derecho Laboral y Seguridad Social',
       descripcion: 'Relaciones de trabajo, beneficios sociales y regímenes especiales.',
-      color: '#047857',
+      color: '#9E1B32',
       casosDisponibles: 2,
     },
     {
@@ -247,7 +247,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'DER-ADM',
       nombre: 'Derecho Administrativo y Regulatorio',
       descripcion: 'Procedimientos sancionadores, contrataciones estatales y recursos.',
-      color: '#4338CA',
+      color: '#1E293B',
       casosDisponibles: 3,
     },
     {
@@ -255,7 +255,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'DER-COM',
       nombre: 'Derecho Comercial y Societario',
       descripcion: 'Sociedades mercantiles, títulos valores y reorganizaciones empresariales.',
-      color: '#0E7490',
+      color: '#F4F4F5',
       casosDisponibles: 3,
     },
   ],
@@ -265,7 +265,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'ADM-EST',
       nombre: 'Dirección Estratégica y Gestión',
       descripcion: 'Planificación corporativa, balanced scorecard y gestión del cambio.',
-      color: '#9E1B32',
+      color: '#C8102E',
       casosDisponibles: 3,
     },
     {
@@ -273,7 +273,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'ADM-FIN',
       nombre: 'Finanzas Corporativas y PyMEs',
       descripcion: 'Estructura de capital, valuación de empresas y flujo de caja.',
-      color: '#1E293B',
+      color: '#121316',
       casosDisponibles: 4,
     },
     {
@@ -281,7 +281,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'ADM-OPE',
       nombre: 'Operaciones y Cadena de Suministro',
       descripcion: 'Logística integral, optimización de procesos y calidad total.',
-      color: '#B45309',
+      color: '#FFFFFF',
       casosDisponibles: 2,
     },
     {
@@ -289,7 +289,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'ADM-TAL',
       nombre: 'Gestión del Talento Humano',
       descripcion: 'Cultura organizacional, evaluación de desempeño y retención.',
-      color: '#047857',
+      color: '#9E1B32',
       casosDisponibles: 3,
     },
   ],
@@ -299,7 +299,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'COM-MKT',
       nombre: 'Marketing Estratégico y Digital',
       descripcion: 'Posicionamiento omnicanal, métricas digitales y experiencia de cliente.',
-      color: '#9E1B32',
+      color: '#C8102E',
       casosDisponibles: 3,
     },
     {
@@ -307,7 +307,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'COM-INT',
       nombre: 'Comercio Exterior y Negociación',
       descripcion: 'Incoterms, apertura de mercados internacionales y logística aduanera.',
-      color: '#1E293B',
+      color: '#121316',
       casosDisponibles: 3,
     },
     {
@@ -315,7 +315,7 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       codigo: 'COM-PRO',
       nombre: 'Formulación y Evaluación de Proyectos',
       descripcion: 'Análisis de viabilidad económica, TIR/VAN y modelos de negocio.',
-      color: '#B45309',
+      color: '#FFFFFF',
       casosDisponibles: 2,
     },
   ],

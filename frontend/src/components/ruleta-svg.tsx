@@ -18,14 +18,12 @@ interface RuletaSvgProps {
 }
 
 const PALETA_COLORES_INSTITUCIONAL = [
-  '#9E1B32', // UTEPSA Crimson
-  '#0F172A', // Slate 900
-  '#1E3A8A', // Deep Navy
-  '#B91C1C', // Red 700
-  '#334155', // Slate 700
-  '#831843', // Rose 900
-  '#1E293B', // Dark Slate
-  '#B45309', // Amber 700
+  '#C8102E', // Rojo Institucional UTEPSA
+  '#121316', // Negro Obsidiana
+  '#FFFFFF', // Blanco Perlado
+  '#9E1B32', // Carmín Oscuro
+  '#1E293B', // Pizarra Carbón
+  '#F4F4F5', // Blanco Platino
 ];
 
 /**

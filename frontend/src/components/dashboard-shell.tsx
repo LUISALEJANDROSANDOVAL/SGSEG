@@ -1,11 +1,14 @@
-import { Bell, Menu, Search, X, LogOut, ChevronRight } from 'lucide-react'
+import { Menu, X, LogOut, ChevronRight, UserCog } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { navegacion } from '@/lib/navegacion'
 import { useAuth } from '@/context/AuthContext'
+import { NotificacionesPopover } from './notificaciones-popover'
+import { ModalEditarPerfil } from './modal-editar-perfil'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [modalPerfilAbierto, setModalPerfilAbierto] = useState(false)
   const { user, logout, checkRole } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -18,6 +21,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     .slice(0, 2)
     .map((palabra) => palabra[0])
     .join('')
+    .toUpperCase()
 
   const handleLogout = () => {
     logout()
@@ -67,20 +71,47 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        {/* ── User info ── */}
-        <div className="relative border-b border-gray-100 px-5 py-4">
-          <p className="text-[9px] font-bold tracking-[0.18em] text-gray-400 uppercase mb-2">
-            Usuario Conectado
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#c8102e] text-xs font-bold text-white ring-2 ring-red-100 shadow-sm">
-              {iniciales}
+        {/* ── User info (Clickable to edit profile, avatar & password) ── */}
+        <div className="relative border-b border-gray-100 px-3.5 py-3">
+          <div className="flex items-center justify-between mb-1.5 px-1.5">
+            <p className="text-[9px] font-bold tracking-[0.18em] text-gray-400 uppercase">
+              Usuario Conectado
+            </p>
+            <span className="text-[9px] font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">
+              ID: #{user.id}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setModalPerfilAbierto(true)}
+            title="Haga clic para editar su foto, datos o cambiar contraseña"
+            className="group flex w-full items-center gap-3 rounded-xl p-2 text-left transition-all duration-150 hover:bg-red-50/70 hover:ring-1 hover:ring-[#c8102e]/20"
+          >
+            <div className="relative shrink-0">
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={user.nombre}
+                  className="size-9 rounded-full object-cover ring-2 ring-[#c8102e] shadow-sm"
+                />
+              ) : (
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#c8102e] text-xs font-bold text-white ring-2 ring-red-100 shadow-sm transition-transform group-hover:scale-105">
+                  {iniciales}
+                </div>
+              )}
+              <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-gray-900 text-white shadow ring-1 ring-white">
+                <UserCog className="size-2" />
+              </span>
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{user.nombre}</p>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-gray-900 truncate group-hover:text-[#c8102e] transition-colors">
+                {user.nombre}
+              </p>
               <p className="text-[11px] text-gray-400 truncate mt-0.5">{user.rol}</p>
             </div>
-          </div>
+          </button>
         </div>
 
         {/* ── Navigation ── */}
@@ -142,50 +173,39 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen flex-col lg:pl-64">
 
         {/* ── Top header ── */}
-        <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-gray-200 bg-white/90 backdrop-blur-md px-4 py-3 sm:px-6 shadow-sm">
-          <button
-            type="button"
-            onClick={() => setMenuAbierto(true)}
-            className="text-gray-600 transition-colors hover:text-gray-900 lg:hidden"
-          >
-            <Menu className="size-5" />
-            <span className="sr-only">Abrir menú</span>
-          </button>
-
-          {/* Search */}
-          <div className="relative flex-1 sm:max-w-md">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="search"
-              placeholder="Buscar estudiantes, casos o exámenes..."
-              aria-label="Búsqueda global"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pr-3 pl-9 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-[#c8102e] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#c8102e]/20"
-            />
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-gray-200 bg-white/90 backdrop-blur-md px-4 py-3 sm:px-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMenuAbierto(true)}
+              className="text-gray-600 transition-colors hover:text-gray-900 lg:hidden"
+            >
+              <Menu className="size-5" />
+              <span className="sr-only">Abrir menú</span>
+            </button>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span className="font-bold text-gray-900">SGSEG</span>
+              <span className="text-gray-300">/</span>
+              <span className="font-medium text-gray-600">Sistema de Graduación UTEPSA</span>
+            </div>
           </div>
 
-          {/* Right section */}
-          <div className="ml-auto flex items-center gap-3">
-            <button type="button" className="relative rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900">
-              <Bell className="size-5" />
-              <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-[#c8102e] ring-2 ring-white" />
-              <span className="sr-only">Notificaciones: hay alertas nuevas</span>
-            </button>
-
-            <div className="flex items-center gap-3 border-l border-gray-200 pl-3">
-              <div className="hidden text-right sm:block">
-                <p className="text-sm font-semibold leading-tight text-gray-900">{user.nombre}</p>
-                <p className="text-xs text-gray-500">{user.rol}</p>
-              </div>
-              <div className="flex size-9 items-center justify-center rounded-full bg-[#c8102e] text-xs font-bold text-white shadow-md shadow-red-200">
-                {iniciales}
-              </div>
-            </div>
+          {/* Right section with functional Notifications */}
+          <div className="flex items-center gap-3">
+            <NotificacionesPopover />
           </div>
         </header>
 
         {/* ── Page content ── */}
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
+
+      {/* ── Modal Editar Perfil ── */}
+      <ModalEditarPerfil
+        abierto={modalPerfilAbierto}
+        onCerrar={() => setModalPerfilAbierto(false)}
+      />
     </div>
   )
 }
+

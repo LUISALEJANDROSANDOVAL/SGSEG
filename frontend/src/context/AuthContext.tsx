@@ -68,10 +68,15 @@ export interface User {
   id: string;
   email: string;
   nombre: string;
+  primerNombre?: string;
+  segundoNombre?: string;
+  primerApellido?: string;
+  segundoApellido?: string;
   rol: RolLabel;
   rolCode: RolCode;
   carreras?: CarreraUsuario[];
   carreraId?: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextType {
@@ -80,6 +85,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, pass: string) => Promise<User>;
   logout: () => void;
+  updateUser: (updatedData: Partial<User>) => void;
   checkRole: (allowedRoles?: (RolCode | RolLabel)[]) => boolean;
 }
 
@@ -118,14 +124,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const raw = res.data;
         const { code, label } = normalizarRol(raw.rol);
+        const avatarSaved = localStorage.getItem(`sgseg_avatar_${raw.idUsuario}`);
         const validatedUser: User = {
           id: String(raw.idUsuario),
           email: raw.correoInstitucional,
-          nombre: `${raw.primerNombre ?? ''} ${raw.primerApellido ?? ''}`.trim() || 'Usuario',
+          primerNombre: raw.primerNombre,
+          segundoNombre: raw.segundoNombre,
+          primerApellido: raw.primerApellido,
+          segundoApellido: raw.segundoApellido,
+          nombre: [raw.primerNombre, raw.segundoNombre, raw.primerApellido, raw.segundoApellido].filter(Boolean).join(' ') || raw.primerNombre || 'Usuario',
           rol: label,
           rolCode: code,
           carreras: raw.carreras || [],
           carreraId: raw.carreras?.[0]?.idCarrera || undefined,
+          avatarUrl: avatarSaved || undefined,
         };
 
         setUser(validatedUser);
@@ -157,6 +169,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const updateUser = useCallback((updatedData: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const nextUser = { ...prev, ...updatedData };
+      localStorage.setItem('sgseg_user', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  }, []);
+
   const login = useCallback(async (email: string, pass: string): Promise<User> => {
     setLoading(true);
     try {
@@ -168,18 +189,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const tokenToSave = res.data.accessToken || res.data.access_token;
       const rawUser = res.data.user;
       const { code, label } = normalizarRol(rawUser?.rol || '');
+      const avatarSaved = localStorage.getItem(`sgseg_avatar_${rawUser?.idUsuario}`);
 
       const authenticatedUser: User = {
         id: String(rawUser?.idUsuario || '1'),
         email: rawUser?.correoInstitucional || email,
+        primerNombre: rawUser?.primerNombre,
+        segundoNombre: rawUser?.segundoNombre,
+        primerApellido: rawUser?.primerApellido,
+        segundoApellido: rawUser?.segundoApellido,
         nombre:
-          `${rawUser?.primerNombre ?? ''} ${rawUser?.primerApellido ?? ''}`.trim() ||
+          [rawUser?.primerNombre, rawUser?.segundoNombre, rawUser?.primerApellido, rawUser?.segundoApellido].filter(Boolean).join(' ') ||
           rawUser?.nombre ||
           'Usuario',
         rol: label,
         rolCode: code,
         carreras: rawUser?.carreras || [],
         carreraId: rawUser?.carreras?.[0]?.idCarrera || undefined,
+        avatarUrl: avatarSaved || undefined,
       };
 
       localStorage.setItem('token', tokenToSave);
@@ -215,7 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, checkRole }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, updateUser, checkRole }}>
       {children}
     </AuthContext.Provider>
   );

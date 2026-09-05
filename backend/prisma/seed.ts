@@ -1,18 +1,16 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
-import * as dotenv from 'dotenv';
 import { CATALOGO_OFICIAL_UTEPSA } from './data-oficial-utepsa';
 
-dotenv.config();
-
-const connectionString =
-  process.env.DATABASE_URL ??
-  'postgresql://sgseg:sgseg@localhost:5437/sgseg?schema=public';
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url:
+        process.env.DATABASE_URL ??
+        'postgresql://sgseg:sgseg@localhost:5437/sgseg?schema=public',
+    },
+  },
+});
 
 /**
  * Principio de Responsabilidad Única (SRP):
@@ -557,5 +555,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-    await pool.end();
   });

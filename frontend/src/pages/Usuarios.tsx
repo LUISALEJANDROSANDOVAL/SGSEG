@@ -33,11 +33,11 @@ export default function PaginaUsuarios() {
     setLoading(true);
     try {
       const [resUsers, resCarreras] = await Promise.all([
-        api.get('/users'),
-        api.get('/academia/carreras'),
+        api.get('/auth/users').catch(() => api.get('/users')),
+        api.get('/estudiantes/carreras').catch(() => api.get('/academia/carreras')),
       ]);
-      setUsuarios(resUsers.data);
-      setCarreras(resCarreras.data);
+      setUsuarios(Array.isArray(resUsers.data) ? resUsers.data : []);
+      setCarreras(Array.isArray(resCarreras.data) ? resCarreras.data : []);
     } catch (err: any) {
       setError('Error al cargar la información de usuarios.');
     } finally {
@@ -251,13 +251,21 @@ export default function PaginaUsuarios() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-neutral-600">Email Institucional</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-neutral-600">Email Institucional</label>
+                    {editId && <span className="text-[10px] text-neutral-400 font-normal">Permanente (No editable)</span>}
+                  </div>
                   <input
                     type="email"
                     required
+                    disabled={Boolean(editId)}
                     value={formEmail}
                     onChange={(e) => setFormEmail(e.target.value)}
-                    className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
+                    className={`w-full border border-line px-3 py-2 text-sm outline-none ${
+                      editId
+                        ? 'bg-neutral-100 text-neutral-500 cursor-not-allowed'
+                        : 'bg-surface focus:border-ink focus:bg-white'
+                    }`}
                   />
                 </div>
 
