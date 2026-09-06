@@ -91,11 +91,11 @@ export class SorteosRepository {
    * Obtiene las áreas académicas activas disponibles para el estudiante (por plan o por carrera).
    */
   async findAreasDisponibles(idPlanEstudio: bigint, idCarrera: bigint) {
-    // 1. Intentar por plan_area
+    // 1. Intentar por plan_area asegurando aislamiento estricto por carrera
     const planAreas = await this.prisma.planArea.findMany({
       where: {
         idPlanEstudio,
-        area: { estado: 'ACTIVO' },
+        area: { estado: 'ACTIVO', idCarrera },
       },
       include: {
         area: true,

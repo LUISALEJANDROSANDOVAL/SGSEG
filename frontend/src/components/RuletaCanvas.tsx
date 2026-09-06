@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import confetti from 'canvas-confetti'
-import { Volume2, VolumeX, Sparkles, RefreshCw } from 'lucide-react'
+import { Volume2, VolumeX, Sparkles, RefreshCw, Lock } from 'lucide-react'
 
 export interface RuletaItem {
   id: string
@@ -15,6 +15,7 @@ export interface RuletaItem {
 interface RuletaCanvasProps {
   items: RuletaItem[]
   onFinish?: (selectedItem: RuletaItem, index: number) => void
+  onSpinStart?: () => void
   disabled?: boolean
   size?: number
   targetIndex?: number | null
@@ -24,14 +25,11 @@ interface RuletaCanvasProps {
   accentColor?: string
 }
 
-// Paleta institucional UTEPSA por defecto (Rojo, Negro y Blanco)
+// Paleta institucional estricta UTEPSA: Solo Guindo, Negro y Blanco
 const COLORES_DEFAULT = [
-  '#C8102E', // Rojo Institucional UTEPSA
+  '#9E1B32', // Guindo Carmín Institucional UTEPSA
   '#121316', // Negro Obsidiana
-  '#FFFFFF', // Blanco Perlado
-  '#9E1B32', // Carmín Oscuro
-  '#1E293B', // Pizarra Carbón
-  '#F4F4F5', // Blanco Platino
+  '#FFFFFF', // Blanco Puro
 ]
 
 function isColorLight(hex: string): boolean {
@@ -48,6 +46,7 @@ function isColorLight(hex: string): boolean {
 export function RuletaCanvas({
   items,
   onFinish,
+  onSpinStart,
   disabled = false,
   size = 460,
   targetIndex = null,
@@ -103,7 +102,7 @@ export function RuletaCanvas({
   const triggerInstitutionalConfetti = useCallback(() => {
     // Ráfaga institucional UTEPSA
     const end = Date.now() + 2.5 * 1000
-    const colors = ['#9E1B32', '#C5A059', '#1E293B', '#F59E0B', '#FFFFFF', '#10B981']
+    const colors = ['#9E1B32', '#121316', '#FFFFFF']
 
     const frame = () => {
       confetti({
@@ -190,7 +189,8 @@ export function RuletaCanvas({
       const item = items[i]
       const startAngle = i * sliceAngle
       const endAngle = startAngle + sliceAngle
-      const baseColor = item.color || COLORES_DEFAULT[i % COLORES_DEFAULT.length]
+      // Forzar paleta estricta UTEPSA: Guindo, Negro y Blanco
+      const baseColor = COLORES_DEFAULT[i % COLORES_DEFAULT.length]
 
       // Segmento
       ctx.beginPath()
@@ -352,8 +352,9 @@ export function RuletaCanvas({
 
   // Ejecutar giro con física natural de desaceleración
   const girarRuleta = () => {
-    if (isSpinning || disabled || items.length === 0) return
+    if (isSpinning || disabled || items.length === 0 || ganador) return
 
+    onSpinStart?.()
     setIsSpinning(true)
     setGanador(null)
 
@@ -494,7 +495,7 @@ export function RuletaCanvas({
           ref={canvasRef}
           style={{ width: size, height: size }}
           className="rounded-full cursor-pointer transition-transform active:scale-[0.99]"
-          onClick={!isSpinning && !disabled ? girarRuleta : undefined}
+          onClick={!isSpinning && !disabled && !ganador ? girarRuleta : undefined}
         />
 
         {/* Control de Audio flotante */}
@@ -512,34 +513,41 @@ export function RuletaCanvas({
         </button>
       </div>
 
-      {/* Resultado Destacado */}
+      {/* Resultado Destacado Sobrio e Institucional */}
       {ganador && !isSpinning && (
-        <div className="mt-5 w-full max-w-md animate-fade-in-up rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 p-4 text-center shadow-sm">
-          <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold tracking-wider text-amber-800 uppercase">
+        <div className="mt-5 w-full max-w-md animate-fade-in-up border-l-4 border-l-[#9E1B32] border border-line bg-white p-4 text-center shadow-xs">
+          <span className="inline-block border border-[#9E1B32]/30 bg-[#9E1B32]/10 px-3 py-1 text-[10px] font-bold tracking-widest text-[#9E1B32] uppercase">
             Resultado Oficial Sorteado
           </span>
-          <p className="mt-2 text-lg font-bold text-gray-900">{ganador.label}</p>
+          <p className="mt-2 text-xl font-extrabold text-neutral-900 tracking-tight">{ganador.label}</p>
           {ganador.sublabel && (
-            <p className="mt-0.5 text-xs text-gray-600">{ganador.sublabel}</p>
+            <p className="mt-0.5 text-xs text-neutral-600">{ganador.sublabel}</p>
           )}
         </div>
       )}
 
-      {/* Botón de Giro Principal */}
+      {/* Botón de Giro Principal o Bloqueo Oficial (No re-sorteo) */}
       <div className="mt-6 flex w-full max-w-sm flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={girarRuleta}
-          disabled={isSpinning || disabled || items.length === 0}
-          className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#9E1B32] to-[#7f1527] px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-crimson/20 transition-all hover:shadow-lg hover:shadow-crimson/30 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <RefreshCw
-            className={`size-4 transition-transform ${
-              isSpinning ? 'animate-spin' : 'group-hover:rotate-180 duration-500'
-            }`}
-          />
-          {isSpinning ? 'Sorteando en vivo...' : spinButtonText}
-        </button>
+        {ganador && !isSpinning ? (
+          <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+            <Lock className="size-4 text-[#9E1B32]" />
+            <span>Acto Oficial Sorteado y Registrado (Bloqueado)</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={girarRuleta}
+            disabled={isSpinning || disabled || items.length === 0}
+            className="group relative flex w-full items-center justify-center gap-2 rounded-none border border-[#9E1B32] bg-[#9E1B32] px-6 py-3.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#821528] active:bg-[#6c1121] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`size-4 transition-transform ${
+                isSpinning ? 'animate-spin' : 'group-hover:rotate-180 duration-500'
+              }`}
+            />
+            {isSpinning ? 'Sorteando en vivo...' : spinButtonText}
+          </button>
+        )}
 
         {items.length === 0 && (
           <p className="text-xs text-red-500">

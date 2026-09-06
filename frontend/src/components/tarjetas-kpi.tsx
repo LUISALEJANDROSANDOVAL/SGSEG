@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, BookOpen, GraduationCap, TrendingUp, Users, ArrowUpRight, CheckCircle2, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, BookOpen, GraduationCap, Users, ArrowUpRight, CheckCircle2, ShieldAlert } from 'lucide-react'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import { defensasApi, type EmbudoEstados } from '@/lib/defensas.api'
 import { casosApi, type MetricasCasos } from '@/lib/casos.api'
@@ -50,130 +50,124 @@ export function TarjetasKpi() {
   const tasaExito = totalDefensas > 0 ? Math.round((concluidos / totalDefensas) * 100) : 0
 
   return (
-    <section aria-label="Indicadores clave" className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Indicadores clave" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       
       {/* 1. Padrón de Postulantes */}
       <Link
         to="/estudiantes"
-        className="group relative overflow-hidden rounded-2xl border border-gray-200/90 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-blue-200"
+        className="group border border-line bg-white p-5 shadow-xs transition-colors hover:border-ink block"
       >
         <div className="flex items-center justify-between">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 transition-transform group-hover:scale-110">
-            <Users className="size-5" />
+          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+            Postulantes Registrados
           </span>
-          <span className="flex items-center gap-1 rounded-full bg-blue-50/80 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-            Padrón Activo
-            <ArrowUpRight className="size-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+          <span className="flex size-8 items-center justify-center border border-line bg-surface text-neutral-700">
+            <Users className="size-4" />
           </span>
         </div>
 
-        <div className="mt-4">
-          <p className="text-xs font-bold tracking-wider text-gray-500 uppercase">
-            Postulantes Registrados
-          </p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-gray-900 tabular-nums">
+        <div className="mt-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 tabular-nums">
               {loading ? '—' : totalEstudiantes.toLocaleString()}
             </span>
-            <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
-              <CheckCircle2 className="size-3" /> Habilitados
+            <span className="inline-flex items-center gap-1 border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+              <CheckCircle2 className="size-3 text-emerald-600" /> Habilitados
             </span>
           </div>
         </div>
 
-        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-          <span className="truncate">
-            {isJefe && carreraNombre ? carreraNombre : 'Padrón institucional UTEPSA'}
+        <div className="mt-4 pt-3 border-t border-line flex items-center justify-between text-[11px] text-neutral-500">
+          <span className="truncate max-w-[160px]">
+            {isJefe && carreraNombre ? carreraNombre : 'Padrón UTEPSA'}
           </span>
-          <span className="font-semibold text-blue-600 group-hover:underline">Ver padrón</span>
+          <span className="inline-flex items-center gap-0.5 font-medium text-neutral-700 group-hover:text-crimson">
+            Ver padrón <ArrowUpRight className="size-3" />
+          </span>
         </div>
       </Link>
 
       {/* 2. Defensas en Cronograma */}
       <Link
         to="/defensas"
-        className="group relative overflow-hidden rounded-2xl border border-gray-200/90 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-red-200"
+        className="group border border-line bg-white p-5 shadow-xs transition-colors hover:border-ink block"
       >
         <div className="flex items-center justify-between">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-red-50 text-[#c8102e] ring-1 ring-red-100 transition-transform group-hover:scale-110">
-            <AlertTriangle className="size-5" />
+          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+            Defensas Programadas
           </span>
-          {embudo && embudo.programados > 0 ? (
-            <span className="flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-[10px] font-extrabold text-[#c8102e] animate-pulse">
-              {embudo.programados} Por Sortear
-            </span>
-          ) : (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-              Al Día
-            </span>
-          )}
+          <span className="flex size-8 items-center justify-center border border-line bg-surface text-neutral-700">
+            <AlertTriangle className="size-4 text-crimson" />
+          </span>
         </div>
 
-        <div className="mt-4">
-          <p className="text-xs font-bold tracking-wider text-gray-500 uppercase">
-            Defensas en Cronograma
-          </p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-gray-900 tabular-nums">
+        <div className="mt-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 tabular-nums">
               {loading ? '—' : totalDefensas}
             </span>
-            <span className="text-xs text-gray-500">
-              ({embudo?.areaSorteada || 0} con área)
-            </span>
+            {embudo && embudo.programados > 0 ? (
+              <span className="border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-crimson">
+                {embudo.programados} por sortear
+              </span>
+            ) : (
+              <span className="border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+                Al día
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-          <span className="text-red-600 font-semibold truncate">
+        <div className="mt-4 pt-3 border-t border-line flex items-center justify-between text-[11px] text-neutral-500">
+          <span className="truncate text-crimson font-medium">
             {embudo ? `${embudo.programados} pendientes de sorteo` : 'En seguimiento'}
           </span>
-          <span className="font-semibold text-[#c8102e] group-hover:underline">Ver fechas</span>
+          <span className="inline-flex items-center gap-0.5 font-medium text-neutral-700 group-hover:text-crimson">
+            Agenda <ArrowUpRight className="size-3" />
+          </span>
         </div>
       </Link>
 
       {/* 3. Casos Disponibles */}
       <Link
         to="/casos"
-        className="group relative overflow-hidden rounded-2xl border border-gray-200/90 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-emerald-200"
+        className="group border border-line bg-white p-5 shadow-xs transition-colors hover:border-ink block"
       >
         <div className="flex items-center justify-between">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100 transition-transform group-hover:scale-110">
-            <BookOpen className="size-5" />
+          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+            Casos Disponibles
           </span>
-          {stockCriticoCount > 0 ? (
-            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">
-              <ShieldAlert className="size-3" /> {stockCriticoCount} Área(s) Alerta
-            </span>
-          ) : (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-              Stock Óptimo
-            </span>
-          )}
+          <span className="flex size-8 items-center justify-center border border-line bg-surface text-neutral-700">
+            <BookOpen className="size-4" />
+          </span>
         </div>
 
-        <div className="mt-4">
-          <p className="text-xs font-bold tracking-wider text-gray-500 uppercase">
-            Casos Disponibles
-          </p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-gray-900 tabular-nums">
+        <div className="mt-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 tabular-nums">
               {loading ? '—' : casosDisp}
             </span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-neutral-500">
               de {casosTotal} totales
             </span>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-1.5 pt-3 border-t border-gray-100">
-          <div className="flex items-center justify-between text-[11px] text-gray-500">
-            <span>Disponibilidad</span>
-            <span className="font-bold text-gray-800">{porcentajeDisp}%</span>
+        <div className="mt-4 pt-3 border-t border-line flex flex-col gap-1.5">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-neutral-500">Disponibilidad ({porcentajeDisp}%)</span>
+            {stockCriticoCount > 0 ? (
+              <span className="inline-flex items-center gap-0.5 text-crimson font-semibold">
+                <ShieldAlert className="size-3" /> {stockCriticoCount} en alerta
+              </span>
+            ) : (
+              <span className="text-emerald-700 font-medium">Stock óptimo</span>
+            )}
           </div>
-          <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+          <div className="h-1.5 w-full bg-neutral-100 overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                porcentajeDisp > 40 ? 'bg-emerald-500' : porcentajeDisp > 20 ? 'bg-amber-500' : 'bg-red-500'
+              className={`h-full transition-all duration-500 ${
+                porcentajeDisp > 40 ? 'bg-emerald-600' : porcentajeDisp > 20 ? 'bg-amber-500' : 'bg-crimson'
               }`}
               style={{ width: `${porcentajeDisp}%` }}
             />
@@ -184,37 +178,35 @@ export function TarjetasKpi() {
       {/* 4. Tasa de Culminación */}
       <Link
         to="/reportes"
-        className="group relative overflow-hidden rounded-2xl border border-gray-200/90 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-purple-200"
+        className="group border border-line bg-white p-5 shadow-xs transition-colors hover:border-ink block"
       >
         <div className="flex items-center justify-between">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600 ring-1 ring-purple-100 transition-transform group-hover:scale-110">
-            <GraduationCap className="size-5" />
+          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+            Defensas Concluidas
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-            <TrendingUp className="size-3" />
-            {tasaExito}% Avance
+          <span className="flex size-8 items-center justify-center border border-line bg-surface text-neutral-700">
+            <GraduationCap className="size-4" />
           </span>
         </div>
 
-        <div className="mt-4">
-          <p className="text-xs font-bold tracking-wider text-gray-500 uppercase">
-            Defensas Concluidas
-          </p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-gray-900 tabular-nums">
+        <div className="mt-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 tabular-nums">
               {loading ? '—' : concluidos}
             </span>
-            <span className="text-xs text-gray-500">
-              ({embudo?.calificados || 0} con acta)
+            <span className="border border-line bg-surface px-1.5 py-0.5 text-[10px] font-semibold text-neutral-700">
+              {tasaExito}% del período
             </span>
           </div>
         </div>
 
-        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-          <span className="truncate text-emerald-700 font-semibold">
-            Semestre 2-2026 activo
+        <div className="mt-4 pt-3 border-t border-line flex items-center justify-between text-[11px] text-neutral-500">
+          <span className="text-neutral-600 truncate">
+            {embudo?.calificados || 0} con acta registrada
           </span>
-          <span className="font-semibold text-purple-600 group-hover:underline">Ver actas</span>
+          <span className="inline-flex items-center gap-0.5 font-medium text-neutral-700 group-hover:text-crimson">
+            Reportes <ArrowUpRight className="size-3" />
+          </span>
         </div>
       </Link>
 

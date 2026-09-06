@@ -44,27 +44,27 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
   }, [refreshTrigger, user, isJefe, carreraId])
 
   return (
-    <section className="flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <header className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+    <section className="flex flex-col border border-line bg-white p-5 shadow-xs">
+      <header className="flex items-center justify-between border-b border-line pb-3 mb-3">
         <div>
           <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <FileCheck2 className="size-4" />
+            <span className="flex size-7 items-center justify-center border border-line bg-surface text-neutral-700">
+              <FileCheck2 className="size-4 text-neutral-700" />
             </span>
-            <h2 className="text-sm font-bold tracking-tight text-gray-900">
+            <h2 className="text-sm font-semibold tracking-tight text-neutral-900 uppercase">
               Historial de Sorteos y Actas
             </h2>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-neutral-500 mt-0.5">
             {total} actos de sorteo registrados con validez reglamentaria
           </p>
         </div>
         <button
           type="button"
           onClick={cargarHistorial}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+          className="flex items-center gap-1.5 border border-line bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-surface transition-colors"
         >
-          <RefreshCw className={`size-3 ${loading ? 'animate-spin text-[#c8102e]' : ''}`} />
+          <RefreshCw className={`size-3 ${loading ? 'animate-spin text-crimson' : ''}`} />
           <span>Actualizar</span>
         </button>
       </header>
@@ -158,52 +158,52 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
 
       {/* MODAL DE ACTA OFICIAL DE SORTEO DIGITAL */}
       {actaSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-xl border border-line bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs print:relative print:inset-auto print:bg-white print:p-0 print:z-auto">
+          <div className="w-full max-w-xl border border-line bg-white shadow-2xl print:border-none print:shadow-none print:max-w-none">
             {/* Header del Acta */}
-            <header className="flex items-center justify-between border-b border-line px-6 py-4 bg-surface">
+            <header className="flex items-center justify-between border-b border-line px-6 py-4 bg-surface print:bg-white print:border-b-2 print:border-neutral-900">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="size-5 text-crimson" />
+                <ShieldCheck className="size-5 text-crimson print:text-neutral-900" />
                 <div>
                   <h3 className="text-sm font-bold tracking-tight text-neutral-900 uppercase">
                     Acta Oficial de Sorteo Digital
                   </h3>
-                  <p className="text-[11px] text-neutral-500">
-                    Sistema de Gestión de Exámenes de Grado · UPTECSA
+                  <p className="text-[11px] text-neutral-500 print:text-neutral-700">
+                    Sistema de Gestión de Exámenes de Grado · UTEPSA
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setActaSeleccionada(null)}
-                className="text-neutral-400 hover:text-neutral-700"
+                className="text-neutral-400 hover:text-neutral-700 print:hidden"
               >
                 <X className="size-5" />
               </button>
             </header>
 
             {/* Contenido Imprimible del Acta */}
-            <div className="p-6 flex flex-col gap-4 text-xs text-neutral-800">
-              <div className="text-center border-b border-line pb-3">
-                <p className="text-xs uppercase tracking-widest text-neutral-500 font-semibold">
+            <div className="p-6 flex flex-col gap-4 text-xs text-neutral-800 print:p-8 print:text-black">
+              <div className="text-center border-b border-line pb-3 print:border-neutral-300">
+                <p className="text-xs uppercase tracking-widest text-neutral-500 font-semibold print:text-neutral-700">
                   Certificado de Asignación Aleatoria
                 </p>
-                <h4 className="text-base font-bold text-neutral-900 mt-1">
+                <h4 className="text-base font-bold text-neutral-900 mt-1 print:text-black">
                   ACTA DE SORTEO N° {actaSeleccionada.idSorteo.padStart(6, '0')}
                 </h4>
-                <p className="text-[11px] text-neutral-500">
+                <p className="text-[11px] text-neutral-500 font-mono print:text-neutral-700">
                   Fecha y Hora del Acto: {new Date(actaSeleccionada.fechaHora).toLocaleString()}
                 </p>
               </div>
 
               {/* Datos del Postulante */}
-              <div className="grid grid-cols-2 gap-3 bg-surface p-3 border border-line">
+              <div className="grid grid-cols-2 gap-3 bg-surface p-3 border border-line print:bg-neutral-50 print:border-neutral-300">
                 <div>
                   <span className="text-[10px] text-neutral-500 uppercase font-semibold">Postulante</span>
-                  <p className="font-bold text-neutral-900">
+                  <p className="font-bold text-neutral-900 print:text-black">
                     {actaSeleccionada.defensa?.instancia?.proceso?.estudiante?.nombreCompleto}
                   </p>
-                  <p className="text-[11px] text-neutral-500">
+                  <p className="text-[11px] text-neutral-500 font-mono">
                     C.I.: {actaSeleccionada.defensa?.instancia?.proceso?.estudiante?.carnetIdentidad} · Registro:{' '}
                     {actaSeleccionada.defensa?.instancia?.proceso?.estudiante?.carnetEstudiantil}
                   </p>
@@ -211,24 +211,24 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
 
                 <div>
                   <span className="text-[10px] text-neutral-500 uppercase font-semibold">Carrera y Facultad</span>
-                  <p className="font-bold text-neutral-900">
+                  <p className="font-bold text-neutral-900 print:text-black">
                     {actaSeleccionada.defensa?.instancia?.proceso?.estudiante?.planEstudio?.carrera?.nombre}
                   </p>
                   <p className="text-[11px] text-neutral-500">
-                    {actaSeleccionada.defensa?.instancia?.proceso?.estudiante?.planEstudio?.carrera?.facultad?.nombre || 'UPTECSA'}
+                    {actaSeleccionada.defensa?.instancia?.proceso?.estudiante?.planEstudio?.carrera?.facultad?.nombre || 'UTEPSA'}
                   </p>
                 </div>
               </div>
 
               {/* Resultado del Sorteo */}
-              <div className="border border-line p-4 flex flex-col gap-2">
+              <div className="border border-line p-4 flex flex-col gap-2 print:border-neutral-300">
                 <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
                   Resultado del Bolillero Digital
                 </span>
                 {actaSeleccionada.area && (
                   <div>
                     <span className="text-neutral-500 text-[11px]">Área Académica Asignada:</span>
-                    <p className="text-sm font-bold text-neutral-900">
+                    <p className="text-sm font-bold text-neutral-900 print:text-black">
                       {actaSeleccionada.area.areaResultado.nombre}
                     </p>
                   </div>
@@ -236,10 +236,10 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
                 {actaSeleccionada.caso && (
                   <div className="mt-1">
                     <span className="text-neutral-500 text-[11px]">Caso de Estudio Seleccionado:</span>
-                    <p className="text-sm font-bold text-neutral-900">
+                    <p className="text-sm font-bold text-neutral-900 print:text-black">
                       {actaSeleccionada.caso.casoSeleccionado.titulo}
                     </p>
-                    <p className="text-[11px] text-neutral-600 mt-1 italic line-clamp-3">
+                    <p className="text-[11px] text-neutral-600 mt-1 italic line-clamp-3 print:line-clamp-none">
                       "{actaSeleccionada.caso.casoSeleccionado.contenido}"
                     </p>
                   </div>
@@ -250,16 +250,16 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
               <div className="grid grid-cols-2 gap-3 text-[11px]">
                 <div>
                   <span className="text-neutral-500">Operador del Sistema:</span>
-                  <p className="font-semibold text-neutral-900">
+                  <p className="font-semibold text-neutral-900 print:text-black">
                     {actaSeleccionada.usuarioEjecutor
                       ? `${actaSeleccionada.usuarioEjecutor.primerNombre} ${actaSeleccionada.usuarioEjecutor.primerApellido}`
                       : 'Secretaría de Facultad'}
                   </p>
-                  <p className="text-neutral-500">{actaSeleccionada.usuarioEjecutor?.correoInstitucional}</p>
+                  <p className="text-neutral-500 font-mono text-[10px]">{actaSeleccionada.usuarioEjecutor?.correoInstitucional}</p>
                 </div>
                 <div>
                   <span className="text-neutral-500">Comparecencia del Estudiante:</span>
-                  <p className="font-semibold text-neutral-900">
+                  <p className="font-semibold text-neutral-900 print:text-black">
                     {actaSeleccionada.estudiantePresente ? 'Presente en Sesión' : 'Inasistencia Justificada'}
                   </p>
                   {!actaSeleccionada.estudiantePresente && actaSeleccionada.motivoInasistencia && (
@@ -269,24 +269,38 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
               </div>
 
               {/* Sello Criptográfico SHA-256 */}
-              <div className="bg-neutral-50 p-3 border border-line flex flex-col gap-1">
+              <div className="bg-neutral-50 p-3 border border-line flex flex-col gap-1 print:bg-white print:border-neutral-300">
                 <span className="text-[10px] uppercase font-bold text-neutral-600 tracking-wider">
                   Sello de Integridad Criptográfica (SHA-256)
                 </span>
                 <p className="font-mono text-[10px] text-neutral-800 break-all select-all">
-                  {actaSeleccionada.tokenActa || 'UPTECSA-VERIFIED-HASH-SEAL'}
+                  {actaSeleccionada.tokenActa || 'UTEPSA-VERIFIED-HASH-SEAL'}
                 </p>
               </div>
 
+              {/* Bloque Oficial de Firmas para Impresión Física */}
+              <div className="hidden print:grid grid-cols-2 gap-12 mt-12 pt-8 text-center text-xs text-black">
+                <div className="flex flex-col items-center">
+                  <div className="w-56 border-b border-black mb-1.5" />
+                  <p className="font-bold">Firma de la Autoridad Académica</p>
+                  <p className="text-[10px] text-neutral-600">Secretaría de Facultad / Coordinación UTEPSA</p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-56 border-b border-black mb-1.5" />
+                  <p className="font-bold">Firma del Postulante</p>
+                  <p className="text-[10px] text-neutral-600">Conformidad con el Acta de Sorteo</p>
+                </div>
+              </div>
+
               {/* Acciones */}
-              <footer className="mt-2 flex items-center justify-between border-t border-line pt-4">
+              <footer className="mt-2 flex items-center justify-between border-t border-line pt-4 print:hidden">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                  className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs"
                 >
                   <Printer className="size-3.5" />
-                  <span>Imprimir Acta</span>
+                  <span>Imprimir Acta Oficial</span>
                 </button>
                 <button
                   type="button"

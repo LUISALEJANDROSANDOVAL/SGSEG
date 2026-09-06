@@ -6,6 +6,7 @@ import Configuracion from '@/pages/Configuracion'
 import Estudiantes from '@/pages/Estudiantes'
 import Reportes from '@/pages/Reportes'
 import Sorteo from '@/pages/Sorteo'
+import SorteoEnVivo from '@/pages/SorteoEnVivo'
 import Usuarios from '@/pages/Usuarios'
 import Academia from '@/pages/Academia'
 import Defensas from '@/pages/Defensas'
@@ -19,6 +20,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/sorteo/en-vivo" element={<SorteoEnVivo />} />
           
           <Route path="/" element={
             <ProtectedRoute>

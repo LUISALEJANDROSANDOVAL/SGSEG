@@ -43,7 +43,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* ── SIDEBAR ── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-white text-gray-900 shadow-xl border-r border-gray-200 transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-white text-gray-900 shadow-xl border-r border-gray-200 transition-transform duration-300 lg:translate-x-0 print:hidden ${
           menuAbierto ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -170,10 +170,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <div className="flex min-h-screen flex-col lg:pl-64">
+      <div className="flex min-h-screen flex-col lg:pl-64 print:pl-0 print:m-0">
 
         {/* ── Top header ── */}
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-gray-200 bg-white/90 backdrop-blur-md px-4 py-3 sm:px-6 shadow-sm">
+        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-gray-200 bg-white/90 backdrop-blur-md px-4 py-3 sm:px-6 shadow-sm print:hidden">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -197,7 +197,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* ── Page content ── */}
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 print:p-0 print:m-0">{children}</main>
       </div>
 
       {/* ── Modal Editar Perfil ── */}

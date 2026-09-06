@@ -76,6 +76,7 @@ export interface User {
   rolCode: RolCode;
   carreras?: CarreraUsuario[];
   carreraId?: string;
+  facultadId?: string;
   avatarUrl?: string;
 }
 

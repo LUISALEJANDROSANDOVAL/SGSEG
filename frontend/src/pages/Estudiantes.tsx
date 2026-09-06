@@ -31,6 +31,8 @@ import {
   UserPlus,
   ShieldCheck,
 } from 'lucide-react'
+import { TableSkeleton } from '@/components/table-skeleton'
+import { EmptyState } from '@/components/empty-state'
 import { useAuth } from '@/context/AuthContext'
 import { esJefeCarrera as checkEsJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
 
@@ -741,37 +743,34 @@ export default function PaginaEstudiantes() {
               <tbody className="divide-y divide-line">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-neutral-500">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <RefreshCw className="h-6 w-6 animate-spin text-neutral-400" />
-                        <span className="text-xs">Cargando padrón de estudiantes...</span>
-                      </div>
+                    <td colSpan={8} className="p-0">
+                      <TableSkeleton filas={6} columnas={8} className="border-0" />
                     </td>
                   </tr>
                 ) : estudiantes.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-neutral-500">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <GraduationCap className="h-8 w-8 text-neutral-300" />
-                        <span className="text-sm font-medium text-neutral-700">
-                          No se encontraron estudiantes
-                        </span>
-                        <p className="text-xs text-neutral-400 max-w-sm">
-                          {busqueda || carreraSeleccionada !== 'ALL' || planSeleccionado !== 'ALL'
+                    <td colSpan={8} className="p-6">
+                      <EmptyState
+                        titulo="No se encontraron estudiantes"
+                        descripcion={
+                          busqueda || carreraSeleccionada !== 'ALL' || planSeleccionado !== 'ALL'
                             ? 'Intenta ajustar o limpiar los filtros de búsqueda y carrera.'
-                            : 'El padrón está vacío. Inscribe al primer estudiante o importa un archivo masivo.'}
-                        </p>
-                        <div className="mt-3 flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={abrirModalNuevoEstudiante}
-                            className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
-                          >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            <span>Inscribir Estudiante</span>
-                          </button>
-                        </div>
-                      </div>
+                            : 'El padrón está vacío. Inscribe al primer estudiante o importa un archivo masivo.'
+                        }
+                        icono={GraduationCap}
+                        accion={
+                          !esJefeCarrera ? (
+                            <button
+                              type="button"
+                              onClick={abrirModalNuevoEstudiante}
+                              className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                              <span>Inscribir Estudiante</span>
+                            </button>
+                          ) : undefined
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (

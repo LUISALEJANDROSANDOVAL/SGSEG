@@ -20,6 +20,8 @@ import {
 } from 'lucide-react'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
+import { TableSkeleton } from '@/components/table-skeleton'
+import { EmptyState } from '@/components/empty-state'
 import { useAuth } from '@/context/AuthContext'
 import { casosApi } from '@/lib/casos.api'
 import type {
@@ -403,28 +405,28 @@ export default function PaginaCasos() {
           </div>
         )}
 
-        {/* Banner de Stock Crítico dinámico estructurado en lista */}
+        {/* Banner de Stock Crítico dinámico institucional */}
         {metricas && metricas.stockCritico.length > 0 && (
           <section
             role="alert"
-            className="rounded-2xl border border-red-200/80 bg-gradient-to-r from-red-50/70 via-red-50/40 to-orange-50/30 p-5 shadow-xs"
+            className="border-l-4 border-l-crimson border border-line bg-white p-4 shadow-xs"
           >
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3.5">
               <div className="flex items-center gap-2.5">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700 shadow-2xs">
-                  <AlertOctagon className="size-4.5" />
+                <span className="flex size-8 shrink-0 items-center justify-center bg-crimson/10 text-crimson">
+                  <AlertOctagon className="size-4" />
                 </span>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-red-950">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900">
                       Alerta de Stock Crítico en Banco de Casos
                     </h3>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100/90 border border-red-200 px-2.5 py-0.5 text-[11px] font-bold text-red-800">
-                      <span className="size-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <span className="inline-flex items-center gap-1 bg-crimson/10 border border-crimson/20 px-2 py-0.5 text-[11px] font-semibold text-crimson">
+                      <span className="size-1.5 rounded-full bg-crimson animate-pulse" />
                       {metricas.stockCritico.length} áreas con stock bajo
                     </span>
                   </div>
-                  <p className="text-[11px] text-red-800/80 mt-0.5">
+                  <p className="text-[11px] text-neutral-500 mt-0.5">
                     Áreas con menos de 2 casos disponibles. Se requiere incorporar nuevos casos antes de iniciar sorteos.
                   </p>
                 </div>
@@ -434,7 +436,7 @@ export default function PaginaCasos() {
                 <button
                   type="button"
                   onClick={() => setMostrarTodasAlertas(!mostrarTodasAlertas)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-800 bg-white/95 hover:bg-white border border-red-200 px-3 py-1.5 rounded-lg transition-all shadow-2xs hover:shadow-xs"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-50 border border-line px-3 py-1.5 transition-colors"
                 >
                   {mostrarTodasAlertas ? (
                     <>
@@ -451,27 +453,27 @@ export default function PaginaCasos() {
               )}
             </div>
 
-            {/* Lista organizada en tarjetas limpias */}
+            {/* Lista organizada en tarjetas sobrias */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
               {(mostrarTodasAlertas ? metricas.stockCritico : metricas.stockCritico.slice(0, 6)).map((alerta) => (
                 <div
                   key={alerta.idArea}
-                  className="group relative flex items-center justify-between gap-3 rounded-xl border border-red-200/70 bg-white/95 p-3 shadow-2xs transition-all duration-150 hover:border-red-300 hover:shadow-xs"
+                  className="group relative flex items-center justify-between gap-3 border border-line bg-surface p-3 transition-colors hover:border-crimson/40"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-gray-900 truncate group-hover:text-red-900 transition-colors">
+                    <p className="text-xs font-semibold text-neutral-900 truncate group-hover:text-crimson transition-colors">
                       {alerta.nombreArea}
                     </p>
-                    <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                    <p className="text-[11px] text-neutral-500 truncate mt-0.5">
                       {alerta.carrera}
                     </p>
                   </div>
 
                   <div className="shrink-0 flex items-center gap-2">
                     <span
-                      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border ${
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-medium border ${
                         alerta.casosDisponibles === 0
-                          ? 'bg-red-50 text-red-700 border-red-200'
+                          ? 'bg-crimson/10 text-crimson border-crimson/30'
                           : 'bg-amber-50 text-amber-800 border-amber-200'
                       }`}
                     >
@@ -485,7 +487,7 @@ export default function PaginaCasos() {
                         setFormNuevo((prev) => ({ ...prev, idArea: String(alerta.idArea) }))
                         setModalNuevoCaso(true)
                       }}
-                      className="flex size-6.5 items-center justify-center rounded-lg bg-gray-50 text-gray-600 border border-gray-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors"
+                      className="flex size-6.5 items-center justify-center bg-white text-neutral-600 border border-line hover:bg-neutral-50 hover:text-crimson transition-colors cursor-pointer"
                     >
                       <Plus className="size-3" />
                     </button>
@@ -718,14 +720,32 @@ export default function PaginaCasos() {
               <tbody className="divide-y divide-line">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-xs text-neutral-400">
-                      Cargando banco de casos...
+                    <td colSpan={6} className="p-0">
+                      <TableSkeleton filas={5} columnas={6} className="border-0" />
                     </td>
                   </tr>
                 ) : casos.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-xs text-neutral-400">
-                      No se encontraron casos de estudio con los filtros seleccionados.
+                    <td colSpan={6} className="p-6">
+                      <EmptyState
+                        titulo="No se encontraron casos de estudio"
+                        descripcion={
+                          searchTerm || selectedCarrera !== 'ALL' || selectedArea !== 'ALL' || selectedEstado !== 'ALL'
+                            ? 'Intenta ajustar o limpiar los filtros de búsqueda, carrera o estado.'
+                            : 'El banco de casos está vacío. Registra el primer caso académico.'
+                        }
+                        icono={FolderKanban}
+                        accion={
+                          <button
+                            type="button"
+                            onClick={() => setModalNuevoCaso(true)}
+                            className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 cursor-pointer"
+                          >
+                            <Plus className="size-3.5" />
+                            <span>Registrar Caso</span>
+                          </button>
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -901,14 +921,32 @@ export default function PaginaCasos() {
                 <tbody className="divide-y divide-line">
                   {loading ? (
                     <tr>
-                      <td colSpan={9} className="px-5 py-8 text-center text-xs text-neutral-400">
-                        Cargando áreas académicas...
+                      <td colSpan={9} className="p-0">
+                        <TableSkeleton filas={5} columnas={9} className="border-0" />
                       </td>
                     </tr>
                   ) : (vistaAreasCarrera.length > 0 ? vistaAreasCarrera : areas).length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-5 py-8 text-center text-xs text-neutral-400">
-                        No se encontraron áreas académicas registradas para los filtros seleccionados.
+                      <td colSpan={9} className="p-6">
+                        <EmptyState
+                          titulo="No se encontraron áreas académicas"
+                          descripcion={
+                            selectedCarrera !== 'ALL'
+                              ? 'No hay áreas registradas para la carrera seleccionada.'
+                              : 'No hay áreas académicas registradas en el sistema.'
+                          }
+                          icono={Layers}
+                          accion={
+                            <button
+                              type="button"
+                              onClick={() => setModalNuevaArea(true)}
+                              className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 cursor-pointer"
+                            >
+                              <Plus className="size-3.5" />
+                              <span>Registrar Área</span>
+                            </button>
+                          }
+                        />
                       </td>
                     </tr>
                   ) : (

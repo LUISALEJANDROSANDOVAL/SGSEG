@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
+import { TableSkeleton } from '@/components/table-skeleton'
+import { EmptyState } from '@/components/empty-state'
 import { useAuth } from '@/context/AuthContext'
 import {
   defensasApi,
@@ -542,14 +544,18 @@ export default function PaginaDefensas() {
               <tbody className="divide-y divide-line">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-xs text-neutral-400">
-                      Cargando cronograma de defensas...
+                    <td colSpan={8} className="p-0">
+                      <TableSkeleton filas={5} columnas={8} className="border-0" />
                     </td>
                   </tr>
                 ) : defensas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-xs text-neutral-400">
-                      No hay defensas programadas con los criterios seleccionados.
+                    <td colSpan={8} className="p-6">
+                      <EmptyState
+                        titulo="No hay defensas programadas"
+                        descripcion="No se encontraron defensas con los criterios de búsqueda o filtros seleccionados."
+                        icono={Calendar}
+                      />
                     </td>
                   </tr>
                 ) : (
