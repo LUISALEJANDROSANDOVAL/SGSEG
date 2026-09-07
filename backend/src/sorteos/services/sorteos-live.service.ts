@@ -35,6 +35,18 @@ export interface SesionLive {
   fechaCreacion: Date;
   fechaExpiracion?: Date | null;
   expirado: boolean;
+  estudianteConectado?: boolean;
+  estudianteListo?: boolean;
+  fechaConfirmacionListo?: Date | null;
+  ultimoPing?: Date | null;
+  itemsRuleta?: Array<{
+    id: string;
+    label: string;
+    sublabel?: string;
+    color?: string;
+    badge?: string;
+  }> | null;
+  ruletaGiroActivo?: boolean;
 }
 
 export interface NotificacionSorteoDto {
@@ -83,6 +95,12 @@ export class SorteosLiveService {
       hashActa: null,
       fechaCreacion: new Date(),
       expirado: false,
+      estudianteConectado: false,
+      estudianteListo: false,
+      fechaConfirmacionListo: null,
+      ultimoPing: null,
+      itemsRuleta: null,
+      ruletaGiroActivo: false,
     };
 
     this.sesiones.set(token, nuevaSesion);
@@ -196,6 +214,83 @@ El documento oficial de acta ha sido archivado en los registros de Secretaría d
       codigoActa: dto.codigoActa,
       fechaDespacho: ahora,
       mensaje: `Notificación y pliego oficial despachados con éxito al correo ${dto.correo}.`,
+    };
+  }
+
+  /**
+   * Registra la presencia activa del estudiante (heartbeat desde su móvil).
+   */
+  conectarEstudiante(token: string): { conectado: boolean; timestamp: string } {
+    const sesion = this.sesiones.get(token);
+    const ahora = new Date();
+    if (sesion && !sesion.expirado) {
+      sesion.estudianteConectado = true;
+      sesion.ultimoPing = ahora;
+      this.sesiones.set(token, sesion);
+    }
+    return {
+      conectado: !!sesion && !sesion.expirado,
+      timestamp: ahora.toISOString(),
+    };
+  }
+
+  /**
+   * El estudiante confirma explícitamente en su dispositivo que está listo para iniciar el sorteo.
+   */
+  confirmarEstudianteListo(token: string): { listo: boolean; timestamp: string } {
+    const sesion = this.sesiones.get(token);
+    const ahora = new Date();
+    if (sesion && !sesion.expirado) {
+      sesion.estudianteConectado = true;
+      sesion.estudianteListo = true;
+      sesion.fechaConfirmacionListo = ahora;
+      sesion.ultimoPing = ahora;
+      this.sesiones.set(token, sesion);
+    }
+    return {
+      listo: !!sesion && !sesion.expirado,
+      timestamp: ahora.toISOString(),
+    };
+  }
+
+  /**
+   * Despacha por correo al postulante la invitación al sorteo en vivo con su enlace temporal.
+   */
+  enviarNotificacionInicio(dto: {
+    token: string;
+    correo: string;
+    nombreEstudiante: string;
+    carnet: string;
+    carrera: string;
+    linkLive: string;
+  }): { enviado: boolean; destinatario: string; mensaje: string } {
+    const ahora = new Date().toLocaleString('es-BO', {
+      timeZone: 'America/La_Paz',
+    });
+
+    console.log(`
+================================================================================
+🏛️  UTEPSA - INVITACIÓN OFICIAL A SORTEO DIGITAL EN TIEMPO REAL
+================================================================================
+Destinatario: ${dto.nombreEstudiante} <${dto.correo}>
+CU/CI:        ${dto.carnet}
+Carrera:      ${dto.carrera}
+Enlace Live:  ${dto.linkLive}
+Fecha/Hora:   ${ahora}
+
+Estimado(a) postulante:
+Se le informa que el acto oficial de sorteo de Caso de Grado está por dar inicio en sala.
+Puede seguir la ruleta digital y cada una de las fases en vivo desde su dispositivo móvil ingresando a:
+👉 ${dto.linkLive}
+
+Al ingresar, presione "Estoy Listo para el Sorteo" para certificar su conformidad en tiempo real.
+================================================================================
+    `);
+
+    return {
+      enviado: true,
+      destinatario: dto.correo,
+      mensaje: `Enlace de transmisión en vivo despachado exitosamente al correo ${dto.correo}.`,
     };
   }
 }

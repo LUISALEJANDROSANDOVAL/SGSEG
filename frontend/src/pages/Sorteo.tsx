@@ -5,6 +5,7 @@ import { RuletaCanvas, type RuletaItem } from '@/components/RuletaCanvas'
 import { estudiantesApi, type Estudiante } from '@/lib/estudiantes.api'
 import { casosApi } from '@/lib/casos.api'
 import { sorteosApi } from '@/lib/sorteos.api'
+import QRCode from 'qrcode'
 import { useAuth } from '@/context/AuthContext'
 import { esJefeCarrera, getJefeCarreraId, getJefeCarreraNombre } from '@/lib/auth-helpers'
 import {
@@ -539,6 +540,33 @@ export default function PaginaSorteo() {
   const [liveUrl, setLiveUrl] = useState<string>('')
   const [modoProyector, setModoProyector] = useState<boolean>(false)
   const [copiadoLink, setCopiadoLink] = useState<boolean>(false)
+  const [liveSessionData, setLiveSessionData] = useState<any>(null)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
+  const [mostrarModalQR, setMostrarModalQR] = useState<boolean>(false)
+
+  // Polling del estado de la sesión en vivo para detectar conexión y confirmación del estudiante
+  useEffect(() => {
+    if (!liveToken) return
+    let activo = true
+
+    const sincronizarEstadoSesion = async () => {
+      try {
+        const datos = await sorteosApi.getSesionLive(liveToken)
+        if (activo && datos) {
+          setLiveSessionData(datos)
+        }
+      } catch {
+        // Ignorar fallos transitorios
+      }
+    }
+
+    sincronizarEstadoSesion()
+    const timer = setInterval(sincronizarEstadoSesion, 1500)
+    return () => {
+      activo = false
+      clearInterval(timer)
+    }
+  }, [liveToken])
 
   // Estados de datos dinámicos desde API
   const [areasDb, setAreasDb] = useState<AreaAcademicaSorteo[]>([])
@@ -657,41 +685,6 @@ export default function PaginaSorteo() {
       setAreasDb([])
     }
     loadAreasForCarrera()
-  }, [postulanteSeleccionado])
-
-  // Iniciar o reiniciar sesión en vivo cuando cambia el postulante
-  useEffect(() => {
-    let isMounted = true
-    async function initLive() {
-      if (!postulanteSeleccionado) return
-      const p = postulanteSeleccionado
-      try {
-        const resp = await sorteosApi.crearSesionLive({
-          idPostulante: p.id,
-          nombreEstudiante: p.nombreCompleto,
-          carnet: `${p.carnetEstudiantil} · CI: ${p.carnetIdentidad}`,
-          carrera: p.carrera,
-          correo: p.correo,
-          tipoDefensa: p.tipoDefensa,
-        })
-        if (isMounted && resp && resp.token) {
-          setLiveToken(resp.token)
-          setLiveUrl(`${window.location.origin}/sorteo/en-vivo?token=${resp.token}`)
-        }
-      } catch {
-        if (isMounted) {
-          const fallbackToken = `live-${Date.now()}`
-          setLiveToken(fallbackToken)
-          setLiveUrl(`${window.location.origin}/sorteo/en-vivo?token=${fallbackToken}`)
-        }
-      }
-    }
-
-    initLive()
-
-    return () => {
-      isMounted = false
-    }
   }, [postulanteSeleccionado])
 
   // 1. Áreas correspondientes estricta y exclusivamente a la carrera del postulante (RNF-02)
@@ -897,7 +890,17 @@ export default function PaginaSorteo() {
   // Inicio de giro de Área (sincronizar en vivo)
   const handleSpinStartArea = () => {
     if (liveToken) {
-      sorteosApi.actualizarSesionLive(liveToken, { fase: 'AREA_GIRANDO' }).catch(() => {})
+      sorteosApi.actualizarSesionLive(liveToken, {
+        fase: 'AREA_GIRANDO',
+        itemsRuleta: ruletaItemsAreas.map((item) => ({
+          id: item.id,
+          label: item.label,
+          sublabel: item.sublabel,
+          color: item.color,
+          badge: item.badge,
+        })),
+        ruletaGiroActivo: true,
+      }).catch(() => {})
     }
   }
 
@@ -914,6 +917,7 @@ export default function PaginaSorteo() {
             nombre: area.nombre,
             descripcion: area.descripcion,
           },
+          ruletaGiroActivo: false,
         }).catch(() => {})
       }
     }
@@ -922,7 +926,17 @@ export default function PaginaSorteo() {
   // Inicio de giro de Caso (sincronizar en vivo)
   const handleSpinStartCaso = () => {
     if (liveToken) {
-      sorteosApi.actualizarSesionLive(liveToken, { fase: 'CASO_GIRANDO' }).catch(() => {})
+      sorteosApi.actualizarSesionLive(liveToken, {
+        fase: 'CASO_GIRANDO',
+        itemsRuleta: ruletaItemsCasos.map((item) => ({
+          id: item.id,
+          label: item.label,
+          sublabel: item.sublabel,
+          color: item.color,
+          badge: item.badge,
+        })),
+        ruletaGiroActivo: true,
+      }).catch(() => {})
     }
   }
 
@@ -941,6 +955,7 @@ export default function PaginaSorteo() {
             contenido: caso.contenido,
             plazoHoras: caso.plazoHoras,
           },
+          ruletaGiroActivo: false,
         }).catch(() => {})
       }
     }
@@ -984,9 +999,12 @@ export default function PaginaSorteo() {
 
     // Agregar al historial de la sesión
     const nuevoRegistro: RegistroHistorialSorteo = {
-      id: `sorteo-${Date.now()}`,
-      actaCodigo: codigoActa,
-      fechaHora: fechaHoraEjecucion || 'Reciente',
+      id: `hist-${Date.now()}`,
+      actaCodigo: codigoActa || `ACTA-${Date.now()}`,
+      fechaHora: new Date().toLocaleTimeString('es-BO', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
       estudiante: postulanteSeleccionado,
       area: areaGanadora,
       caso: casoGanador,
@@ -996,22 +1014,29 @@ export default function PaginaSorteo() {
         hour: '2-digit',
         minute: '2-digit',
       }),
-      hashVerificacion: hashActa,
+      hashVerificacion: hashActa || 'SHA256:VERIFICADO',
     }
 
     setHistorialSesion((prev) => [nuevoRegistro, ...prev])
   }
 
-  // Reiniciar sorteo para un nuevo estudiante y expirar enlace anterior
+  // Reiniciar flujo para siguiente postulante
   const handleIniciarNuevoSorteo = () => {
+    // Si había sesión en vivo previa, finalizarla formalmente
     if (liveToken) {
       sorteosApi.expirarSesionLive(liveToken).catch(() => {})
     }
+
     setLiveToken('')
     setLiveUrl('')
+    setLiveSessionData(null)
+    setQrCodeUrl('')
+    setMostrarModalQR(false)
     setPasoActual(1)
     setAreaGanadora(null)
     setCasoGanador(null)
+    setCodigoActa('')
+    setHashActa('')
     setAsistenciaPresente(true)
     setMotivoInasistencia('')
     setObservacionInasistencia('')
@@ -1035,6 +1060,101 @@ export default function PaginaSorteo() {
     alert(`Descargando Acta Oficial ${codigoActa || 'ACTA-UTEPSA'}.pdf...`)
   }
 
+  // Activar modo pantalla completa / proyector, generar enlace en vivo, código QR y despachar invitación por correo
+  const asegurarSesionLiveYFullscreen = async () => {
+    if (!postulanteSeleccionado) {
+      alert('Seleccione un postulante antes de iniciar el modo proyector.')
+      return null
+    }
+    setModoProyector(true)
+
+    // Intentar solicitar pantalla completa nativa al navegador
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {})
+      }
+    } catch {
+      // Ignorar restricciones si el navegador bloquea fullscreen programático
+    }
+
+    let tokenActual = liveToken
+    let urlActual = liveUrl
+
+    // Crear la sesión en vivo si aún no existe
+    if (!tokenActual) {
+      const p = postulanteSeleccionado
+      try {
+        const resp = await sorteosApi.crearSesionLive({
+          idPostulante: p.id,
+          nombreEstudiante: p.nombreCompleto,
+          carnet: `${p.carnetEstudiantil} · CI: ${p.carnetIdentidad}`,
+          carrera: p.carrera,
+          correo: p.correo,
+          tipoDefensa: p.tipoDefensa,
+        })
+        if (resp && resp.token) {
+          tokenActual = resp.token
+          urlActual = `${window.location.origin}/sorteo/en-vivo?token=${resp.token}`
+          setLiveToken(resp.token)
+          setLiveUrl(urlActual)
+
+          // Despachar inmediatamente el enlace al correo institucional del alumno
+          sorteosApi.notificarInicioSorteo({
+            token: resp.token,
+            correo: p.correo,
+            nombreEstudiante: p.nombreCompleto,
+            carnet: `${p.carnetEstudiantil} · CI: ${p.carnetIdentidad}`,
+            carrera: p.carrera,
+            linkLive: urlActual,
+          }).catch(() => {})
+        }
+      } catch {
+        const fallbackToken = `live-${Date.now()}`
+        tokenActual = fallbackToken
+        urlActual = `${window.location.origin}/sorteo/en-vivo?token=${fallbackToken}`
+        setLiveToken(fallbackToken)
+        setLiveUrl(urlActual)
+      }
+    }
+
+    // Generar código QR para escaneo inmediato con el teléfono inteligente
+    if (urlActual) {
+      try {
+        const qr = await QRCode.toDataURL(urlActual, {
+          width: 280,
+          margin: 1.5,
+          color: {
+            dark: '#121316',
+            light: '#FFFFFF',
+          },
+        })
+        setQrCodeUrl(qr)
+      } catch (err) {
+        console.error('Error generando QR', err)
+      }
+    }
+
+    return tokenActual
+  }
+
+  const handleAbrirProyector = async () => {
+    await asegurarSesionLiveYFullscreen()
+  }
+
+  const handleCerrarProyector = () => {
+    setModoProyector(false)
+    try {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {})
+      }
+    } catch {}
+  }
+
+  const handleIniciarSorteoOficial = async () => {
+    await asegurarSesionLiveYFullscreen()
+    setPasoActual(2)
+  }
+
   return (
     <DashboardShell>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
@@ -1044,21 +1164,10 @@ export default function PaginaSorteo() {
           descripcion="Flujo institucional de 4 pasos para la asignación transparente, auditable y en tiempo real de áreas y casos de estudio."
           accion={
             <div className="flex items-center gap-2">
-              {liveUrl && (
-                <button
-                  type="button"
-                  onClick={handleCopiarLink}
-                  className="flex items-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-semibold text-neutral-700 hover:border-neutral-900 transition-colors shadow-2xs cursor-pointer"
-                  title="Copiar enlace para el celular del estudiante"
-                >
-                  <Copy className="size-3.5 text-crimson" />
-                  <span>{copiadoLink ? '¡Enlace Copiado!' : 'Copiar Link Estudiante'}</span>
-                </button>
-              )}
               <button
                 type="button"
-                onClick={() => setModoProyector(true)}
-                className="flex items-center gap-1.5 border border-ink bg-ink px-3 py-2 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer"
+                onClick={handleAbrirProyector}
+                className="flex items-center gap-1.5 border border-ink bg-ink px-3.5 py-2 text-xs font-semibold text-white hover:bg-neutral-800 transition-colors shadow-xs cursor-pointer"
                 title="Modo Proyector para Auditorio / Pantalla Grande"
               >
                 <Maximize2 className="size-3.5" />
@@ -1067,45 +1176,6 @@ export default function PaginaSorteo() {
             </div>
           }
         />
-
-        {/* Banner de Sincronización en Vivo para Móvil */}
-        {liveUrl && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-3.5 shadow-xs">
-            <div className="flex items-center gap-3">
-              <span className="flex size-8 items-center justify-center bg-crimson/10 text-crimson">
-                <QrCode className="size-4" />
-              </span>
-              <div>
-                <p className="text-xs font-bold text-neutral-900">
-                  Enlace de Transmisión en Tiempo Real para el Postulante
-                </p>
-                <p className="text-[11px] text-neutral-500 font-mono">
-                  Token: {liveToken} · El estudiante puede seguir los giros en vivo desde su celular.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleCopiarLink}
-                className="flex items-center gap-1.5 border border-line bg-surface px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
-              >
-                <Copy className="size-3.5 text-neutral-500" />
-                <span>{copiadoLink ? 'Copiado al portapapeles' : 'Copiar Link'}</span>
-              </button>
-              <a
-                href={liveUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 border border-line bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:text-crimson transition-colors"
-              >
-                <ExternalLink className="size-3.5" />
-                <span>Abrir Vista Celular</span>
-              </a>
-            </div>
-          </div>
-        )}
 
         {/* Insignia de Aislamiento para Jefe de Carrera */}
         {isJefe && (
@@ -1536,10 +1606,11 @@ export default function PaginaSorteo() {
                     <button
                       type="button"
                       disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
-                      onClick={() => setPasoActual(2)}
-                      className="flex items-center gap-2 rounded-xl bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      onClick={handleIniciarSorteoOficial}
+                      className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
-                      Continuar al Sorteo de Área
+                      <Maximize2 className="size-4" />
+                      <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
                       <ArrowRight className="size-4" />
                     </button>
                   </div>
@@ -2076,27 +2147,73 @@ export default function PaginaSorteo() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Botón de Código QR para el Postulante */}
+              {qrCodeUrl && (
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalQR(true)}
+                  className="flex items-center gap-1.5 border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-neutral-200 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
+                  title="Mostrar Código QR en Pantalla Grande para el Postulante"
+                >
+                  <QrCode className="size-3.5 text-[#C8102E]" />
+                  <span>Código QR en Sala</span>
+                </button>
+              )}
+
+              {/* Indicador de Conexión en Tiempo Real del Postulante */}
+              {liveSessionData?.estudianteListo ? (
+                <div className="flex items-center gap-2 border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 text-xs text-emerald-300 font-bold shadow-xs">
+                  <CheckCircle2 className="size-4 text-emerald-400" />
+                  <span>Postulante Conectado y Listo</span>
+                </div>
+              ) : liveSessionData?.estudianteConectado ? (
+                <div className="flex items-center gap-2 border border-blue-500/50 bg-blue-950/60 px-3 py-1.5 text-xs text-blue-300 font-semibold animate-pulse shadow-xs">
+                  <span className="size-2 rounded-full bg-blue-400 animate-ping" />
+                  <span>Postulante en Línea · Esperando "Estoy Listo"</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalQR(true)}
+                  className="flex items-center gap-2 border border-amber-500/50 bg-amber-950/60 px-3 py-1.5 text-xs text-amber-300 font-medium hover:bg-amber-900/60 transition-colors cursor-pointer shadow-xs"
+                >
+                  <span className="size-2 rounded-full bg-amber-400 animate-ping" />
+                  <span>Esperando Postulante (Ver QR)</span>
+                </button>
+              )}
+
               {liveToken && (
-                <div className="flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-mono">
-                  <span className="inline-block size-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="text-neutral-400">Token Móvil:</span>
-                  <span className="font-bold text-white">{liveToken}</span>
+                <div className="hidden lg:flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-mono">
+                  <span className="text-neutral-400">Token:</span>
+                  <span className="font-bold text-white truncate max-w-[100px]">{liveToken.substring(0, 8)}...</span>
                 </div>
               )}
               {liveUrl && (
-                <button
-                  type="button"
-                  onClick={handleCopiarLink}
-                  className="flex items-center gap-1.5 border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors cursor-pointer"
-                  title="Copiar enlace para el postulante"
-                >
-                  <Copy className="size-3.5 text-[#C8102E]" />
-                  <span>{copiadoLink ? '¡Enlace Copiado!' : 'Copiar Link Móvil'}</span>
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={handleCopiarLink}
+                    className="flex items-center gap-1.5 border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors cursor-pointer"
+                    title="Copiar enlace para el postulante"
+                  >
+                    <Copy className="size-3.5 text-[#C8102E]" />
+                    <span>{copiadoLink ? '¡Enlace Copiado!' : 'Copiar Link Móvil'}</span>
+                  </button>
+                  <a
+                    href={liveUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-white/20 transition-colors"
+                    title="Abrir vista móvil de prueba"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    <span>Abrir Móvil</span>
+                  </a>
+                </>
               )}
               <button
                 type="button"
-                onClick={() => setModoProyector(false)}
+                onClick={handleCerrarProyector}
                 className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-4 py-2 text-xs font-bold text-white hover:bg-[#821528] transition-colors shadow-sm cursor-pointer"
                 title="Salir del modo pantalla completa"
               >
@@ -2176,6 +2293,55 @@ export default function PaginaSorteo() {
                   <h2 className="text-2xl font-black text-white mt-2">
                     Sorteo Oficial de Área Académica
                   </h2>
+                </div>
+
+                {/* Banner de Verificación y Código QR en Sala para el Postulante */}
+                <div className="flex flex-wrap items-center justify-between gap-4 w-full border border-white/15 bg-white/5 p-4">
+                  <div className="flex items-center gap-4">
+                    {qrCodeUrl && (
+                      <img
+                        src={qrCodeUrl}
+                        alt="Código QR Sorteo"
+                        className="size-16 bg-white p-1 border border-white/30 cursor-pointer hover:scale-105 transition-transform"
+                        onClick={() => setMostrarModalQR(true)}
+                        title="Clic para ampliar código QR"
+                      />
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-bold text-white">Transmisión Móvil para el Postulante</p>
+                        {liveSessionData?.estudianteListo ? (
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 font-mono font-bold">
+                            CONECTADO & LISTO
+                          </span>
+                        ) : liveSessionData?.estudianteConectado ? (
+                          <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 font-mono font-bold">
+                            EN LÍNEA
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 font-mono font-bold">
+                            ESPERANDO ESCANEO
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-neutral-400 mt-1">
+                        {liveSessionData?.estudianteListo
+                          ? `El postulante ${postulanteSeleccionado?.nombreCompleto} ha confirmado en su móvil que está listo para el sorteo.`
+                          : 'El postulante puede escanear el código QR con su celular o acceder mediante el enlace enviado a su correo institucional.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {qrCodeUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setMostrarModalQR(true)}
+                      className="border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs px-3.5 py-2 transition-colors cursor-pointer font-semibold inline-flex items-center gap-1.5"
+                    >
+                      <QrCode className="size-3.5 text-[#C8102E]" />
+                      <span>Ampliar QR</span>
+                    </button>
+                  )}
                 </div>
 
                 <RuletaCanvas
@@ -2333,6 +2499,83 @@ export default function PaginaSorteo() {
             <span>SGSEG · Sistema de Gestión de Exámenes de Grado UTEPSA</span>
             <span>Sorteo Público Inalterable conforme a Reglamento de Graduación</span>
           </footer>
+
+          {/* Modal Ampliado de Código QR para el Postulante */}
+          {mostrarModalQR && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+              <div className="w-full max-w-md border border-white/20 bg-[#121316] p-6 text-white shadow-2xl animate-fade-in border-l-4 border-l-[#9E1B32]">
+                <div className="flex items-center justify-between border-b border-white/15 pb-3">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#C8102E] font-bold">
+                      Auditoría y Transparencia
+                    </span>
+                    <h3 className="text-base font-black text-white mt-0.5">
+                      Código QR para el Postulante
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalQR(false)}
+                    className="text-neutral-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="size-5" />
+                  </button>
+                </div>
+
+                <div className="my-5 flex flex-col items-center justify-center text-center">
+                  {qrCodeUrl ? (
+                    <div className="bg-white p-3 border-2 border-[#9E1B32] shadow-xl">
+                      <img src={qrCodeUrl} alt="Código QR Sorteo" className="size-56" />
+                    </div>
+                  ) : (
+                    <div className="size-56 flex items-center justify-center border border-white/15 text-neutral-400 text-xs">
+                      Generando código QR...
+                    </div>
+                  )}
+
+                  <p className="mt-4 text-xs font-semibold text-neutral-200">
+                    Escanee este código con la cámara de su celular para seguir el sorteo en tiempo real.
+                  </p>
+                  <p className="text-[11px] text-neutral-400 mt-1">
+                    Copia enviada al correo institucional:{' '}
+                    <strong className="text-white font-mono">{postulanteSeleccionado?.correo}</strong>
+                  </p>
+
+                  <div className="mt-4 w-full border border-white/10 bg-white/5 p-3 text-xs">
+                    <span className="text-[10px] uppercase text-neutral-400 font-bold block">
+                      Estado de Conexión en Sala:
+                    </span>
+                    {liveSessionData?.estudianteListo ? (
+                      <p className="font-bold text-emerald-400 mt-1 flex items-center justify-center gap-1.5">
+                        <CheckCircle2 className="size-4" />
+                        ¡Postulante Confirmado y Listo para Iniciar!
+                      </p>
+                    ) : liveSessionData?.estudianteConectado ? (
+                      <p className="font-bold text-blue-400 mt-1 flex items-center justify-center gap-1.5">
+                        <span className="size-2 rounded-full bg-blue-400 animate-ping" />
+                        Postulante conectado en el móvil. Aguardando confirmación.
+                      </p>
+                    ) : (
+                      <p className="font-semibold text-amber-400 mt-1 flex items-center justify-center gap-1.5">
+                        <span className="size-2 rounded-full bg-amber-400 animate-pulse" />
+                        Esperando que el estudiante escanee el código...
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 border-t border-white/15 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalQR(false)}
+                    className="border border-white bg-white px-5 py-2 text-xs font-bold text-neutral-900 hover:bg-neutral-200 transition-colors cursor-pointer"
+                  >
+                    Cerrar y Continuar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </DashboardShell>

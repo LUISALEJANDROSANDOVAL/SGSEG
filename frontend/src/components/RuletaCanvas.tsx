@@ -23,6 +23,8 @@ interface RuletaCanvasProps {
   subtitle?: string
   spinButtonText?: string
   accentColor?: string
+  autoSpin?: boolean
+  readOnly?: boolean
 }
 
 // Paleta institucional estricta UTEPSA: Solo Guindo, Negro y Blanco
@@ -54,6 +56,8 @@ export function RuletaCanvas({
   subtitle,
   spinButtonText = 'Iniciar Giro Aleatorio',
   accentColor = '#9E1B32',
+  autoSpin = false,
+  readOnly = false,
 }: RuletaCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [isSpinning, setIsSpinning] = useState(false)
@@ -440,6 +444,13 @@ export function RuletaCanvas({
     }
   }, [])
 
+  // Auto-giro sincronizado (usado para la pantalla móvil del estudiante)
+  useEffect(() => {
+    if (autoSpin && !isSpinning && !ganador && items.length > 0) {
+      girarRuleta()
+    }
+  }, [autoSpin, isSpinning, ganador, items.length])
+
   return (
     <div className="flex flex-col items-center justify-center">
       {/* Encabezado contextual */}
@@ -528,7 +539,23 @@ export function RuletaCanvas({
 
       {/* Botón de Giro Principal o Bloqueo Oficial (No re-sorteo) */}
       <div className="mt-6 flex w-full max-w-sm flex-col items-center gap-2">
-        {ganador && !isSpinning ? (
+        {readOnly ? (
+          isSpinning ? (
+            <div className="flex w-full items-center justify-center gap-2 border border-[#9E1B32]/30 bg-[#9E1B32]/10 py-3 px-4 text-xs font-semibold text-[#9E1B32] shadow-2xs animate-pulse">
+              <RefreshCw className="size-4 animate-spin text-[#9E1B32]" />
+              <span>Girando ruleta en tiempo real en la sala oficial...</span>
+            </div>
+          ) : ganador ? (
+            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+              <Lock className="size-4 text-[#9E1B32]" />
+              <span>Acto Oficial Sorteado y Registrado por el Tribunal</span>
+            </div>
+          ) : (
+            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-medium text-neutral-500 shadow-2xs">
+              <span>Aguardando inicio del sorteo por el tribunal...</span>
+            </div>
+          )
+        ) : ganador && !isSpinning ? (
           <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
             <Lock className="size-4 text-[#9E1B32]" />
             <span>Acto Oficial Sorteado y Registrado (Bloqueado)</span>

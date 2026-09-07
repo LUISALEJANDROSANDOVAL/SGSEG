@@ -243,4 +243,36 @@ export const sorteosApi = {
     const { data } = await api.post('/sorteos/notificar-estudiante', dto);
     return data;
   },
+
+  /**
+   * Heartbeat / Ping de presencia desde el móvil del estudiante en tiempo real.
+   */
+  async conectarEstudianteLive(token: string): Promise<any> {
+    const { data } = await api.post('/sorteos/live/conectar', { token });
+    return data;
+  },
+
+  /**
+   * Confirmación explícita del estudiante de que está listo para iniciar el sorteo.
+   */
+  async confirmarEstudianteListoLive(token: string): Promise<any> {
+    const { data } = await api.post('/sorteos/live/confirmar-listo', { token });
+    return data;
+  },
+
+  /**
+   * Despacha la invitación con el link de seguimiento en vivo al correo del estudiante.
+   */
+  async notificarInicioSorteo(payload: {
+    token: string;
+    correo: string;
+    nombreEstudiante: string;
+    carnet: string;
+    carrera: string;
+    linkLive: string;
+  }): Promise<any> {
+    const { data } = await api.post('/sorteos/live/notificar-inicio', payload);
+    return data;
+  },
 };
+

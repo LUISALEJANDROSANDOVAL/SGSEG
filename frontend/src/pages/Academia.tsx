@@ -5,6 +5,8 @@ import api from '../lib/api';
 import { GraduationCap, Landmark, BookOpen, Layers, Plus, X, ChevronRight, Check, ShieldCheck, Lock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers';
+import { estudiantesApi } from '@/lib/estudiantes.api';
+import { casosApi } from '@/lib/casos.api';
 
 export default function PaginaAcademia() {
   const { user } = useAuth();
@@ -42,16 +44,63 @@ export default function PaginaAcademia() {
   const fetchDatos = async () => {
     setLoading(true);
     try {
-      const [resFacs, resCarreras, resAreas, resPensums] = await Promise.all([
-        api.get('/academia/facultades'),
-        api.get('/academia/carreras'),
-        api.get('/academia/areas'),
-        api.get('/academia/pensums'),
-      ]);
-      setFacultades(resFacs.data);
-      setCarreras(resCarreras.data);
-      setAreas(resAreas.data);
-      setPensums(resPensums.data);
+      // 1. Obtener carreras oficiales con facultades y pensums
+      const listaCarreras = await estudiantesApi.getCarreras();
+      setCarreras(listaCarreras || []);
+
+      // Extraer facultades únicas
+      const facMap = new Map();
+      (listaCarreras || []).forEach((c: any) => {
+        if (c.facultad && !facMap.has(String(c.facultad.idFacultad))) {
+          facMap.set(String(c.facultad.idFacultad), {
+            id: String(c.facultad.idFacultad),
+            nombre: c.facultad.nombre,
+            carreras: (listaCarreras || []).filter(
+              (cr: any) => String(cr.idFacultad) === String(c.facultad.idFacultad),
+            ),
+          });
+        }
+      });
+      setFacultades(Array.from(facMap.values()));
+
+      // Extraer pensums (planes de estudio)
+      const listaPensums: any[] = [];
+      (listaCarreras || []).forEach((c: any) => {
+        if (c.planesEstudio && Array.isArray(c.planesEstudio)) {
+          c.planesEstudio.forEach((p: any) => {
+            listaPensums.push({
+              id: String(p.idPlanEstudio),
+              nombre: p.nombre,
+              carreraId: String(c.idCarrera),
+              idCarrera: String(c.idCarrera),
+              carrera: c.nombre,
+              estadoVigencia: p.estadoVigencia,
+            });
+          });
+        }
+      });
+      setPensums(listaPensums);
+
+      // 2. Obtener áreas de grado reales desde casosApi
+      const idCarreraParam = esJefe && jefeCarreraId ? String(jefeCarreraId) : undefined;
+      const listaAreas = await casosApi.getAreas(idCarreraParam);
+
+      const areasNormalizadas = (listaAreas || []).map((a: any) => ({
+        id: String(a.idArea),
+        idArea: String(a.idArea),
+        nombre: a.nombre,
+        carreraId: String(a.idCarrera || a.carrera?.idCarrera || ''),
+        idCarrera: String(a.idCarrera || a.carrera?.idCarrera || ''),
+        carrera: a.carrera?.nombre || '',
+        umbralDisponibilidad: a.umbralDisponibilidad,
+        casosCount: a._count?.casos ?? 0,
+        pensums:
+          a.planes?.map((pl: any) => ({
+            pensumId: String(pl.idPlanEstudio || pl.planEstudio?.idPlanEstudio),
+            nombre: pl.planEstudio?.nombre || 'Plan Vigente',
+          })) || [],
+      }));
+      setAreas(areasNormalizadas);
     } catch (err) {
       console.error('Error al cargar datos académicos', err);
     } finally {
@@ -61,22 +110,30 @@ export default function PaginaAcademia() {
 
   useEffect(() => {
     fetchDatos();
-  }, []);
+  }, [jefeCarreraId]);
 
   // Filtrar áreas y pensums para que el Jefe de Carrera solo vea los de su carrera
   const areasFiltradas = useMemo(() => {
     if (!esJefe) return areas;
-    return areas.filter((a) => String(a.carreraId) === String(jefeCarreraId));
+    return areas.filter(
+      (a) => !jefeCarreraId || String(a.carreraId || a.idCarrera) === String(jefeCarreraId),
+    );
   }, [areas, esJefe, jefeCarreraId]);
 
   const pensumsFiltrados = useMemo(() => {
     if (!esJefe) return pensums;
-    return pensums.filter((p) => String(p.carreraId) === String(jefeCarreraId));
+    return pensums.filter(
+      (p) => !jefeCarreraId || String(p.carreraId || p.idCarrera) === String(jefeCarreraId),
+    );
   }, [pensums, esJefe, jefeCarreraId]);
 
   const carreraActualJefe = useMemo(() => {
-    return carreras.find((c) => String(c.id) === String(jefeCarreraId))?.nombre || 'Ingeniería de Sistemas';
-  }, [carreras, jefeCarreraId]);
+    return (
+      carreras.find((c) => String(c.idCarrera || c.id) === String(jefeCarreraId))?.nombre ||
+      user?.carreras?.[0]?.nombre ||
+      'Sistemas'
+    );
+  }, [carreras, jefeCarreraId, user]);
 
   const abrirCrear = () => {
     setEditId(null);
@@ -233,7 +290,7 @@ export default function PaginaAcademia() {
             }`}
           >
             <Layers className="size-4" />
-            Áreas Académicas ({areasFiltradas.length})
+            Áreas de Grado ({areasFiltradas.length})
           </button>
           <button
             onClick={() => setActiveTab('pensums')}
@@ -261,7 +318,7 @@ export default function PaginaAcademia() {
                   <div key={f.id} className="border border-line bg-white p-5 flex flex-col justify-between shadow-sm">
                     <div>
                       <h3 className="text-sm font-semibold tracking-tight text-neutral-900">{f.nombre}</h3>
-                      <p className="text-xs text-neutral-500 mt-1">{f.carreras.length} carreras asociadas</p>
+                      <p className="text-xs text-neutral-500 mt-1">{f.carreras?.length || 0} carreras asociadas</p>
                     </div>
                     <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3">
                       <button
@@ -281,7 +338,7 @@ export default function PaginaAcademia() {
             {!esJefe && activeTab === 'carreras' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {carreras.map((c) => (
-                  <div key={c.id} className="border border-line bg-white p-5 flex flex-col justify-between shadow-sm">
+                  <div key={c.id || c.idCarrera} className="border border-line bg-white p-5 flex flex-col justify-between shadow-sm">
                     <div>
                       <span className="text-[9px] font-semibold tracking-[0.14em] text-neutral-400 uppercase">
                         {c.facultad?.nombre}
@@ -302,14 +359,14 @@ export default function PaginaAcademia() {
               </div>
             )}
 
-            {/* VISTA AREAS ACADEMICAS */}
+            {/* VISTA AREAS ACADEMICAS / DE GRADO */}
             {activeTab === 'areas' && (
               <div className="border border-line bg-white shadow-sm">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead className="border-b border-line bg-surface">
                       <tr className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase font-semibold">
-                        <th scope="col" className="px-5 py-3 font-medium">Área Académica</th>
+                        <th scope="col" className="px-5 py-3 font-medium">Área de Grado / Especialidad</th>
                         <th scope="col" className="px-5 py-3 font-medium">Carrera</th>
                         <th scope="col" className="px-5 py-3 font-medium">Pensums Habilitados (RF-04)</th>
                         <th scope="col" className="px-5 py-3 font-medium text-right">Acciones</th>
@@ -319,23 +376,23 @@ export default function PaginaAcademia() {
                       {areasFiltradas.map((a) => (
                         <tr key={a.id} className="hover:bg-neutral-50/50 transition-colors">
                           <td className="px-5 py-4 font-medium text-neutral-900">{a.nombre}</td>
-                          <td className="px-5 py-4 text-neutral-600">{a.carrera?.nombre}</td>
+                          <td className="px-5 py-4 text-neutral-600">{a.carrera?.nombre || a.carrera || carreraActualJefe}</td>
                           <td className="px-5 py-4">
                             <div className="flex flex-wrap gap-1.5">
-                              {a.pensums.map((ap: any) => (
-                                <span key={ap.pensumId} className="inline-block bg-slate-100 px-2 py-0.5 text-xs text-neutral-700 font-medium">
-                                  {ap.pensum?.nombre}
+                              {a.pensums.map((ap: any, idx: number) => (
+                                <span key={ap.pensumId || idx} className="inline-block bg-slate-100 px-2 py-0.5 text-xs text-neutral-700 font-medium">
+                                  {ap.nombre || ap.pensum?.nombre || 'Plan Vigente'}
                                 </span>
                               ))}
                               {a.pensums.length === 0 && (
-                                <span className="text-xs text-neutral-400 italic">Ningún pensum vinculado</span>
+                                <span className="text-xs text-neutral-400 italic">Plan Vigente (Habilitado)</span>
                               )}
                             </div>
                           </td>
                           <td className="px-5 py-4 text-right">
                             <button
                               onClick={() => abrirEditar(a)}
-                              className="text-xs font-semibold text-neutral-600 hover:text-ink"
+                              className="text-xs font-semibold text-neutral-600 hover:text-ink cursor-pointer"
                             >
                               Editar
                             </button>
@@ -345,7 +402,7 @@ export default function PaginaAcademia() {
                       {areasFiltradas.length === 0 && (
                         <tr>
                           <td colSpan={4} className="px-5 py-8 text-center text-xs text-neutral-500">
-                            No hay áreas académicas registradas para esta carrera.
+                            No hay áreas de grado registradas para esta carrera.
                           </td>
                         </tr>
                       )}

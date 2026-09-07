@@ -143,6 +143,43 @@ export class SorteosController {
   }
 
   /**
+   * Registra el ping/heartbeat de presencia en tiempo real del estudiante.
+   */
+  @Post('live/conectar')
+  @Public()
+  async conectarEstudiante(@Body() body: { token: string }) {
+    return this.sorteosLiveService.conectarEstudiante(body.token);
+  }
+
+  /**
+   * El estudiante confirma explícitamente desde su móvil que está listo para el sorteo.
+   */
+  @Post('live/confirmar-listo')
+  @Public()
+  async confirmarEstudianteListo(@Body() body: { token: string }) {
+    return this.sorteosLiveService.confirmarEstudianteListo(body.token);
+  }
+
+  /**
+   * Despacha el enlace de transmisión en vivo al correo del estudiante al iniciar el acto.
+   */
+  @Post('live/notificar-inicio')
+  @Roles('SECRETARIADO', 'JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
+  async notificarInicioSorteo(
+    @Body()
+    body: {
+      token: string;
+      correo: string;
+      nombreEstudiante: string;
+      carnet: string;
+      carrera: string;
+      linkLive: string;
+    },
+  ) {
+    return this.sorteosLiveService.enviarNotificacionInicio(body);
+  }
+
+  /**
    * Obtiene el detalle y acta formal de un sorteo por ID.
    */
   @Get(':id')
