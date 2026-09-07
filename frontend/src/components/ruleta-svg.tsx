@@ -119,16 +119,18 @@ export const RuletaSvg: React.FC<RuletaSvgProps> = ({
               PALETA_COLORES_INSTITUCIONAL[index % PALETA_COLORES_INSTITUCIONAL.length];
             const isWhite = color === '#FFFFFF';
 
-            // Posición del texto dentro del sector (a 60% del radio)
-            const textPos = polarToCartesian(cx, cy, radio * 0.62, midAngle);
+            // Posición del texto centrada en el sector (a 56% del radio)
+            const textPos = polarToCartesian(cx, cy, radio * 0.56, midAngle);
             const textRotation = midAngle > 90 && midAngle < 270 ? midAngle + 180 : midAngle;
 
             // Truncar label si es muy largo según la cantidad de sectores
-            const maxChars = numSectores > 6 ? 16 : numSectores > 4 ? 22 : numSectores > 2 ? 28 : 36;
+            const maxChars = numSectores > 6 ? 18 : numSectores > 4 ? 24 : numSectores > 2 ? 30 : 40;
             const labelTexto =
               sector.label.length > maxChars
                 ? `${sector.label.slice(0, maxChars - 2)}...`
                 : sector.label;
+
+            const fontSize = numSectores > 6 ? '11' : numSectores > 4 ? '13' : numSectores > 2 ? '15' : '17';
 
             return (
               <g key={sector.id || index}>
@@ -147,7 +149,7 @@ export const RuletaSvg: React.FC<RuletaSvgProps> = ({
                     textAnchor="middle"
                     dominantBaseline="central"
                     fill={isWhite ? '#121316' : '#FFFFFF'}
-                    fontSize={numSectores > 6 ? '9' : numSectores > 4 ? '10.5' : numSectores > 2 ? '12' : '13'}
+                    fontSize={fontSize}
                     fontWeight="700"
                     className={`tracking-tight select-none pointer-events-none ${
                       isWhite ? 'drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]' : 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]'

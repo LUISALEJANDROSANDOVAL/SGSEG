@@ -234,10 +234,10 @@ export function RuletaCanvas({
       ctx.lineWidth = 1
       ctx.stroke()
 
-      // 4. Texto y etiquetas del slice
+      // 4. Texto y etiquetas del slice (Centrados y multilínea inteligente)
       ctx.save()
       ctx.rotate(startAngle + sliceAngle / 2)
-      ctx.textAlign = 'right'
+      ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
       const isLight = isColorLight(baseColor)
@@ -245,28 +245,72 @@ export function RuletaCanvas({
       ctx.fillStyle = textColor
 
       // Ajuste tipográfico dinámico según cantidad de elementos
-      const maxTextLength = numSlices > 10 ? 16 : 24
+      const maxTextLength = numSlices <= 2 ? 30 : numSlices <= 4 ? 26 : numSlices > 8 ? 16 : 22
       let labelText = item.label
       if (labelText.length > maxTextLength) {
         labelText = labelText.substring(0, maxTextLength - 2) + '...'
       }
 
-      const fontSize = numSlices > 12 ? 11 : numSlices > 8 ? 12 : 13
+      // Tamaño de fuente grande y visible
+      const fontSize = numSlices <= 2 ? 19 : numSlices <= 4 ? 17 : numSlices <= 6 ? 15 : numSlices <= 8 ? 14 : numSlices <= 12 ? 12 : 11
+      const subFontSize = numSlices <= 2 ? 13.5 : numSlices <= 4 ? 12.5 : numSlices <= 6 ? 11.5 : numSlices <= 8 ? 10.5 : 10
+
       ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
-      ctx.shadowColor = isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.65)'
-      ctx.shadowBlur = 3
+      ctx.shadowColor = isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.8)'
+      ctx.shadowBlur = 4
       ctx.shadowOffsetX = 1
       ctx.shadowOffsetY = 1
 
-      // Dibujar texto principal
-      const textRadius = outerRadius - 22
-      ctx.fillText(labelText, textRadius, 0)
+      // Radio centrado perfectamente en el punto medio del sector
+      const midRadius = (innerHubRadius + outerRadius) / 2 + (numSlices <= 2 ? 4 : 6)
 
-      // Subetiqueta / Badge si existe
       if (item.sublabel && numSlices <= 8) {
-        ctx.font = `600 10px "Plus Jakarta Sans", Inter, sans-serif`
-        ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.85)' : 'rgba(255, 255, 255, 0.9)'
-        ctx.fillText(item.sublabel, textRadius, 14)
+        const rawSub = item.sublabel.trim()
+        const maxCharsPerLine = numSlices <= 2 ? 22 : numSlices <= 4 ? 18 : 15
+        
+        // Dividir subtítulo en máximo 2 líneas limpias por palabras
+        let lines: string[] = []
+        if (rawSub.length > maxCharsPerLine) {
+          const words = rawSub.split(' ')
+          let l1 = ''
+          let l2 = ''
+          for (const w of words) {
+            if ((l1 + ' ' + w).trim().length <= maxCharsPerLine && l2 === '') {
+              l1 = (l1 + ' ' + w).trim()
+            } else {
+              l2 = (l2 + ' ' + w).trim()
+            }
+          }
+          if (l2.length > maxCharsPerLine + 3) {
+            l2 = l2.substring(0, maxCharsPerLine) + '...'
+          }
+          lines = [l1, l2].filter(Boolean)
+        } else {
+          lines = [rawSub]
+        }
+
+        ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+        if (lines.length === 2) {
+          // Título arriba
+          ctx.fillText(labelText, midRadius, -18)
+
+          // Subtítulo en 2 líneas
+          ctx.font = `600 ${subFontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+          ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.92)' : 'rgba(255, 255, 255, 0.95)'
+          ctx.fillText(lines[0], midRadius, 2)
+          ctx.fillText(lines[1], midRadius, 18)
+        } else {
+          // Título arriba
+          ctx.fillText(labelText, midRadius, -10)
+
+          // Subtítulo en 1 línea
+          ctx.font = `600 ${subFontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+          ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.92)' : 'rgba(255, 255, 255, 0.95)'
+          ctx.fillText(lines[0], midRadius, 11)
+        }
+      } else {
+        // Título principal centrado verticalmente
+        ctx.fillText(labelText, midRadius, 0)
       }
 
       ctx.restore()
