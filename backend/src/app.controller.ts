@@ -9,8 +9,20 @@ export class AppController {
 
   @Public()
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  getHello() {
+    return {
+      status: 'online',
+      sistema: 'SGSEG - Sistema de Gestión de Graduación UTEPSA',
+      apiPrefix: '/api',
+      endpoints: {
+        auth: '/api/auth/login',
+        usuarios: '/api/usuarios',
+        sorteos: '/api/sorteos',
+        casos: '/api/casos',
+        estudiantes: '/api/estudiantes',
+      },
+      timestamp: new Date().toISOString(),
+    };
   }
 
   @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA')

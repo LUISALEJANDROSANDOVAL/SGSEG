@@ -1,7 +1,18 @@
 import axios from 'axios';
 
+const rawBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+
+// Asegurar que si se ingresa la URL de Railway (con o sin /api), siempre termine en /api
+let baseURL = '/api';
+if (rawBaseUrl) {
+  const cleanUrl = rawBaseUrl.replace(/\/+$/, '');
+  baseURL = cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+}
+
+console.log(`[SGSEG API] Base URL configurada: ${baseURL}`);
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL,
 });
 
 // Interceptor para inyectar el token JWT en las peticiones
