@@ -29,8 +29,6 @@ import {
   XCircle,
   Maximize2,
   Minimize2,
-  Copy,
-  ExternalLink,
   Lock,
   X,
 } from 'lucide-react'
@@ -539,7 +537,6 @@ export default function PaginaSorteo() {
   const [liveToken, setLiveToken] = useState<string>('')
   const [liveUrl, setLiveUrl] = useState<string>('')
   const [modoProyector, setModoProyector] = useState<boolean>(false)
-  const [copiadoLink, setCopiadoLink] = useState<boolean>(false)
   const [liveSessionData, setLiveSessionData] = useState<any>(null)
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [mostrarModalQR, setMostrarModalQR] = useState<boolean>(false)
@@ -1044,15 +1041,6 @@ export default function PaginaSorteo() {
     setCorreoDespachadoExitoso(false)
     setDespachandoCorreo(false)
     setModoProyector(false)
-  }
-
-  // Copiar link en vivo para el estudiante
-  const handleCopiarLink = () => {
-    if (liveUrl) {
-      navigator.clipboard.writeText(liveUrl)
-      setCopiadoLink(true)
-      setTimeout(() => setCopiadoLink(false), 2500)
-    }
   }
 
   // Descargar acta oficial
@@ -2182,35 +2170,6 @@ export default function PaginaSorteo() {
                 </button>
               )}
 
-              {liveToken && (
-                <div className="hidden lg:flex items-center gap-2 border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-mono">
-                  <span className="text-neutral-400">Token:</span>
-                  <span className="font-bold text-white truncate max-w-[100px]">{liveToken.substring(0, 8)}...</span>
-                </div>
-              )}
-              {liveUrl && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleCopiarLink}
-                    className="flex items-center gap-1.5 border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors cursor-pointer"
-                    title="Copiar enlace para el postulante"
-                  >
-                    <Copy className="size-3.5 text-[#C8102E]" />
-                    <span>{copiadoLink ? '¡Enlace Copiado!' : 'Copiar Link Móvil'}</span>
-                  </button>
-                  <a
-                    href={liveUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-white/20 transition-colors"
-                    title="Abrir vista móvil de prueba"
-                  >
-                    <ExternalLink className="size-3.5" />
-                    <span>Abrir Móvil</span>
-                  </a>
-                </>
-              )}
               <button
                 type="button"
                 onClick={handleCerrarProyector}
