@@ -9,8 +9,15 @@ import { EncabezadoPagina } from '@/components/encabezado-pagina'
 import { defensasApi, type EmbudoEstados, type Defensa } from '@/lib/defensas.api'
 import { casosApi, type AreaAcademica, type MetricasCasos } from '@/lib/casos.api'
 import { sorteosApi, type SorteoItem } from '@/lib/sorteos.api'
+import { useAuth } from '@/context/AuthContext'
+import { esJefeCarrera, getJefeCarreraId, getJefeCarreraNombre } from '@/lib/auth-helpers'
 
 export default function PaginaReportes() {
+  const { user } = useAuth()
+  const isJefe = esJefeCarrera(user)
+  const jefeCarreraId = getJefeCarreraId(user)
+  const carreraNombre = getJefeCarreraNombre(user)
+
   const [embudo, setEmbudo] = useState<EmbudoEstados | null>(null)
   const [metricasCasos, setMetricasCasos] = useState<MetricasCasos | null>(null)
   const [areas, setAreas] = useState<AreaAcademica[]>([])
@@ -21,12 +28,13 @@ export default function PaginaReportes() {
   const cargarReportes = async () => {
     setLoading(true)
     try {
+      const idCarreraFiltro = isJefe && jefeCarreraId ? jefeCarreraId : undefined
       const [embudoData, casosData, areasData, sorteosData, defensasData] = await Promise.all([
         defensasApi.getEmbudo(),
-        casosApi.getMetricas(),
-        casosApi.getAreas(),
-        sorteosApi.getHistorial({ limit: 100 }),
-        defensasApi.getDefensas({ limit: 100 }),
+        casosApi.getMetricas(idCarreraFiltro),
+        casosApi.getAreas(idCarreraFiltro),
+        sorteosApi.getHistorial({ idCarrera: idCarreraFiltro, limit: 100 }),
+        defensasApi.getDefensas({ idCarrera: idCarreraFiltro, limit: 100 }),
       ])
       setEmbudo(embudoData)
       setMetricasCasos(casosData)
@@ -42,7 +50,7 @@ export default function PaginaReportes() {
 
   useEffect(() => {
     cargarReportes()
-  }, [])
+  }, [user, isJefe, jefeCarreraId])
 
   // Exportar reporte consolidado en CSV
   const exportarCSV = () => {
@@ -86,7 +94,8 @@ export default function PaginaReportes() {
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement('a')
     link.setAttribute('href', encodedUri)
-    link.setAttribute('download', `reporte_consolidado_defensas_${new Date().toISOString().split('T')[0]}.csv`)
+    const slugCarrera = isJefe && carreraNombre ? `_${carreraNombre.toLowerCase().replace(/\s+/g, '_')}` : '_consolidado'
+    link.setAttribute('download', `reporte_defensas${slugCarrera}_${new Date().toISOString().split('T')[0]}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -96,8 +105,12 @@ export default function PaginaReportes() {
     <DashboardShell>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <EncabezadoPagina
-          titulo="Informes y Reportes Consolidados"
-          descripcion="Panel estratégico para Vicerrectorado, Dirección Académica y Coordinación. Métricas operativas, rendimiento por área y exportación de padrones auditados."
+          titulo={isJefe ? `Reporte de Programa: ${carreraNombre || 'Carrera'}` : 'Informes y Reportes Consolidados'}
+          descripcion={
+            isJefe
+              ? 'Métricas académicas, rendimiento por área temática y exportación del padrón exclusivo de su carrera.'
+              : 'Panel estratégico para Vicerrectorado, Dirección Académica y Coordinación. Métricas operativas, rendimiento por área y exportación de padrones auditados.'
+          }
           accion={
             <div className="flex items-center gap-2">
               <button
@@ -119,6 +132,34 @@ export default function PaginaReportes() {
             </div>
           }
         />
+
+        {/* Insignia de Aislamiento para Jefe de Carrera */}
+        {isJefe && (
+          <div className="flex items-center justify-between border-l-4 border-l-crimson border border-line bg-surface p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center bg-crimson/10 text-crimson">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-widest text-crimson uppercase">
+                    Aislamiento Estricto por Carrera (RNF-02)
+                  </span>
+                  <span className="bg-neutral-200 text-neutral-800 text-[10px] font-semibold px-2 py-0.5">
+                    Reporte de Carrera
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-neutral-900 mt-0.5">
+                  Visualizando inventario, métricas de aprobación y padrón exclusivo de:{' '}
+                  <span className="text-crimson font-bold">{carreraNombre || 'Tu Carrera'}</span>
+                </p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-block text-[11px] text-neutral-500 font-mono">
+              carreraId: {jefeCarreraId}
+            </span>
+          </div>
+        )}
 
         {/* Tarjetas KPI de Supervisión Global */}
         <section className="grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-4">

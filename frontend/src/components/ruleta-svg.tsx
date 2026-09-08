@@ -18,14 +18,9 @@ interface RuletaSvgProps {
 }
 
 const PALETA_COLORES_INSTITUCIONAL = [
-  '#9E1B32', // UTEPSA Crimson
-  '#0F172A', // Slate 900
-  '#1E3A8A', // Deep Navy
-  '#B91C1C', // Red 700
-  '#334155', // Slate 700
-  '#831843', // Rose 900
-  '#1E293B', // Dark Slate
-  '#B45309', // Amber 700
+  '#9E1B32', // Guindo Carmín Institucional UTEPSA
+  '#121316', // Negro Obsidiana
+  '#FFFFFF', // Blanco Puro
 ];
 
 /**
@@ -121,8 +116,8 @@ export const RuletaSvg: React.FC<RuletaSvgProps> = ({
             const endAngle = (index + 1) * anguloSector;
             const midAngle = startAngle + anguloSector / 2;
             const color =
-              sector.color ||
               PALETA_COLORES_INSTITUCIONAL[index % PALETA_COLORES_INSTITUCIONAL.length];
+            const isWhite = color === '#FFFFFF';
 
             // Posición del texto dentro del sector (a 60% del radio)
             const textPos = polarToCartesian(cx, cy, radio * 0.62, midAngle);
@@ -146,15 +141,17 @@ export const RuletaSvg: React.FC<RuletaSvgProps> = ({
                   className="transition-colors hover:brightness-110"
                 />
 
-                {/* Texto legible rotado hacia el centro */}
+                {/* Texto legible rotado hacia el centro con contraste dinámico */}
                 <g transform={`translate(${textPos.x}, ${textPos.y}) rotate(${textRotation})`}>
                   <text
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fill="#FFFFFF"
+                    fill={isWhite ? '#121316' : '#FFFFFF'}
                     fontSize={numSectores > 6 ? '9' : numSectores > 4 ? '10.5' : numSectores > 2 ? '12' : '13'}
                     fontWeight="700"
-                    className="tracking-tight select-none pointer-events-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                    className={`tracking-tight select-none pointer-events-none ${
+                      isWhite ? 'drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]' : 'drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]'
+                    }`}
                   >
                     {labelTexto}
                   </text>

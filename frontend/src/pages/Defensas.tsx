@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import {
   AlertTriangle,
   Award,
+  Calendar,
   CheckCircle2,
   Eye,
   Filter,
@@ -14,6 +15,8 @@ import {
 } from 'lucide-react'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
+import { TableSkeleton } from '@/components/table-skeleton'
+import { EmptyState } from '@/components/empty-state'
 import { useAuth } from '@/context/AuthContext'
 import {
   defensasApi,
@@ -23,11 +26,14 @@ import {
 import type { Defensa, EmbudoEstados } from '@/lib/defensas.api'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Estudiante } from '@/lib/estudiantes.api'
+import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
 
 export default function PaginaDefensas() {
   // Rol de usuario autenticado
   const { user } = useAuth()
-  const esSoloLectura = user?.rol === 'Vicerrectorado'
+  const isJefe = esJefeCarrera(user)
+  const jefeCarreraId = getJefeCarreraId(user)
+  const esSoloLectura = user?.rol === 'Vicerrectorado' || isJefe
 
   // Datos
   const [defensas, setDefensas] = useState<Defensa[]>([])
@@ -70,6 +76,7 @@ export default function PaginaDefensas() {
   const cargarDatos = async () => {
     setLoading(true)
     try {
+      const idCarreraFiltro = isJefe && jefeCarreraId ? jefeCarreraId : undefined
       const [embudoData, alertasData, defensasData] = await Promise.all([
         defensasApi.getEmbudo(),
         defensasApi.getAlertas(15),
@@ -79,6 +86,7 @@ export default function PaginaDefensas() {
           search: searchTerm,
           estadoDefensa: selectedEstado,
           tipoDefensa: selectedTipo,
+          idCarrera: idCarreraFiltro,
         }),
       ])
 
@@ -233,16 +241,45 @@ export default function PaginaDefensas() {
           titulo="Cronograma y Embudo de Defensas"
           descripcion="Gestión integral de fechas para examen de grado. Monitoreo del embudo de postulantes, verificación automatizada de plazos reglamentarios por carrera y alertas de sorteo."
           accion={
-            <button
-              type="button"
-              onClick={abrirModalProgramar}
-              className="flex items-center gap-1.5 bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 transition-opacity"
-            >
-              <Plus className="size-3.5" />
-              Programar Fecha de Defensa
-            </button>
+            !isJefe && (
+              <button
+                type="button"
+                onClick={abrirModalProgramar}
+                className="flex items-center gap-1.5 bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 transition-opacity cursor-pointer"
+              >
+                <Plus className="size-3.5" />
+                Programar Fecha de Defensa
+              </button>
+            )
           }
         />
+
+        {/* Insignia de Aislamiento para Jefe de Carrera */}
+        {isJefe && (
+          <div className="flex items-center justify-between border-l-4 border-l-crimson border border-line bg-surface p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center bg-crimson/10 text-crimson">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-widest text-crimson uppercase">
+                    Aislamiento Estricto por Carrera (RNF-02)
+                  </span>
+                  <span className="bg-neutral-200 text-neutral-800 text-[10px] font-semibold px-2 py-0.5">
+                    Modo Supervisión Académica
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-neutral-900 mt-0.5">
+                  Supervisando el cronograma de defensas y tribunales asignados a su carrera.
+                </p>
+              </div>
+            </div>
+            <span className="hidden sm:inline-block text-[11px] text-neutral-500 font-mono">
+              carreraId: {jefeCarreraId}
+            </span>
+          </div>
+        )}
 
         {/* Feedback alert */}
         {feedback && (
@@ -337,34 +374,53 @@ export default function PaginaDefensas() {
 
         {/* Alertas Operativas de Sorteo Próximo */}
         {alertas.length > 0 && (
-          <section className="border border-amber-300 bg-amber-50 p-4">
-            <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs mb-2">
-              <AlertTriangle className="size-4 text-amber-700" />
-              <span>
-                ALERTAS OPERATIVAS: {alertas.length} POSTULANTE(S) CON DEFENSA PRÓXIMA SIN SORTEO
+          <section className="rounded-2xl border border-amber-200/70 bg-gradient-to-r from-amber-50/70 via-amber-50/40 to-orange-50/30 p-5 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-amber-100/90 text-amber-700 shadow-2xs">
+                  <AlertTriangle className="size-4" />
+                </span>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-amber-950">
+                    Alertas Operativas
+                  </h3>
+                  <p className="text-[11px] text-amber-800/80">
+                    {alertas.length} postulante(s) con fecha de defensa próxima y sorteo pendiente
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/80 border border-amber-200/80 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
+                <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                Acción Requerida
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-amber-900">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {alertas.slice(0, 4).map((alerta) => (
                 <div
                   key={alerta.idDefensa}
-                  className="bg-white/80 p-2.5 border border-amber-200 flex items-center justify-between"
+                  className="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-200/60 bg-white/95 p-3.5 shadow-2xs transition-all duration-150 hover:border-amber-300 hover:shadow-xs"
                 >
-                  <div>
-                    <p className="font-semibold text-neutral-900">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-gray-900 truncate group-hover:text-amber-900 transition-colors">
                       {alerta.instancia.proceso.estudiante.nombreCompleto}
                     </p>
-                    <p className="text-[11px] text-neutral-600">
-                      {alerta.instancia.proceso.estudiante.planEstudio.carrera.nombre} ·{' '}
-                      {alerta.tipoDefensa.nombre}
-                    </p>
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                      <span className="truncate">{alerta.instancia.proceso.estudiante.planEstudio.carrera.nombre}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="inline-block rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+                        {alerta.tipoDefensa.nombre}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[11px] font-medium bg-amber-100 text-amber-800 px-2 py-0.5 border border-amber-300">
+
+                  <div className="shrink-0 text-right flex flex-col items-end gap-1">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-50/90 border border-amber-200/70 px-2.5 py-1 text-[11px] font-semibold text-amber-900">
+                      <Calendar className="size-3 text-amber-600" />
                       Fecha: {new Date(alerta.fechaDefensa).toLocaleDateString()}
                     </span>
-                    <p className="text-[10px] text-neutral-500 mt-0.5">
-                      Sorteo sugerido: {alerta.reglasSorteo?.fechaSorteoAreaRecomendada || 'Pendiente'}
+                    <p className="text-[10px] text-gray-400">
+                      Sorteo sugerido: <span className="font-medium text-gray-600">{alerta.reglasSorteo?.fechaSorteoAreaRecomendada || 'Pendiente'}</span>
                     </p>
                   </div>
                 </div>
@@ -488,14 +544,18 @@ export default function PaginaDefensas() {
               <tbody className="divide-y divide-line">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-xs text-neutral-400">
-                      Cargando cronograma de defensas...
+                    <td colSpan={8} className="p-0">
+                      <TableSkeleton filas={5} columnas={8} className="border-0" />
                     </td>
                   </tr>
                 ) : defensas.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-8 text-center text-xs text-neutral-400">
-                      No hay defensas programadas con los criterios seleccionados.
+                    <td colSpan={8} className="p-6">
+                      <EmptyState
+                        titulo="No hay defensas programadas"
+                        descripcion="No se encontraron defensas con los criterios de búsqueda o filtros seleccionados."
+                        icono={Calendar}
+                      />
                     </td>
                   </tr>
                 ) : (

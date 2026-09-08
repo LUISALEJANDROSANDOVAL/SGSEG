@@ -184,4 +184,95 @@ export const sorteosApi = {
     const { data } = await api.get<SorteoItem>(`/sorteos/${idSorteo}`);
     return data;
   },
+
+  /**
+   * Consulta pública del estado en vivo para el celular del estudiante.
+   */
+  async getSesionLive(token: string): Promise<any> {
+    const { data } = await api.get(`/sorteos/live/${token}`);
+    return data;
+  },
+
+  /**
+   * Crea una sesión en vivo de sorteo.
+   */
+  async crearSesionLive(payload: {
+    idPostulante: string;
+    nombreEstudiante: string;
+    carnet: string;
+    carrera: string;
+    correo: string;
+    tipoDefensa: string;
+  }): Promise<any> {
+    const { data } = await api.post('/sorteos/live/crear', payload);
+    return data;
+  },
+
+  /**
+   * Actualiza el estado de la sesión en vivo (giro, ganador de área, caso, etc.).
+   */
+  async actualizarSesionLive(token: string, update: any): Promise<any> {
+    const { data } = await api.post('/sorteos/live/actualizar', { token, update });
+    return data;
+  },
+
+  /**
+   * Expira formalmente la sesión en vivo.
+   */
+  async expirarSesionLive(token: string): Promise<any> {
+    const { data } = await api.post('/sorteos/live/expirar', { token });
+    return data;
+  },
+
+  /**
+   * Despacha la notificación oficial del sorteo al correo institucional del alumno.
+   */
+  async notificarEstudiante(dto: {
+    correo: string;
+    nombreEstudiante: string;
+    carnet: string;
+    carrera: string;
+    areaNombre: string;
+    casoCodigo: string;
+    casoTitulo: string;
+    casoContenido?: string;
+    plazoHoras: number;
+    codigoActa: string;
+    hashActa: string;
+  }): Promise<any> {
+    const { data } = await api.post('/sorteos/notificar-estudiante', dto);
+    return data;
+  },
+
+  /**
+   * Heartbeat / Ping de presencia desde el móvil del estudiante en tiempo real.
+   */
+  async conectarEstudianteLive(token: string): Promise<any> {
+    const { data } = await api.post('/sorteos/live/conectar', { token });
+    return data;
+  },
+
+  /**
+   * Confirmación explícita del estudiante de que está listo para iniciar el sorteo.
+   */
+  async confirmarEstudianteListoLive(token: string): Promise<any> {
+    const { data } = await api.post('/sorteos/live/confirmar-listo', { token });
+    return data;
+  },
+
+  /**
+   * Despacha la invitación con el link de seguimiento en vivo al correo del estudiante.
+   */
+  async notificarInicioSorteo(payload: {
+    token: string;
+    correo: string;
+    nombreEstudiante: string;
+    carnet: string;
+    carrera: string;
+    linkLive: string;
+  }): Promise<any> {
+    const { data } = await api.post('/sorteos/live/notificar-inicio', payload);
+    return data;
+  },
 };
+

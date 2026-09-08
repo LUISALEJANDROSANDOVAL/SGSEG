@@ -4,6 +4,8 @@ import {
   AlertTriangle,
   Building2,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Eye,
   Filter,
   FolderKanban,
@@ -18,6 +20,8 @@ import {
 } from 'lucide-react'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
+import { TableSkeleton } from '@/components/table-skeleton'
+import { EmptyState } from '@/components/empty-state'
 import { useAuth } from '@/context/AuthContext'
 import { casosApi } from '@/lib/casos.api'
 import type {
@@ -28,11 +32,14 @@ import type {
 } from '@/lib/casos.api'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Carrera } from '@/lib/estudiantes.api'
+import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
 
 export default function PaginaCasos() {
 
   // Contexto de autenticación
   const { user } = useAuth()
+  const isJefe = esJefeCarrera(user)
+  const jefeCarreraId = getJefeCarreraId(user)
 
   // Estados de datos
   const [carreras, setCarreras] = useState<Carrera[]>([])
@@ -40,7 +47,7 @@ export default function PaginaCasos() {
   const [casos, setCasos] = useState<CasoEstudio[]>([])
   const [areas, setAreas] = useState<AreaAcademica[]>([])
   const [vistaAreasCarrera, setVistaAreasCarrera] = useState<VistaAreaItem[]>([])
-  const [tabActiva, setTabActiva] = useState<'casos' | 'areas'>('casos')
+  const [tabActiva, setTabActiva] = useState<'areas' | 'casos'>('areas')
   const [metricas, setMetricas] = useState<MetricasCasos | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [actionLoading, setActionLoading] = useState<boolean>(false)
@@ -53,6 +60,15 @@ export default function PaginaCasos() {
   const [page, setPage] = useState<number>(1)
   const [totalPages, setTotalPages] = useState<number>(1)
   const [totalCasosCount, setTotalCasosCount] = useState<number>(0)
+  const [mostrarTodasAlertas, setMostrarTodasAlertas] = useState<boolean>(false)
+  const [areasColapsadas, setAreasColapsadas] = useState<Record<string, boolean>>({})
+
+  const toggleExpandArea = (idArea: string) => {
+    setAreasColapsadas((prev) => ({
+      ...prev,
+      [idArea]: !prev[idArea],
+    }))
+  }
 
   // Modales
   const [modalNuevoCaso, setModalNuevoCaso] = useState<boolean>(false)
@@ -93,10 +109,9 @@ export default function PaginaCasos() {
         const lista = await estudiantesApi.getCarreras()
         setCarreras(lista)
 
-        if (user?.rolCode === 'JEFE_CARRERA') {
-          const userCarreraId = user.carreraId || (user.carreras && user.carreras[0]?.idCarrera)
-          if (userCarreraId) {
-            setSelectedCarrera(String(userCarreraId))
+        if (isJefe) {
+          if (jefeCarreraId) {
+            setSelectedCarrera(String(jefeCarreraId))
           } else if (lista.length > 0) {
             setSelectedCarrera(String(lista[0].idCarrera))
           }
@@ -106,7 +121,7 @@ export default function PaginaCasos() {
       }
     }
     initCarreras()
-  }, [user])
+  }, [user, isJefe, jefeCarreraId])
 
   // Carga inicial y recarga optimizada
   const cargarDatos = async () => {
@@ -120,14 +135,14 @@ export default function PaginaCasos() {
         idCarreraParam
           ? casosApi.getCasosPorCarreraVista(idCarreraParam, {
               page,
-              limit: 10,
+              limit: 50,
               search: searchTerm,
               idArea: selectedArea,
               estado: selectedEstado,
             })
           : casosApi.getCasos({
               page,
-              limit: 10,
+              limit: 50,
               search: searchTerm,
               idCarrera: idCarreraParam,
               idArea: selectedArea,
@@ -312,7 +327,10 @@ export default function PaginaCasos() {
   // Reactivar caso por excepción extraordinaria (Jefe de Carrera)
   const handleReactivarCasoEspecial = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!modalReactivar || !motivoReactivar.trim()) return
+    if (!modalReactivar || motivoReactivar.trim().length < 10) {
+      setFeedback({ tipo: 'error', mensaje: 'Debe ingresar una justificación técnica o resolución de al menos 10 caracteres.' })
+      return
+    }
 
     setActionLoading(true)
     try {
@@ -395,33 +413,109 @@ export default function PaginaCasos() {
           </div>
         )}
 
-        {/* Banner de Stock Crítico dinámico */}
+        {/* Banner de Stock Crítico dinámico institucional */}
         {metricas && metricas.stockCritico.length > 0 && (
-          <div
+          <section
             role="alert"
-            className="flex flex-col gap-2 border border-crimson bg-crimson px-5 py-4 text-white shadow-sm"
+            className="border-l-4 border-l-crimson border border-line bg-white p-4 shadow-xs"
           >
-            <div className="flex items-center gap-2">
-              <AlertOctagon className="size-5 shrink-0" />
-              <span className="font-bold tracking-wide text-xs uppercase">
-                ALERTA DE STOCK CRÍTICO EN BANCO DE CASOS
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="flex size-8 shrink-0 items-center justify-center bg-crimson/10 text-crimson">
+                  <AlertOctagon className="size-4" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900">
+                      Alerta de Stock Crítico en Banco de Casos
+                    </h3>
+                    <span className="inline-flex items-center gap-1 bg-crimson/10 border border-crimson/20 px-2 py-0.5 text-[11px] font-semibold text-crimson">
+                      <span className="size-1.5 rounded-full bg-crimson animate-pulse" />
+                      {metricas.stockCritico.length} áreas con stock bajo
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">
+                    Áreas con menos de 2 casos disponibles. Se requiere incorporar nuevos casos antes de iniciar sorteos.
+                  </p>
+                </div>
+              </div>
+
+              {metricas.stockCritico.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => setMostrarTodasAlertas(!mostrarTodasAlertas)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-700 bg-white hover:bg-neutral-50 border border-line px-3 py-1.5 transition-colors"
+                >
+                  {mostrarTodasAlertas ? (
+                    <>
+                      <ChevronUp className="size-3.5" />
+                      Mostrar menos
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="size-3.5" />
+                      Ver todas ({metricas.stockCritico.length})
+                    </>
+                  )}
+                </button>
+              )}
             </div>
-            <div className="mt-1 flex flex-col gap-1.5 pl-7 text-xs leading-relaxed opacity-95">
-              {metricas.stockCritico.map((alerta) => (
-                <p key={alerta.idArea}>
-                  • <strong>{alerta.nombreArea}</strong> ({alerta.carrera}): cuenta con solo{' '}
-                  <span className="underline font-semibold">{alerta.casosDisponibles} caso(s) disponible(s)</span> frente
-                  al umbral mínimo reglamentario de {alerta.umbralRequerido}. Se requiere reposición de casos antes de
-                  iniciar los sorteos.
-                </p>
+
+            {/* Lista organizada en tarjetas sobrias */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {(mostrarTodasAlertas ? metricas.stockCritico : metricas.stockCritico.slice(0, 6)).map((alerta) => (
+                <div
+                  key={alerta.idArea}
+                  className="group relative flex items-center justify-between gap-3 border border-line bg-surface p-3 transition-colors hover:border-crimson/40"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-neutral-900 truncate group-hover:text-crimson transition-colors">
+                      {alerta.nombreArea}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 truncate mt-0.5">
+                      {alerta.carrera}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-medium border ${
+                        alerta.casosDisponibles === 0
+                          ? 'bg-crimson/10 text-crimson border-crimson/30'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}
+                    >
+                      {alerta.casosDisponibles} de {alerta.umbralRequerido} disp.
+                    </span>
+
+                    <button
+                      type="button"
+                      title={`Registrar nuevo caso en ${alerta.nombreArea}`}
+                      onClick={() => {
+                        setFormNuevo((prev) => ({ ...prev, idArea: String(alerta.idArea) }))
+                        setModalNuevoCaso(true)
+                      }}
+                      className="flex size-6.5 items-center justify-center bg-white text-neutral-600 border border-line hover:bg-neutral-50 hover:text-crimson transition-colors cursor-pointer"
+                    >
+                      <Plus className="size-3" />
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Tarjetas de Resumen (KPIs) */}
+        {/* Tarjetas de Resumen (KPIs: Áreas de la Carrera primero, luego Casos) */}
         <section className="grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-4">
+          <div className="bg-white px-5 py-4">
+            <p className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
+              Áreas de la Carrera
+            </p>
+            <p className="mt-1.5 text-2xl font-semibold tracking-tight text-neutral-900">
+              {metricas ? metricas.areasCubiertas : '—'}
+            </p>
+          </div>
           <div className="bg-white px-5 py-4">
             <p className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
               Casos Registrados
@@ -444,14 +538,6 @@ export default function PaginaCasos() {
             </p>
             <p className="mt-1.5 text-2xl font-semibold tracking-tight text-crimson">
               {metricas ? metricas.agotados : '—'}
-            </p>
-          </div>
-          <div className="bg-white px-5 py-4">
-            <p className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
-              Áreas Cubiertas
-            </p>
-            <p className="mt-1.5 text-2xl font-semibold tracking-tight text-neutral-900">
-              {metricas ? metricas.areasCubiertas : '—'}
             </p>
           </div>
         </section>
@@ -558,24 +644,8 @@ export default function PaginaCasos() {
           </form>
         </section>
 
-        {/* Pestañas de Vista: Inventario de Casos vs Áreas y Stock */}
+        {/* Pestañas de Vista: Áreas de Grado primero, luego Casos de Estudio */}
         <div className="flex items-center gap-2 border-b border-line pb-px">
-          <button
-            type="button"
-            onClick={() => setTabActiva('casos')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
-              tabActiva === 'casos'
-                ? 'border-crimson text-crimson font-semibold bg-white'
-                : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
-            }`}
-          >
-            <FolderKanban className="size-3.5" />
-            <span>Inventario de Casos</span>
-            <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-mono text-neutral-600">
-              {totalCasosCount}
-            </span>
-          </button>
-
           <button
             type="button"
             onClick={() => setTabActiva('areas')}
@@ -589,6 +659,22 @@ export default function PaginaCasos() {
             <span>Áreas Académicas y Stock</span>
             <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-mono text-neutral-600">
               {areas.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTabActiva('casos')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
+              tabActiva === 'casos'
+                ? 'border-crimson text-crimson font-semibold bg-white'
+                : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50'
+            }`}
+          >
+            <FolderKanban className="size-3.5" />
+            <span>Inventario de Casos</span>
+            <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-mono text-neutral-600">
+              {totalCasosCount}
             </span>
           </button>
         </div>
@@ -642,14 +728,32 @@ export default function PaginaCasos() {
               <tbody className="divide-y divide-line">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-xs text-neutral-400">
-                      Cargando banco de casos...
+                    <td colSpan={6} className="p-0">
+                      <TableSkeleton filas={5} columnas={6} className="border-0" />
                     </td>
                   </tr>
                 ) : casos.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-xs text-neutral-400">
-                      No se encontraron casos de estudio con los filtros seleccionados.
+                    <td colSpan={6} className="p-6">
+                      <EmptyState
+                        titulo="No se encontraron casos de estudio"
+                        descripcion={
+                          searchTerm || selectedCarrera !== 'ALL' || selectedArea !== 'ALL' || selectedEstado !== 'ALL'
+                            ? 'Intenta ajustar o limpiar los filtros de búsqueda, carrera o estado.'
+                            : 'El banco de casos está vacío. Registra el primer caso académico.'
+                        }
+                        icono={FolderKanban}
+                        accion={
+                          <button
+                            type="button"
+                            onClick={() => setModalNuevoCaso(true)}
+                            className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 cursor-pointer"
+                          >
+                            <Plus className="size-3.5" />
+                            <span>Registrar Caso</span>
+                          </button>
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -781,129 +885,265 @@ export default function PaginaCasos() {
             </footer>
           )}
         </section>
-        )}
+      )}
 
-        {/* Tabla Optimizada de Áreas Académicas y Stock (Pestaña Áreas) */}
+        {/* Vista Maestro-Detalle: Banco de Casos Organizado por Áreas */}
         {tabActiva === 'areas' && (
-          <section className="border border-line bg-white">
-            <header className="flex items-center justify-between border-b border-line px-5 py-4">
+          <div className="flex flex-col gap-4">
+            <header className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 shadow-xs">
               <div>
-                <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
-                  {selectedCarrera !== 'ALL'
-                    ? `Áreas Académicas y Stock de ${carreras.find((c) => String(c.idCarrera) === selectedCarrera)?.nombre || 'la Carrera'}`
-                    : 'Áreas Académicas Registradas'}
+                <h2 className="text-sm font-bold tracking-tight text-neutral-900">
+                  Banco de Casos por Área de Grado (Maestro - Detalle)
                 </h2>
                 <p className="text-xs text-neutral-500">
-                  Monitoreo consolidado de disponibilidad, regla de 2 usos y alertas preventivas por área académica.
+                  {selectedCarrera !== 'ALL'
+                    ? `Visualizando casos de estudio agrupados por área para ${carreras.find((c) => String(c.idCarrera) === selectedCarrera)?.nombre || 'la Carrera'}.`
+                    : 'Visualice y administre directamente cada área académica con sus casos de estudio anidados y control de stock.'}
                 </p>
               </div>
-              <button
-                onClick={cargarDatos}
-                className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-800"
-                title="Recargar áreas"
-              >
-                <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-                Actualizar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const lista = vistaAreasCarrera.length > 0 ? vistaAreasCarrera : areas
+                    const allCol = Object.keys(areasColapsadas).length > 0 && Object.values(areasColapsadas).every(Boolean)
+                    const next: Record<string, boolean> = {}
+                    lista.forEach((a: any) => {
+                      next[String(a.idArea)] = !allCol
+                    })
+                    setAreasColapsadas(next)
+                  }}
+                  className="text-xs font-medium text-neutral-600 hover:text-neutral-900 border border-line bg-surface px-3 py-1.5 cursor-pointer shadow-2xs"
+                >
+                  Expandir / Contraer Todo
+                </button>
+                <button
+                  type="button"
+                  onClick={cargarDatos}
+                  className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-800 border border-line bg-surface px-3 py-1.5 cursor-pointer shadow-2xs"
+                  title="Recargar datos"
+                >
+                  <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  Actualizar
+                </button>
+              </div>
             </header>
 
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead className="border-b border-line bg-surface">
-                  <tr className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
-                    <th scope="col" className="px-5 py-3 font-medium">Código</th>
-                    <th scope="col" className="px-5 py-3 font-medium">Área Académica</th>
-                    <th scope="col" className="px-5 py-3 font-medium">Carrera</th>
-                    <th scope="col" className="px-5 py-3 font-medium text-center">Total Casos</th>
-                    <th scope="col" className="px-5 py-3 font-medium text-center">Disponibles</th>
-                    <th scope="col" className="px-5 py-3 font-medium text-center">Agotados</th>
-                    <th scope="col" className="px-5 py-3 font-medium text-center">Umbral Requerido</th>
-                    <th scope="col" className="px-5 py-3 font-medium">Estado de Stock</th>
-                    <th scope="col" className="px-5 py-3 font-medium text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={9} className="px-5 py-8 text-center text-xs text-neutral-400">
-                        Cargando áreas académicas...
-                      </td>
-                    </tr>
-                  ) : (vistaAreasCarrera.length > 0 ? vistaAreasCarrera : areas).length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="px-5 py-8 text-center text-xs text-neutral-400">
-                        No se encontraron áreas académicas registradas para los filtros seleccionados.
-                      </td>
-                    </tr>
-                  ) : (
-                    (vistaAreasCarrera.length > 0 ? vistaAreasCarrera : areas).map((areaItem: any) => {
-                      const idArea = String(areaItem.idArea)
-                      const idCodigo = `AREA-${idArea.padStart(3, '0')}`
-                      const nombreArea = areaItem.nombreArea || areaItem.nombre
-                      const carreraNombre = areaItem.nombreCarrera || areaItem.carrera?.nombre || '—'
-                      const totalCasos = areaItem.totalCasos ?? areaItem._count?.casos ?? 0
-                      const disponibles = areaItem.casosDisponibles ?? areaItem._count?.casos ?? 0
-                      const agotados = areaItem.casosAgotados ?? 0
-                      const umbral = areaItem.umbralDisponibilidad ?? 2
-                      const esCritico = areaItem.stockCritico ?? (disponibles < umbral)
+            {loading ? (
+              <div className="border border-line bg-white p-6 shadow-xs">
+                <TableSkeleton filas={4} columnas={5} className="border-0" />
+              </div>
+            ) : (vistaAreasCarrera.length > 0 ? vistaAreasCarrera : areas).length === 0 ? (
+              <div className="border border-line bg-white p-8 shadow-xs">
+                <EmptyState
+                  titulo="No se encontraron áreas de grado"
+                  descripcion="No hay áreas registradas para la carrera seleccionada."
+                  icono={Layers}
+                  accion={
+                    <button
+                      type="button"
+                      onClick={() => setModalNuevaArea(true)}
+                      className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 cursor-pointer shadow-xs"
+                    >
+                      <Plus className="size-3.5" />
+                      <span>Registrar Área</span>
+                    </button>
+                  }
+                />
+              </div>
+            ) : (
+              (vistaAreasCarrera.length > 0 ? vistaAreasCarrera : areas).map((areaItem: any) => {
+                const idArea = String(areaItem.idArea)
+                const idCodigo = `AREA-${idArea.padStart(3, '0')}`
+                const nombreArea = areaItem.nombreArea || areaItem.nombre
+                const carreraNombre = areaItem.nombreCarrera || areaItem.carrera?.nombre || '—'
+                const totalCasos = areaItem.totalCasos ?? areaItem._count?.casos ?? 0
+                const disponibles = areaItem.casosDisponibles ?? areaItem._count?.casos ?? 0
+                const agotados = areaItem.casosAgotados ?? 0
+                const umbral = areaItem.umbralDisponibilidad ?? 2
+                const esCritico = areaItem.stockCritico ?? (disponibles < umbral)
+                const estaColapsada = !!areasColapsadas[idArea]
 
-                      return (
-                        <tr key={idArea} className="hover:bg-neutral-50/70 transition-colors">
-                          <td className="px-5 py-3.5 font-mono text-xs text-neutral-500">
-                            {idCodigo}
-                          </td>
-                          <td className="px-5 py-3.5 font-medium text-xs text-neutral-900">
-                            {nombreArea}
-                          </td>
-                          <td className="px-5 py-3.5 text-xs text-neutral-600">
-                            {carreraNombre}
-                          </td>
-                          <td className="px-5 py-3.5 text-center font-mono text-xs text-neutral-800">
-                            {totalCasos}
-                          </td>
-                          <td className="px-5 py-3.5 text-center font-mono text-xs font-semibold text-emerald-600">
-                            {disponibles}
-                          </td>
-                          <td className="px-5 py-3.5 text-center font-mono text-xs font-medium text-crimson">
-                            {agotados}
-                          </td>
-                          <td className="px-5 py-3.5 text-center font-mono text-xs text-neutral-600">
-                            {umbral}
-                          </td>
-                          <td className="px-5 py-3.5">
-                            {esCritico ? (
-                              <span className="inline-flex items-center gap-1 border border-crimson/30 bg-crimson/10 px-2 py-0.5 text-[11px] font-medium text-crimson">
-                                <AlertTriangle className="size-3" />
-                                Stock Crítico ({disponibles}/{umbral})
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                                <CheckCircle2 className="size-3" />
-                                Stock Adecuado
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-5 py-3.5 text-right">
+                // Casos pertenecientes a esta área
+                const casosDeEstaArea = casos.filter(
+                  (c) => String(c.idArea || c.area?.idArea) === idArea,
+                )
+
+                return (
+                  <div
+                    key={idArea}
+                    className={`border border-line bg-white shadow-xs transition-all ${
+                      esCritico ? 'border-l-4 border-l-crimson' : 'border-l-4 border-l-emerald-600'
+                    }`}
+                  >
+                    {/* Encabezado del Área (Maestro) */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-line bg-neutral-50/60">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => toggleExpandArea(idArea)}
+                          className="flex size-7 items-center justify-center border border-line bg-white text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer shadow-2xs"
+                          title={estaColapsada ? 'Expandir casos' : 'Contraer casos'}
+                        >
+                          {estaColapsada ? (
+                            <ChevronDown className="size-4" />
+                          ) : (
+                            <ChevronUp className="size-4" />
+                          )}
+                        </button>
+
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs text-neutral-500 font-bold">
+                              {idCodigo}
+                            </span>
+                            <h3 className="text-sm font-bold text-neutral-900">
+                              {nombreArea}
+                            </h3>
+                            <span className="border border-line bg-white px-2 py-0.5 text-[10px] font-medium text-neutral-600">
+                              {carreraNombre}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-neutral-500 mt-0.5">
+                            Umbral mínimo para sorteo: {umbral} casos disponibles
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        {/* Métricas del Área */}
+                        <div className="flex items-center gap-1.5 text-xs font-mono">
+                          <span className="border border-line bg-white px-2.5 py-1 text-neutral-700 shadow-2xs">
+                            <strong>{totalCasos}</strong> casos
+                          </span>
+                          <span className="border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800 font-semibold shadow-2xs">
+                            <strong>{disponibles}</strong> disp.
+                          </span>
+                          {agotados > 0 && (
+                            <span className="border border-crimson/20 bg-crimson/10 px-2.5 py-1 text-crimson font-semibold shadow-2xs">
+                              <strong>{agotados}</strong> agotados
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Semáforo */}
+                        {esCritico ? (
+                          <span className="inline-flex items-center gap-1 border border-crimson/30 bg-crimson/10 px-2.5 py-1 text-xs font-semibold text-crimson shadow-2xs">
+                            <AlertTriangle className="size-3.5" />
+                            Stock Crítico
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-2xs">
+                            <CheckCircle2 className="size-3.5" />
+                            Stock Adecuado
+                          </span>
+                        )}
+
+                        {/* Botón rápido Nuevo Caso para esta área */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormNuevo((prev) => ({ ...prev, idArea }))
+                            setModalNuevoCaso(true)
+                          }}
+                          className="flex items-center gap-1.5 border border-crimson bg-crimson px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#821528] transition-colors shadow-2xs cursor-pointer"
+                        >
+                          <Plus className="size-3.5" />
+                          <span>+ Caso</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Contenido Anidado: Casos de Estudio de esta Área (Detalle) */}
+                    {!estaColapsada && (
+                      <div className="p-0">
+                        {casosDeEstaArea.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                              <thead className="border-b border-line bg-surface text-[10px] uppercase text-neutral-500 font-mono tracking-wider">
+                                <tr>
+                                  <th scope="col" className="px-5 py-2.5 font-semibold">Código</th>
+                                  <th scope="col" className="px-5 py-2.5 font-semibold">Caso de Estudio</th>
+                                  <th scope="col" className="px-5 py-2.5 font-semibold text-center">Disponibilidad / Usos</th>
+                                  <th scope="col" className="px-5 py-2.5 font-semibold text-right">Acciones</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-line">
+                                {casosDeEstaArea.map((caso) => {
+                                  const idCodigoCaso = `CASO-${String(caso.idCasoEstudio).padStart(3, '0')}`
+                                  const estaAgotado = (caso.usos ?? 0) >= (caso.umbral ?? 2)
+                                  return (
+                                    <tr key={caso.idCasoEstudio} className="hover:bg-neutral-50/70 transition-colors">
+                                      <td className="px-5 py-3 font-mono font-bold text-neutral-700 whitespace-nowrap">
+                                        {idCodigoCaso}
+                                      </td>
+                                      <td className="px-5 py-3">
+                                        <p className="font-bold text-neutral-900 leading-snug">
+                                          {caso.titulo}
+                                        </p>
+                                        <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-1">
+                                          {caso.contenido}
+                                        </p>
+                                      </td>
+                                      <td className="px-5 py-3 text-center whitespace-nowrap">
+                                        <span
+                                          className={`inline-flex items-center px-2 py-0.5 text-[11px] font-semibold border ${
+                                            estaAgotado
+                                              ? 'border-crimson/30 bg-crimson/10 text-crimson'
+                                              : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                                          }`}
+                                        >
+                                          {estaAgotado ? `Agotado (${caso.usos}/${caso.umbral})` : `Disponible (${caso.usos}/${caso.umbral})`}
+                                        </span>
+                                      </td>
+                                      <td className="px-5 py-3 text-right whitespace-nowrap">
+                                        <div className="flex items-center justify-end gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => setModalDetalleCaso(caso)}
+                                            className="p-1.5 text-neutral-500 hover:text-neutral-900 border border-transparent hover:border-line transition-colors cursor-pointer"
+                                            title="Ver detalle del caso"
+                                          >
+                                            <Eye className="size-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => abrirModalEditar(caso)}
+                                            className="p-1.5 text-neutral-500 hover:text-neutral-900 border border-transparent hover:border-line transition-colors cursor-pointer"
+                                            title="Editar caso"
+                                          >
+                                            <Pencil className="size-3.5" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="p-6 text-center text-xs text-neutral-500 bg-neutral-50/30">
+                            <p>No hay casos de estudio registrados en esta área aún.</p>
                             <button
                               type="button"
                               onClick={() => {
-                                setSelectedArea(idArea)
-                                setTabActiva('casos')
-                                setPage(1)
+                                setFormNuevo((prev) => ({ ...prev, idArea }))
+                                setModalNuevoCaso(true)
                               }}
-                              className="border border-line bg-white px-2.5 py-1 text-[11px] font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                              className="mt-2 text-xs text-crimson font-semibold hover:underline cursor-pointer"
                             >
-                              Ver Casos
+                              + Cargar el primer caso para habilitar el sorteo de esta área
                             </button>
-                          </td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
         )}
       </div>
 
@@ -1392,9 +1632,14 @@ export default function PaginaCasos() {
                   rows={4}
                   value={motivoReactivar}
                   onChange={(e) => setMotivoReactivar(e.target.value)}
-                  placeholder="Especifique las razones académicas, resolución de carrera o caso fortuito que justifican habilitar este caso nuevamente..."
+                  placeholder="Especifique las razones académicas, resolución de carrera o caso fortuito que justifican habilitar este caso nuevamente (mínimo 10 caracteres)..."
                   className="w-full border border-line bg-surface p-3 text-xs leading-relaxed outline-none focus:border-neutral-400"
                 />
+                {motivoReactivar.trim().length > 0 && motivoReactivar.trim().length < 10 && (
+                  <p className="mt-1 text-[11px] text-amber-700">
+                    Ingrese al menos 10 caracteres para fundamentar la excepción reglamentaria ({motivoReactivar.trim().length}/10).
+                  </p>
+                )}
               </div>
 
               <footer className="mt-2 flex items-center justify-end gap-3 border-t border-line pt-4">
@@ -1407,7 +1652,7 @@ export default function PaginaCasos() {
                 </button>
                 <button
                   type="submit"
-                  disabled={actionLoading || !motivoReactivar.trim()}
+                  disabled={actionLoading || motivoReactivar.trim().length < 10}
                   className="bg-purple-700 px-5 py-2 text-xs font-medium text-white hover:bg-purple-800 disabled:opacity-50 transition-colors"
                 >
                   {actionLoading ? 'Reactivando...' : 'Confirmar Reactivación Especial'}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import confetti from 'canvas-confetti'
-import { Volume2, VolumeX, Sparkles, RefreshCw } from 'lucide-react'
+import { Volume2, VolumeX, Sparkles, RefreshCw, Lock } from 'lucide-react'
 
 export interface RuletaItem {
   id: string
@@ -15,6 +15,7 @@ export interface RuletaItem {
 interface RuletaCanvasProps {
   items: RuletaItem[]
   onFinish?: (selectedItem: RuletaItem, index: number) => void
+  onSpinStart?: () => void
   disabled?: boolean
   size?: number
   targetIndex?: number | null
@@ -22,23 +23,32 @@ interface RuletaCanvasProps {
   subtitle?: string
   spinButtonText?: string
   accentColor?: string
+  autoSpin?: boolean
+  readOnly?: boolean
 }
 
-// Paleta institucional por defecto
+// Paleta institucional estricta UTEPSA: Solo Guindo, Negro y Blanco
 const COLORES_DEFAULT = [
-  '#9E1B32', // Carmín Institucional
-  '#1E293B', // Pizarra Profundo
-  '#0F172A', // Tinta / Onyx
-  '#B45309', // Ámbar Académico
-  '#047857', // Esmeralda
-  '#4338CA', // Índigo Real
-  '#831843', // Borgoña
-  '#0E7490', // Cyan Oscuro
+  '#9E1B32', // Guindo Carmín Institucional UTEPSA
+  '#121316', // Negro Obsidiana
+  '#FFFFFF', // Blanco Puro
 ]
+
+function isColorLight(hex: string): boolean {
+  if (!hex) return false
+  let c = hex.replace('#', '')
+  if (c.length === 3) c = c.split('').map((x) => x + x).join('')
+  const r = parseInt(c.substring(0, 2), 16) || 0
+  const g = parseInt(c.substring(2, 4), 16) || 0
+  const b = parseInt(c.substring(4, 6), 16) || 0
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000
+  return brightness > 165
+}
 
 export function RuletaCanvas({
   items,
   onFinish,
+  onSpinStart,
   disabled = false,
   size = 460,
   targetIndex = null,
@@ -46,6 +56,8 @@ export function RuletaCanvas({
   subtitle,
   spinButtonText = 'Iniciar Giro Aleatorio',
   accentColor = '#9E1B32',
+  autoSpin = false,
+  readOnly = false,
 }: RuletaCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [isSpinning, setIsSpinning] = useState(false)
@@ -94,7 +106,7 @@ export function RuletaCanvas({
   const triggerInstitutionalConfetti = useCallback(() => {
     // Ráfaga institucional UTEPSA
     const end = Date.now() + 2.5 * 1000
-    const colors = ['#9E1B32', '#C5A059', '#1E293B', '#F59E0B', '#FFFFFF', '#10B981']
+    const colors = ['#9E1B32', '#121316', '#FFFFFF']
 
     const frame = () => {
       confetti({
@@ -181,7 +193,8 @@ export function RuletaCanvas({
       const item = items[i]
       const startAngle = i * sliceAngle
       const endAngle = startAngle + sliceAngle
-      const baseColor = item.color || COLORES_DEFAULT[i % COLORES_DEFAULT.length]
+      // Forzar paleta estricta UTEPSA: Guindo, Negro y Blanco
+      const baseColor = COLORES_DEFAULT[i % COLORES_DEFAULT.length]
 
       // Segmento
       ctx.beginPath()
@@ -227,7 +240,8 @@ export function RuletaCanvas({
       ctx.textAlign = 'right'
       ctx.textBaseline = 'middle'
 
-      const textColor = item.textColor || '#FFFFFF'
+      const isLight = isColorLight(baseColor)
+      const textColor = item.textColor || (isLight ? '#121316' : '#FFFFFF')
       ctx.fillStyle = textColor
 
       // Ajuste tipográfico dinámico según cantidad de elementos
@@ -238,9 +252,9 @@ export function RuletaCanvas({
       }
 
       const fontSize = numSlices > 12 ? 11 : numSlices > 8 ? 12 : 13
-      ctx.font = `600 ${fontSize}px Inter, sans-serif`
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
-      ctx.shadowBlur = 4
+      ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+      ctx.shadowColor = isLight ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.65)'
+      ctx.shadowBlur = 3
       ctx.shadowOffsetX = 1
       ctx.shadowOffsetY = 1
 
@@ -250,8 +264,8 @@ export function RuletaCanvas({
 
       // Subetiqueta / Badge si existe
       if (item.sublabel && numSlices <= 8) {
-        ctx.font = '500 10px Inter, sans-serif'
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+        ctx.font = `600 10px "Plus Jakarta Sans", Inter, sans-serif`
+        ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.85)' : 'rgba(255, 255, 255, 0.9)'
         ctx.fillText(item.sublabel, textRadius, 14)
       }
 
@@ -342,8 +356,9 @@ export function RuletaCanvas({
 
   // Ejecutar giro con física natural de desaceleración
   const girarRuleta = () => {
-    if (isSpinning || disabled || items.length === 0) return
+    if (isSpinning || disabled || items.length === 0 || ganador) return
 
+    onSpinStart?.()
     setIsSpinning(true)
     setGanador(null)
 
@@ -429,6 +444,13 @@ export function RuletaCanvas({
     }
   }, [])
 
+  // Auto-giro sincronizado (usado para la pantalla móvil del estudiante)
+  useEffect(() => {
+    if (autoSpin && !isSpinning && !ganador && items.length > 0) {
+      girarRuleta()
+    }
+  }, [autoSpin, isSpinning, ganador, items.length])
+
   return (
     <div className="flex flex-col items-center justify-center">
       {/* Encabezado contextual */}
@@ -469,11 +491,12 @@ export function RuletaCanvas({
             >
               <path
                 d="M18 40L6 10C5 7 7 4 10 4H26C29 4 31 7 30 10L18 40Z"
-                fill="#C5A059"
+                fill="#C8102E"
                 stroke="#FFFFFF"
-                strokeWidth="2"
+                strokeWidth="2.5"
               />
-              <circle cx="18" cy="11" r="5" fill="#9E1B32" />
+              <circle cx="18" cy="11" r="5" fill="#FFFFFF" />
+              <circle cx="18" cy="11" r="2.5" fill="#121316" />
             </svg>
           </div>
         </div>
@@ -483,7 +506,7 @@ export function RuletaCanvas({
           ref={canvasRef}
           style={{ width: size, height: size }}
           className="rounded-full cursor-pointer transition-transform active:scale-[0.99]"
-          onClick={!isSpinning && !disabled ? girarRuleta : undefined}
+          onClick={!isSpinning && !disabled && !ganador ? girarRuleta : undefined}
         />
 
         {/* Control de Audio flotante */}
@@ -501,34 +524,57 @@ export function RuletaCanvas({
         </button>
       </div>
 
-      {/* Resultado Destacado */}
+      {/* Resultado Destacado Sobrio e Institucional */}
       {ganador && !isSpinning && (
-        <div className="mt-5 w-full max-w-md animate-fade-in-up rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 p-4 text-center shadow-sm">
-          <span className="inline-block rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold tracking-wider text-amber-800 uppercase">
+        <div className="mt-5 w-full max-w-md animate-fade-in-up border-l-4 border-l-[#9E1B32] border border-line bg-white p-4 text-center shadow-xs">
+          <span className="inline-block border border-[#9E1B32]/30 bg-[#9E1B32]/10 px-3 py-1 text-[10px] font-bold tracking-widest text-[#9E1B32] uppercase">
             Resultado Oficial Sorteado
           </span>
-          <p className="mt-2 text-lg font-bold text-gray-900">{ganador.label}</p>
+          <p className="mt-2 text-xl font-extrabold text-neutral-900 tracking-tight">{ganador.label}</p>
           {ganador.sublabel && (
-            <p className="mt-0.5 text-xs text-gray-600">{ganador.sublabel}</p>
+            <p className="mt-0.5 text-xs text-neutral-600">{ganador.sublabel}</p>
           )}
         </div>
       )}
 
-      {/* Botón de Giro Principal */}
+      {/* Botón de Giro Principal o Bloqueo Oficial (No re-sorteo) */}
       <div className="mt-6 flex w-full max-w-sm flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={girarRuleta}
-          disabled={isSpinning || disabled || items.length === 0}
-          className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#9E1B32] to-[#7f1527] px-6 py-3.5 text-sm font-semibold text-white shadow-md shadow-crimson/20 transition-all hover:shadow-lg hover:shadow-crimson/30 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <RefreshCw
-            className={`size-4 transition-transform ${
-              isSpinning ? 'animate-spin' : 'group-hover:rotate-180 duration-500'
-            }`}
-          />
-          {isSpinning ? 'Sorteando en vivo...' : spinButtonText}
-        </button>
+        {readOnly ? (
+          isSpinning ? (
+            <div className="flex w-full items-center justify-center gap-2 border border-[#9E1B32]/30 bg-[#9E1B32]/10 py-3 px-4 text-xs font-semibold text-[#9E1B32] shadow-2xs animate-pulse">
+              <RefreshCw className="size-4 animate-spin text-[#9E1B32]" />
+              <span>Girando ruleta en tiempo real en la sala oficial...</span>
+            </div>
+          ) : ganador ? (
+            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+              <Lock className="size-4 text-[#9E1B32]" />
+              <span>Acto Oficial Sorteado y Registrado por el Tribunal</span>
+            </div>
+          ) : (
+            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-medium text-neutral-500 shadow-2xs">
+              <span>Aguardando inicio del sorteo por el tribunal...</span>
+            </div>
+          )
+        ) : ganador && !isSpinning ? (
+          <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+            <Lock className="size-4 text-[#9E1B32]" />
+            <span>Acto Oficial Sorteado y Registrado (Bloqueado)</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={girarRuleta}
+            disabled={isSpinning || disabled || items.length === 0}
+            className="group relative flex w-full items-center justify-center gap-2 rounded-none border border-[#9E1B32] bg-[#9E1B32] px-6 py-3.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#821528] active:bg-[#6c1121] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`size-4 transition-transform ${
+                isSpinning ? 'animate-spin' : 'group-hover:rotate-180 duration-500'
+              }`}
+            />
+            {isSpinning ? 'Sorteando en vivo...' : spinButtonText}
+          </button>
+        )}
 
         {items.length === 0 && (
           <p className="text-xs text-red-500">

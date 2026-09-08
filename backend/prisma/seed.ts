@@ -2,10 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
-import * as dotenv from 'dotenv';
 import { CATALOGO_OFICIAL_UTEPSA } from './data-oficial-utepsa';
-
-dotenv.config();
 
 const connectionString =
   process.env.DATABASE_URL ??
@@ -557,5 +554,4 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-    await pool.end();
   });
