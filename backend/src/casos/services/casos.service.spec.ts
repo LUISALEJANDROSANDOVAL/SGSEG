@@ -184,6 +184,7 @@ describe('CasosService', () => {
         },
       },
       _count: { defensas: 2, sorteosCaso: 2 },
+      defensas: [],
     });
 
     repository.reactivarCasoEspecial.mockResolvedValue({
