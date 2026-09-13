@@ -33,6 +33,7 @@ import type {
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Carrera } from '@/lib/estudiantes.api'
 import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
+import { getApiErrorMessage } from '@/lib/utils'
 
 export default function PaginaCasos() {
 
@@ -193,10 +194,10 @@ export default function PaginaCasos() {
 
       // Si el formulario de nuevo caso no tiene área seleccionada, asignar la primera
       if (areasData.length > 0 && !formNuevo.idArea) {
-        setFormNuevo((prev) => ({ ...prev, idArea: areasData[0].idArea }))
+        setFormNuevo((prev) => ({ ...prev, idArea: String(areasData[0].idArea) }))
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al cargar inventario de casos'
+      const msg = getApiErrorMessage(err, 'Error al cargar inventario de casos')
       setFeedback({ tipo: 'error', mensaje: msg })
     } finally {
       setLoading(false)
@@ -217,31 +218,40 @@ export default function PaginaCasos() {
   // Guardar nuevo caso
   const handleCrearCaso = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formNuevo.idArea || !formNuevo.titulo.trim() || !formNuevo.contenido.trim()) {
-      setFeedback({ tipo: 'error', mensaje: 'Por favor complete todos los campos obligatorios.' })
+    const idAreaSeleccionada = formNuevo.idArea || (areas[0] ? String(areas[0].idArea) : '')
+    if (!idAreaSeleccionada) {
+      setFeedback({ tipo: 'error', mensaje: 'Debe seleccionar un área académica válida.' })
+      return
+    }
+    if (formNuevo.titulo.trim().length < 3) {
+      setFeedback({ tipo: 'error', mensaje: 'El título del caso debe tener al menos 3 caracteres.' })
+      return
+    }
+    if (formNuevo.contenido.trim().length < 5) {
+      setFeedback({ tipo: 'error', mensaje: 'El planteamiento del caso debe tener al menos 5 caracteres.' })
       return
     }
 
     setActionLoading(true)
     try {
       await casosApi.createCaso({
-        idArea: formNuevo.idArea,
+        idArea: idAreaSeleccionada,
         titulo: formNuevo.titulo.trim(),
         contenido: formNuevo.contenido.trim(),
         documentoAdjunto: formNuevo.documentoAdjunto.trim() || undefined,
       })
 
-      setFeedback({ tipo: 'exito', mensaje: 'Caso de estudio registrado exitosamente.' })
+      setFeedback({ tipo: 'exito', mensaje: 'Caso de estudio registrado exitosamente en la base de datos.' })
       setModalNuevoCaso(false)
       setFormNuevo({
-        idArea: areas[0]?.idArea || '',
+        idArea: areas[0]?.idArea ? String(areas[0].idArea) : '',
         titulo: '',
         contenido: '',
         documentoAdjunto: '',
       })
       await cargarDatos()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar caso'
+      const msg = getApiErrorMessage(err, 'Error al registrar el caso de estudio')
       setFeedback({ tipo: 'error', mensaje: msg })
     } finally {
       setActionLoading(false)
@@ -267,7 +277,7 @@ export default function PaginaCasos() {
       setModalEditarCaso(null)
       await cargarDatos()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar caso'
+      const msg = getApiErrorMessage(err, 'Error al actualizar el caso de estudio')
       setFeedback({ tipo: 'error', mensaje: msg })
     } finally {
       setActionLoading(false)
@@ -285,7 +295,7 @@ export default function PaginaCasos() {
       setFeedback({ tipo: 'exito', mensaje: `Estado del caso actualizado correctamente.` })
       await cargarDatos()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al cambiar estado del caso'
+      const msg = getApiErrorMessage(err, 'Error al cambiar estado del caso')
       setFeedback({ tipo: 'error', mensaje: msg })
     } finally {
       setActionLoading(false)
@@ -317,7 +327,7 @@ export default function PaginaCasos() {
       setFormArea({ idCarrera: '', nombre: '', umbralDisponibilidad: 2 })
       await cargarDatos()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear área académica'
+      const msg = getApiErrorMessage(err, 'Error al crear área académica')
       setFeedback({ tipo: 'error', mensaje: msg })
     } finally {
       setActionLoading(false)
@@ -327,8 +337,8 @@ export default function PaginaCasos() {
   // Reactivar caso por excepción extraordinaria (Jefe de Carrera)
   const handleReactivarCasoEspecial = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!modalReactivar || motivoReactivar.trim().length < 10) {
-      setFeedback({ tipo: 'error', mensaje: 'Debe ingresar una justificación técnica o resolución de al menos 10 caracteres.' })
+    if (!modalReactivar || motivoReactivar.trim().length < 5) {
+      setFeedback({ tipo: 'error', mensaje: 'Debe ingresar una justificación técnica o resolución de al menos 5 caracteres.' })
       return
     }
 
@@ -343,7 +353,7 @@ export default function PaginaCasos() {
       setMotivoReactivar('')
       await cargarDatos()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al reactivar caso de estudio'
+      const msg = getApiErrorMessage(err, 'Error al reactivar caso de estudio')
       setFeedback({ tipo: 'error', mensaje: msg })
     } finally {
       setActionLoading(false)
@@ -381,8 +391,13 @@ export default function PaginaCasos() {
               </button>
               <button
                 type="button"
-                onClick={() => setModalNuevoCaso(true)}
-                className="flex items-center gap-1.5 bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 transition-opacity"
+                onClick={() => {
+                  if (!formNuevo.idArea && areas.length > 0) {
+                    setFormNuevo((prev) => ({ ...prev, idArea: String(areas[0].idArea) }))
+                  }
+                  setModalNuevoCaso(true)
+                }}
+                className="flex items-center gap-1.5 bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 transition-opacity cursor-pointer"
               >
                 <Plus className="size-3.5" />
                 Registrar Nuevo Caso
@@ -1191,11 +1206,12 @@ export default function PaginaCasos() {
 
               <div>
                 <label className="block text-xs font-medium text-neutral-700 mb-1">
-                  Título del Caso de Estudio *
+                  Título del Caso de Estudio * <span className="text-neutral-400 font-normal">(mínimo 3 caracteres)</span>
                 </label>
                 <input
                   type="text"
                   required
+                  minLength={3}
                   value={formNuevo.titulo}
                   onChange={(e) => setFormNuevo({ ...formNuevo, titulo: e.target.value })}
                   placeholder="Ej. Optimización de arquitectura para plataforma de alta concurrencia"
@@ -1205,10 +1221,11 @@ export default function PaginaCasos() {
 
               <div>
                 <label className="block text-xs font-medium text-neutral-700 mb-1">
-                  Planteamiento del Problema y Preguntas de Defensa *
+                  Planteamiento del Problema y Preguntas de Defensa * <span className="text-neutral-400 font-normal">(mínimo 5 caracteres)</span>
                 </label>
                 <textarea
                   required
+                  minLength={5}
                   rows={6}
                   value={formNuevo.contenido}
                   onChange={(e) => setFormNuevo({ ...formNuevo, contenido: e.target.value })}

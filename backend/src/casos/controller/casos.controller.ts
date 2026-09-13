@@ -37,6 +37,8 @@ export class CasosController {
     'COORDINACION',
     'SECRETARIADO',
     'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async getMetricas(
@@ -55,6 +57,8 @@ export class CasosController {
     'COORDINACION',
     'SECRETARIADO',
     'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async getAreas(
@@ -68,7 +72,15 @@ export class CasosController {
    * Registra una nueva área académica para la carrera.
    */
   @Post('areas')
-  @Roles('JEFE_CARRERA', 'COORDINACION')
+  @Roles(
+    'JEFE_CARRERA',
+    'COORDINACION',
+    'SECRETARIADO',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   @HttpCode(HttpStatus.CREATED)
   async createArea(
     @Body() dto: CreateAreaDto,
@@ -86,6 +98,8 @@ export class CasosController {
     'COORDINACION',
     'SECRETARIADO',
     'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async findAll(
@@ -104,6 +118,8 @@ export class CasosController {
     'COORDINACION',
     'SECRETARIADO',
     'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async getCasosPorCarreraVista(
@@ -123,6 +139,8 @@ export class CasosController {
     'COORDINACION',
     'SECRETARIADO',
     'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async getAreasPorCarreraVista(
@@ -141,6 +159,8 @@ export class CasosController {
     'COORDINACION',
     'SECRETARIADO',
     'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async findById(
@@ -154,7 +174,15 @@ export class CasosController {
    * Registra un nuevo caso de estudio.
    */
   @Post()
-  @Roles('JEFE_CARRERA', 'COORDINACION', 'SECRETARIADO')
+  @Roles(
+    'JEFE_CARRERA',
+    'COORDINACION',
+    'SECRETARIADO',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateCasoDto,
@@ -167,7 +195,15 @@ export class CasosController {
    * Actualiza el planteamiento, título o área de un caso.
    */
   @Put(':id')
-  @Roles('JEFE_CARRERA', 'COORDINACION')
+  @Roles(
+    'JEFE_CARRERA',
+    'COORDINACION',
+    'SECRETARIADO',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateCasoDto,
@@ -180,7 +216,15 @@ export class CasosController {
    * Alterna el estado del caso (DISPONIBLE / INACTIVO).
    */
   @Patch(':id/estado')
-  @Roles('JEFE_CARRERA', 'COORDINACION')
+  @Roles(
+    'JEFE_CARRERA',
+    'COORDINACION',
+    'SECRETARIADO',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async toggleEstado(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -189,10 +233,18 @@ export class CasosController {
   }
 
   /**
-   * Reactivación extraordinaria de un caso agotado por caso especial (Solo Jefe de Carrera).
+   * Reactivación extraordinaria de un caso agotado por caso especial.
    */
   @Patch(':id/reactivar-especial')
-  @Roles('JEFE_CARRERA')
+  @Roles(
+    'JEFE_CARRERA',
+    'COORDINACION',
+    'SECRETARIADO',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async reactivarCasoEspecial(
     @Param('id') id: string,
     @Body() dto: ReactivarCasoEspecialDto,
@@ -205,7 +257,15 @@ export class CasosController {
    * Soft-delete / inactivación de un caso de estudio.
    */
   @Delete(':id')
-  @Roles('JEFE_CARRERA', 'COORDINACION')
+  @Roles(
+    'JEFE_CARRERA',
+    'COORDINACION',
+    'SECRETARIADO',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async softDelete(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,

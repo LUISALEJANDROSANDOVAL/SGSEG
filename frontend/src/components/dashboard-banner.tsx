@@ -80,7 +80,7 @@ export function DashboardBanner() {
               className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
             >
               <PlusCircle className="size-3.5 text-neutral-500" />
-              <span>Inventario</span>
+              <span>Casos</span>
             </Link>
           </div>
         </div>
