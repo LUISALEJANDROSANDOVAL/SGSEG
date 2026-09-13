@@ -40,7 +40,15 @@ export class EstudiantesController {
    * Endpoint para carga masiva transaccional e idempotente de estudiantes.
    */
   @Post('bulk-upsert')
-  @Roles('COORDINACION', 'SECRETARIADO')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   @HttpCode(HttpStatus.OK)
   async bulkUpsert(@Body() dto: BulkEstudiantesInputDto) {
     return this.estudiantesService.bulkUpsertEstudiantes(dto);
@@ -50,7 +58,15 @@ export class EstudiantesController {
    * Creación individual o upsert de un estudiante.
    */
   @Post()
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateEstudianteDto,
@@ -92,7 +108,15 @@ export class EstudiantesController {
    * Actualización de datos de un estudiante.
    */
   @Put(':id')
-  @Roles('COORDINACION', 'SECRETARIADO')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async update(@Param('id') id: string, @Body() dto: UpdateEstudianteDto) {
     return this.estudiantesService.update(id, dto);
   }
@@ -101,7 +125,15 @@ export class EstudiantesController {
    * Soft-delete de un estudiante para preservar su historial y procesos académicos.
    */
   @Delete(':id')
-  @Roles('COORDINACION')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async softDelete(@Param('id') id: string) {
     return this.estudiantesService.softDelete(id);
   }
@@ -110,7 +142,15 @@ export class EstudiantesController {
    * Restauración de un estudiante eliminado lógicamente.
    */
   @Patch(':id/restore')
-  @Roles('COORDINACION')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async restore(@Param('id') id: string) {
     return this.estudiantesService.restore(id);
   }

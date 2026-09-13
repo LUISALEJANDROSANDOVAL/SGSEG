@@ -5,6 +5,8 @@ import type { AuthenticatedUser } from '../../common/decorators/current-user.dec
 import { LoginDto } from '../dto/login.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { RecuperarPasswordDto } from '../dto/recuperar-password.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AuthService } from '../services/auth.service';
 
 @Controller('auth')
@@ -16,6 +18,20 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Public()
+  @Post('recuperar-password')
+  @HttpCode(HttpStatus.OK)
+  async recuperarPassword(@Body() dto: RecuperarPasswordDto) {
+    return this.authService.recuperarPassword(dto);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 
   @Get('me')

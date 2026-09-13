@@ -17,5 +17,35 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sgseg-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://sgseg:sgseg@postgres:5432/sgseg?schema=public"
+      PORT: 3000
+      NODE_ENV: production
+      JWT_SECRET: "sgseg_jwt_super_secret_key_2026"
+      CORS_ORIGINS: "http://localhost:5173,http://localhost:3000,http://localhost:8080,http://localhost:80,http://localhost"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sgseg-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+      - "8080:80"
+    depends_on:
+      - backend
+
 volumes:
   sgseg-postgres-data:

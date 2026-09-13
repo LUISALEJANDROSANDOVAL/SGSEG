@@ -21,6 +21,17 @@ export const roles: Rol[] = [
   'Vicerrectorado',
   'Registro',
   'Defensas de Grado',
+  'Administrador General',
+]
+
+const TODOS_LOS_ROLES: Rol[] = [
+  'Coordinador General',
+  'Secretario de Facultad',
+  'Jefe de Carrera',
+  'Vicerrectorado',
+  'Registro',
+  'Defensas de Grado',
+  'Administrador General',
 ]
 
 export type ItemNavegacion = {
@@ -41,7 +52,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: LayoutDashboard,
         descripcion:
           'Resumen ejecutivo con estudiantes pendientes, sorteados y filtro por pensum.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
+        roles: TODOS_LOS_ROLES,
       },
       {
         nombre: 'Sorteo Digital',
@@ -49,7 +60,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: Shuffle,
         descripcion:
           'Selección aleatoria de áreas y casos para defensa interna y externa, con acta de resultados.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado'],
+        roles: TODOS_LOS_ROLES,
       },
     ],
   },
@@ -62,7 +73,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: ClipboardList,
         descripcion:
           'Inventario de casos de estudio, control del límite de 2 usos y alertas de stock crítico.',
-        roles: ['Coordinador General', 'Jefe de Carrera', 'Vicerrectorado'],
+        roles: TODOS_LOS_ROLES,
       },
       {
         nombre: 'Estudiantes',
@@ -70,7 +81,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: Users,
         descripcion:
           'Padrón de postulantes por carrera y pensum, con estado de habilitación y sorteo.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
+        roles: TODOS_LOS_ROLES,
       },
       {
         nombre: 'Cronograma y Defensas',
@@ -78,7 +89,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: Calendar,
         descripcion:
           'Calendario general de defensas, embudo de estados y verificación de plazos reglamentarios.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado'],
+        roles: TODOS_LOS_ROLES,
       },
       {
         nombre: 'Estructura Académica',
@@ -86,7 +97,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: GraduationCap,
         descripcion:
           'Gestión de facultades, carreras, áreas académicas y pensums vinculados.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado'],
+        roles: TODOS_LOS_ROLES,
       },
       {
         nombre: 'Usuarios y Roles',
@@ -94,7 +105,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: ShieldCheck,
         descripcion:
           'Administración de accesos, perfiles de usuario y activación/desactivación de cuentas.',
-        roles: ['Coordinador General'],
+        roles: TODOS_LOS_ROLES,
       },
     ],
   },
@@ -107,7 +118,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: FileBarChart,
         descripcion:
           'Actas, estadísticas de rendimiento por área y exportación de resultados de defensa.',
-        roles: ['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado', 'Registro', 'Defensas de Grado'],
+        roles: TODOS_LOS_ROLES,
       },
       {
         nombre: 'Configuración',
@@ -115,7 +126,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: Settings,
         descripcion:
           'Parámetros del sorteo, límite de usos, permisos por rol y calendario del semestre.',
-        roles: ['Coordinador General', 'Vicerrectorado'],
+        roles: TODOS_LOS_ROLES,
       },
     ],
   },
