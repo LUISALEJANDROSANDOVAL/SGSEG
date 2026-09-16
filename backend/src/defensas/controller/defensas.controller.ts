@@ -33,6 +33,8 @@ export class DefensasController {
     'VICERRECTORADO',
     'JEFE_CARRERA',
     'SECRETARIADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async getEmbudo(@CurrentUser() user: AuthenticatedUser) {
@@ -48,6 +50,8 @@ export class DefensasController {
     'VICERRECTORADO',
     'JEFE_CARRERA',
     'SECRETARIADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async getAlertas(
@@ -67,6 +71,8 @@ export class DefensasController {
     'VICERRECTORADO',
     'JEFE_CARRERA',
     'SECRETARIADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async findAll(
@@ -85,6 +91,8 @@ export class DefensasController {
     'VICERRECTORADO',
     'JEFE_CARRERA',
     'SECRETARIADO',
+    'REGISTRO',
+    'DEFENSA',
     'SUPER_ADMIN',
   )
   async findById(
@@ -98,7 +106,15 @@ export class DefensasController {
    * Programa una nueva fecha de defensa para un estudiante.
    */
   @Post('programar')
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   @HttpCode(HttpStatus.CREATED)
   async programar(
     @Body() dto: ProgramarDefensaDto,
@@ -111,7 +127,15 @@ export class DefensasController {
    * Actualiza los datos de una defensa.
    */
   @Put(':id')
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateDefensaDto,
@@ -124,7 +148,15 @@ export class DefensasController {
    * Registra la calificación formal y dictamen del tribunal para una defensa.
    */
   @Put(':id/calificar')
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   async calificar(
     @Param('id') id: string,
     @Body() dto: CalificarDefensaDto,

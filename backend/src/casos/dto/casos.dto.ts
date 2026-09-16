@@ -15,13 +15,13 @@ export class CreateCasoDto {
 
   @IsString({ message: 'El título debe ser una cadena de texto.' })
   @IsNotEmpty({ message: 'El título del caso es obligatorio.' })
-  @MinLength(5, { message: 'El título debe tener al menos 5 caracteres.' })
+  @MinLength(3, { message: 'El título debe tener al menos 3 caracteres.' })
   @MaxLength(250, { message: 'El título no puede exceder los 250 caracteres.' })
   titulo: string;
 
   @IsString({ message: 'El contenido debe ser una cadena de texto.' })
   @IsNotEmpty({ message: 'El planteamiento y preguntas del caso son obligatorios.' })
-  @MinLength(10, { message: 'El contenido debe tener al menos 10 caracteres.' })
+  @MinLength(5, { message: 'El contenido debe tener al menos 5 caracteres.' })
   contenido: string;
 
   @IsOptional()
@@ -32,7 +32,7 @@ export class CreateCasoDto {
 export class ReactivarCasoEspecialDto {
   @IsString({ message: 'El motivo debe ser una cadena de texto.' })
   @IsNotEmpty({ message: 'La justificación académica o motivo de la reactivación es obligatoria.' })
-  @MinLength(10, { message: 'El motivo debe tener al menos 10 caracteres.' })
+  @MinLength(5, { message: 'El motivo debe tener al menos 5 caracteres.' })
   @MaxLength(500, { message: 'El motivo no puede exceder los 500 caracteres.' })
   motivo: string;
 }
@@ -43,13 +43,13 @@ export class UpdateCasoDto {
 
   @IsOptional()
   @IsString({ message: 'El título debe ser una cadena de texto.' })
-  @MinLength(5, { message: 'El título debe tener al menos 5 caracteres.' })
+  @MinLength(3, { message: 'El título debe tener al menos 3 caracteres.' })
   @MaxLength(250, { message: 'El título no puede exceder los 250 caracteres.' })
   titulo?: string;
 
   @IsOptional()
   @IsString({ message: 'El contenido debe ser una cadena de texto.' })
-  @MinLength(10, { message: 'El contenido debe tener al menos 10 caracteres.' })
+  @MinLength(5, { message: 'El contenido debe tener al menos 5 caracteres.' })
   contenido?: string;
 
   @IsOptional()

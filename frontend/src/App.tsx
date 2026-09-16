@@ -11,8 +11,19 @@ import Usuarios from '@/pages/Usuarios'
 import Academia from '@/pages/Academia'
 import Defensas from '@/pages/Defensas'
 import Login from '@/pages/Login'
+import ResetPassword from '@/pages/ResetPassword'
 import '@/index.css'
 import { AuthProvider as ContextProvider } from '@/context/AuthContext'
+
+const TODOS_LOS_ROLES = [
+  'Coordinador General',
+  'Secretario de Facultad',
+  'Jefe de Carrera',
+  'Vicerrectorado',
+  'Registro',
+  'Defensas de Grado',
+  'Administrador General',
+] as const
 
 function App() {
   return (
@@ -20,6 +31,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/sorteo/en-vivo" element={<SorteoEnVivo />} />
           
           <Route path="/" element={
@@ -29,49 +41,49 @@ function App() {
           } />
           
           <Route path="/sorteo" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+            <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Sorteo />
             </ProtectedRoute>
           } />
           
           <Route path="/casos" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Jefe de Carrera', 'Vicerrectorado']}>
+            <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Casos />
             </ProtectedRoute>
           } />
           
           <Route path="/estudiantes" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+            <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Estudiantes />
             </ProtectedRoute>
           } />
 
           <Route path="/defensas" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+            <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Defensas />
             </ProtectedRoute>
           } />
           
           <Route path="/reportes" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+            <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Reportes />
             </ProtectedRoute>
           } />
           
           <Route path="/configuracion" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Vicerrectorado']}>
+            <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Configuracion />
             </ProtectedRoute>
           } />
 
           <Route path="/usuarios" element={
-            <ProtectedRoute allowedRoles={['Coordinador General']}>
+            <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Usuarios />
             </ProtectedRoute>
           } />
 
           <Route path="/academia" element={
-            <ProtectedRoute allowedRoles={['Coordinador General', 'Secretario de Facultad', 'Jefe de Carrera', 'Vicerrectorado']}>
+            <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Academia />
             </ProtectedRoute>
           } />

@@ -4,6 +4,8 @@ import * as bcrypt from 'bcrypt';
 import { LoginDto } from '../dto/login.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { RecuperarPasswordDto } from '../dto/recuperar-password.dto';
+import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AuthRepository } from '../repositories/auth.repository';
 
 @Injectable()
@@ -145,6 +147,67 @@ export class AuthService {
     return {
       mensaje: 'Contraseña actualizada correctamente',
       success: true,
+    };
+  }
+
+  async recuperarPassword(dto: RecuperarPasswordDto) {
+    const emailRaw = dto.correoInstitucional || dto.email;
+    if (!emailRaw || !emailRaw.trim()) {
+      throw new BadRequestException('Debe ingresar un correo institucional válido');
+    }
+
+    const correoInstitucional = emailRaw.trim().toLowerCase();
+    const user = await this.authRepository.findByCorreoInstitucional(correoInstitucional);
+
+    if (!user || user.estado !== 'ACTIVO') {
+      throw new BadRequestException('El correo institucional ingresado no se encuentra registrado o está inactivo');
+    }
+
+    const payload = {
+      sub: String(user.idUsuario),
+      purpose: 'PASSWORD_RESET',
+      correoInstitucional: user.correoInstitucional,
+    };
+
+    const token = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+
+    return {
+      success: true,
+      message: `Se han generado las instrucciones de recuperación para ${user.correoInstitucional}.`,
+      token,
+      resetUrl: `/reset-password?token=${token}`,
+      email: user.correoInstitucional,
+      expiresInMinutes: 15,
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    if (!dto.token) {
+      throw new BadRequestException('Token de recuperación no proporcionado');
+    }
+
+    let payload: any;
+    try {
+      payload = await this.jwtService.verifyAsync(dto.token);
+    } catch {
+      throw new BadRequestException('El enlace o token de recuperación es inválido o ha expirado');
+    }
+
+    if (payload.purpose !== 'PASSWORD_RESET' || !payload.sub) {
+      throw new BadRequestException('Token de recuperación inválido');
+    }
+
+    const user = await this.authRepository.findById(Number(payload.sub));
+    if (!user || user.estado !== 'ACTIVO') {
+      throw new BadRequestException('Usuario no encontrado o inactivo');
+    }
+
+    const newHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.authRepository.updatePassword(Number(user.idUsuario), newHash);
+
+    return {
+      success: true,
+      message: 'Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña.',
     };
   }
 

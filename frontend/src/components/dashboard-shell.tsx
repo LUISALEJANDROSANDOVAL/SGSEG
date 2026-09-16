@@ -48,23 +48,23 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         }`}
       >
         {/* Subtle top red accent bar */}
-        <div className="pointer-events-none absolute top-0 left-0 right-0 h-0.5 bg-[#c8102e]" />
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-0.5 bg-crimson" />
 
         {/* ── Logo header ── */}
-        <div className="relative flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+        <div className="relative flex items-center justify-between gap-3 border-b border-line px-5 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-black ring-2 ring-gray-200 p-1">
+            <div className="flex size-10 shrink-0 items-center justify-center bg-black border border-line p-1">
               <img src="/logo-uagrm.png" alt="Logo UTEPSA" className="size-7 object-contain" />
             </div>
             <div className="leading-tight">
-              <p className="text-sm font-extrabold tracking-wide text-gray-900">UTEPSA</p>
-              <p className="text-[10px] font-normal text-gray-400">Gestión Académica</p>
+              <p className="text-sm font-extrabold tracking-wide text-neutral-900">UTEPSA</p>
+              <p className="text-[10px] font-normal text-neutral-500">Gestión Académica</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setMenuAbierto(false)}
-            className="text-gray-400 transition-colors hover:text-gray-700 lg:hidden"
+            className="text-neutral-400 transition-colors hover:text-neutral-700 lg:hidden"
           >
             <X className="size-5" />
             <span className="sr-only">Cerrar menú</span>
@@ -72,12 +72,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* ── User info (Clickable to edit profile, avatar & password) ── */}
-        <div className="relative border-b border-gray-100 px-3.5 py-3">
-          <div className="flex items-center justify-between mb-1.5 px-1.5">
-            <p className="text-[9px] font-bold tracking-[0.18em] text-gray-400 uppercase">
+        <div className="relative border-b border-line px-3.5 py-3">
+          <div className="flex items-center justify-between mb-1.5 px-1">
+            <p className="text-[9px] font-bold tracking-[0.18em] text-neutral-400 uppercase">
               Usuario Conectado
             </p>
-            <span className="text-[9px] font-bold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">
+            <span className="text-[9px] font-mono font-semibold text-neutral-500 bg-surface border border-line px-1.5 py-0.5">
               ID: #{user.id}
             </span>
           </div>
@@ -86,30 +86,30 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             type="button"
             onClick={() => setModalPerfilAbierto(true)}
             title="Haga clic para editar su foto, datos o cambiar contraseña"
-            className="group flex w-full items-center gap-3 rounded-xl p-2 text-left transition-all duration-150 hover:bg-red-50/70 hover:ring-1 hover:ring-[#c8102e]/20"
+            className="group flex w-full items-center gap-3 border border-line bg-surface p-2 text-left transition-all duration-150 hover:bg-white hover:border-neutral-400 shadow-xs"
           >
             <div className="relative shrink-0">
               {user.avatarUrl ? (
                 <img
                   src={user.avatarUrl}
                   alt={user.nombre}
-                  className="size-9 rounded-full object-cover ring-2 ring-[#c8102e] shadow-sm"
+                  className="size-9 object-cover border border-line shadow-xs"
                 />
               ) : (
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#c8102e] text-xs font-bold text-white ring-2 ring-red-100 shadow-sm transition-transform group-hover:scale-105">
+                <div className="flex size-9 shrink-0 items-center justify-center bg-crimson text-xs font-bold text-white shadow-xs transition-transform group-hover:scale-105">
                   {iniciales}
                 </div>
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-gray-900 text-white shadow ring-1 ring-white">
+              <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center bg-neutral-900 text-white shadow-xs">
                 <UserCog className="size-2" />
               </span>
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-gray-900 truncate group-hover:text-[#c8102e] transition-colors">
+              <p className="text-xs font-semibold text-neutral-900 truncate group-hover:text-crimson transition-colors">
                 {user.nombre}
               </p>
-              <p className="text-[11px] text-gray-400 truncate mt-0.5">{user.rol}</p>
+              <p className="text-[11px] text-neutral-500 truncate mt-0.5">{user.rol}</p>
             </div>
           </button>
         </div>
@@ -124,7 +124,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
             return (
               <div key={seccion.grupo} className="flex flex-col gap-0.5">
-                <p className="px-3 pb-1.5 text-[10px] font-bold tracking-[0.16em] text-gray-400 uppercase">
+                <p className="px-3 pb-1.5 text-[10px] font-bold tracking-[0.16em] text-neutral-400 uppercase">
                   {seccion.grupo}
                 </p>
                 {itemsFiltrados.map((item) => {
@@ -135,15 +135,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       to={item.ruta}
                       onClick={() => setMenuAbierto(false)}
                       aria-current={activo ? 'page' : undefined}
-                      className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 ${
+                      className={`group flex items-center gap-3 px-3 py-2.5 text-xs font-medium transition-all duration-150 ${
                         activo
-                          ? 'bg-[#c8102e]/10 font-semibold text-[#c8102e]'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-crimson/10 font-semibold text-crimson border-l-2 border-l-crimson'
+                          : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
                       }`}
                     >
-                      <item.icono className={`size-4 shrink-0 transition-transform group-hover:scale-110 ${activo ? 'text-[#c8102e]' : 'text-gray-400'}`} />
+                      <item.icono className={`size-4 shrink-0 transition-transform group-hover:scale-110 ${activo ? 'text-crimson' : 'text-neutral-400'}`} />
                       <span className="flex-1">{item.nombre}</span>
-                      {activo && <ChevronRight className="size-3.5 text-[#c8102e]/60" />}
+                      {activo && <ChevronRight className="size-3.5 text-crimson/60" />}
                     </Link>
                   )
                 })}
@@ -153,11 +153,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* ── Logout ── */}
-        <div className="relative border-t border-gray-100 p-3">
+        <div className="relative border-t border-line p-3">
           <button
             type="button"
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-500 transition-all hover:bg-red-50 hover:text-red-700"
+            className="flex w-full items-center gap-3 px-3 py-2.5 text-xs font-medium text-red-600 transition-all hover:bg-red-50 hover:text-red-700"
           >
             <LogOut className="size-4 shrink-0" />
             <span className="flex-1 text-left">Cerrar Sesión</span>

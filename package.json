@@ -8,7 +8,14 @@
     "build": "npm run build:backend && npm run build:frontend",
     "dev:backend": "npm run start:dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "docker:up": "docker compose up -d",
+    "docker:build": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:db": "docker compose up -d postgres",
+    "db:seed": "npm run db:seed --prefix backend",
+    "db:views": "npm run db:views --prefix backend",
+    "db:seed:estudiantes": "npm run db:seed:estudiantes --prefix backend"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

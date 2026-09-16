@@ -8,7 +8,7 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  private pool: Pool;
+  private readonly pool: Pool;
 
   constructor() {
     const connectionString =
@@ -26,6 +26,6 @@ export class PrismaService
 
   async onModuleDestroy() {
     await this.$disconnect();
-    await this.pool.end();
+    await this.pool?.end();
   }
 }

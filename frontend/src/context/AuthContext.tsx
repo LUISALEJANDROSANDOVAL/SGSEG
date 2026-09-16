@@ -7,7 +7,8 @@ export type RolCode =
   | 'SECRETARIADO'
   | 'VICERRECTORADO'
   | 'REGISTRO'
-  | 'DEFENSA';
+  | 'DEFENSA'
+  | 'SUPER_ADMIN';
 
 export type RolLabel =
   | 'Coordinador General'
@@ -15,7 +16,8 @@ export type RolLabel =
   | 'Jefe de Carrera'
   | 'Vicerrectorado'
   | 'Registro'
-  | 'Defensas de Grado';
+  | 'Defensas de Grado'
+  | 'Administrador General';
 
 export type Rol = RolCode | RolLabel;
 
@@ -26,6 +28,7 @@ export const ROL_MAP: Record<RolCode, RolLabel> = {
   VICERRECTORADO: 'Vicerrectorado',
   REGISTRO: 'Registro',
   DEFENSA: 'Defensas de Grado',
+  SUPER_ADMIN: 'Administrador General',
 };
 
 export const LABEL_TO_ROL_MAP: Record<RolLabel, RolCode> = {
@@ -35,6 +38,7 @@ export const LABEL_TO_ROL_MAP: Record<RolLabel, RolCode> = {
   'Vicerrectorado': 'VICERRECTORADO',
   'Registro': 'REGISTRO',
   'Defensas de Grado': 'DEFENSA',
+  'Administrador General': 'SUPER_ADMIN',
 };
 
 export function normalizarRol(rol: string): { code: RolCode; label: RolLabel } {

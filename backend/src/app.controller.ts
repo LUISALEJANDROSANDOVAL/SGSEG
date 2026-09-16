@@ -25,13 +25,29 @@ export class AppController {
     };
   }
 
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
   @Get('admin/dashboard')
   getAdminDashboard() {
     return {
       success: true,
       message: 'Dashboard administrativo disponible',
-      rolesPermitidos: ['COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA'],
+      rolesPermitidos: [
+        'COORDINACION',
+        'SECRETARIADO',
+        'JEFE_CARRERA',
+        'VICERRECTORADO',
+        'REGISTRO',
+        'DEFENSA',
+        'SUPER_ADMIN',
+      ],
     };
   }
 }

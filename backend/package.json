@@ -28,6 +28,11 @@
     "db:seed:estudiantes": "ts-node prisma/seed-estudiantes.ts",
     "db:test:constraints": "ts-node prisma/validate-constraints.ts",
     "db:views": "ts-node prisma/apply-views.ts",
+    "db:seed:defensas": "ts-node prisma/seed-defensas-casos.ts",
+    "db:seed:casos:all": "ts-node prisma/seed-casos-todas-carreras.ts",
+    "db:seed:usuarios": "ts-node prisma/seed-usuarios.ts",
+    "db:seed:defensas:all": "ts-node prisma/seed-defensas-todas-carreras.ts",
+    "db:seed:envios": "ts-node prisma/seed-envios-casos.ts",
     "db:test:views": "ts-node prisma/validate-views.ts",
     "postinstall": "prisma generate"
   },
