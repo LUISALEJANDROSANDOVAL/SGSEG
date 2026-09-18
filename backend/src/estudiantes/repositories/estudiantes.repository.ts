@@ -158,7 +158,7 @@ export class EstudiantesRepository {
       carnetEstudiantil: string;
       carnetIdentidad: string;
       nombreCompleto: string;
-      correo: string;
+      correoInstitucional: string;
       estado?: string;
     },
   ) {
@@ -175,14 +175,14 @@ export class EstudiantesRepository {
         carnetEstudiantil: data.carnetEstudiantil,
         carnetIdentidad: data.carnetIdentidad,
         nombreCompleto: data.nombreCompleto,
-        correo: data.correo,
+        correoInstitucional: data.correoInstitucional,
         estado: data.estado ?? 'ACTIVO',
       },
       update: {
         idPlanEstudio: data.idPlanEstudio,
         carnetIdentidad: data.carnetIdentidad,
         nombreCompleto: data.nombreCompleto,
-        correo: data.correo,
+        correoInstitucional: data.correoInstitucional,
         estado: data.estado ?? 'ACTIVO',
       },
       include: {
@@ -280,7 +280,7 @@ export class EstudiantesRepository {
         { carnetEstudiantil: { contains: term, mode: 'insensitive' } },
         { carnetIdentidad: { contains: term, mode: 'insensitive' } },
         { nombreCompleto: { contains: term, mode: 'insensitive' } },
-        { correo: { contains: term, mode: 'insensitive' } },
+        { correoInstitucional: { contains: term, mode: 'insensitive' } },
       ];
     }
 

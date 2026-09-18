@@ -21,26 +21,38 @@ const prisma = new PrismaClient({ adapter });
 // ============================================================================
 async function cleanDatabase(): Promise<void> {
   console.log('🧹 Limpiando registros previos para garantizar consistencia...');
-  await prisma.registroAuditoria.deleteMany({});
-  await prisma.envioCasoEstudio.deleteMany({});
-  await prisma.sorteoAreaPool.deleteMany({});
-  await prisma.sorteoArea.deleteMany({});
-  await prisma.sorteoCaso.deleteMany({});
-  await prisma.sorteo.deleteMany({});
-  await prisma.defensaExamenGrado.deleteMany({});
-  await prisma.instanciaExamenGrado.deleteMany({});
-  await prisma.procesoExamenGrado.deleteMany({});
-  await prisma.estudiante.deleteMany({});
-  await prisma.casoEstudio.deleteMany({});
-  await prisma.planArea.deleteMany({});
-  await prisma.areaAcademica.deleteMany({});
-  await prisma.configuracionSorteoCaso.deleteMany({});
-  await prisma.configuracionSorteoArea.deleteMany({});
-  await prisma.planEstudio.deleteMany({});
-  await prisma.usuarioCarrera.deleteMany({});
-  await prisma.usuario.deleteMany({});
-  await prisma.carrera.deleteMany({});
-  await prisma.facultad.deleteMany({});
+  const modelsToDelete = [
+    () => prisma.registroAuditoria.deleteMany({}),
+    () => prisma.sesionEspectadorSorteo.deleteMany({}),
+    () => prisma.asignacionCaso.deleteMany({}),
+    () => prisma.envioCasoEstudio.deleteMany({}),
+    () => prisma.sorteoAreaPool.deleteMany({}),
+    () => prisma.sorteoArea.deleteMany({}),
+    () => prisma.sorteoCaso.deleteMany({}),
+    () => prisma.sorteo.deleteMany({}),
+    () => prisma.defensaExamenGrado.deleteMany({}),
+    () => prisma.instanciaExamenGrado.deleteMany({}),
+    () => prisma.procesoExamenGrado.deleteMany({}),
+    () => prisma.estudiante.deleteMany({}),
+    () => prisma.casoEstudio.deleteMany({}),
+    () => prisma.planArea.deleteMany({}),
+    () => prisma.areaAcademica.deleteMany({}),
+    () => prisma.configuracionSorteoCaso.deleteMany({}),
+    () => prisma.configuracionSorteoArea.deleteMany({}),
+    () => prisma.planEstudio.deleteMany({}),
+    () => prisma.usuarioCarrera.deleteMany({}),
+    () => prisma.usuario.deleteMany({}),
+    () => prisma.carrera.deleteMany({}),
+    () => prisma.facultad.deleteMany({}),
+  ];
+
+  for (const deleteFn of modelsToDelete) {
+    try {
+      await deleteFn();
+    } catch {
+      // Ignorar si el modelo no existe o no tiene registros en el esquema actual
+    }
+  }
   console.log('✅ Base de datos saneada exitosamente.');
 }
 
@@ -334,7 +346,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'SIS-20220001',
       carnetIdentidad: '8392011 SC',
       nombreCompleto: 'Alejandro Morales Quispe',
-      correo: 'alejandro.morales@estudiante.edu.bo',
+      correoInstitucional: 'alejandro.morales@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });
@@ -364,7 +376,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'SIS-20220002',
       carnetIdentidad: '7482910 CB',
       nombreCompleto: 'Valeria Andrea Rojas Mamani',
-      correo: 'valeria.rojas@estudiante.edu.bo',
+      correoInstitucional: 'valeria.rojas@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });
@@ -397,7 +409,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'DER-20220001',
       carnetIdentidad: '6391024 SC',
       nombreCompleto: 'Carlos Eduardo De La Barra Gutiérrez',
-      correo: 'carlos.delabarra@estudiante.edu.bo',
+      correoInstitucional: 'carlos.delabarra@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });
@@ -427,7 +439,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'DER-20220002',
       carnetIdentidad: '9012384 LP',
       nombreCompleto: 'Mariana Sofía Torrico Mendoza',
-      correo: 'mariana.torrico@estudiante.edu.bo',
+      correoInstitucional: 'mariana.torrico@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });
@@ -489,7 +501,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'DER-20210088',
       carnetIdentidad: '8172634 PT',
       nombreCompleto: 'Diego Alonso Paredes Ríos',
-      correo: 'diego.paredes@estudiante.edu.bo',
+      correoInstitucional: 'diego.paredes@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });

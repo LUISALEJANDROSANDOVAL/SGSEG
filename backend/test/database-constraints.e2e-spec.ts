@@ -24,22 +24,22 @@ describe('Restricciones de Base de Datos y DDL (e2e)', () => {
     // Limpieza de datos creados en tests E2E
     try {
       await prisma.estudiante.deleteMany({
-        where: { carnetEstudiantil: { startsWith: 'E2E_' } },
+        where: { carnetEstudiantil: { startsWith: PREFIX } },
       });
       await prisma.planArea.deleteMany({
-        where: { planEstudio: { nombre: { startsWith: 'E2E_' } } },
+        where: { planEstudio: { nombre: { startsWith: PREFIX } } },
       });
       await prisma.areaAcademica.deleteMany({
-        where: { nombre: { startsWith: 'E2E_' } },
+        where: { nombre: { startsWith: PREFIX } },
       });
       await prisma.planEstudio.deleteMany({
-        where: { nombre: { startsWith: 'E2E_' } },
+        where: { nombre: { startsWith: PREFIX } },
       });
       await prisma.carrera.deleteMany({
-        where: { nombre: { startsWith: 'E2E_' } },
+        where: { nombre: { startsWith: PREFIX } },
       });
       await prisma.facultad.deleteMany({
-        where: { nombre: { startsWith: 'E2E_' } },
+        where: { nombre: { startsWith: PREFIX } },
       });
     } finally {
       await prisma.$disconnect();
@@ -180,7 +180,7 @@ describe('Restricciones de Base de Datos y DDL (e2e)', () => {
           carnetEstudiantil: carnetUnico,
           carnetIdentidad: '98765432-LP',
           nombreCompleto: 'Estudiante Primero',
-          correo: 'primero@test.com',
+          correoInstitucional: 'primero@test.com',
         },
       });
 
@@ -192,7 +192,7 @@ describe('Restricciones de Base de Datos y DDL (e2e)', () => {
             carnetEstudiantil: carnetUnico,
             carnetIdentidad: '11223344-CBBA',
             nombreCompleto: 'Estudiante Segundo',
-            correo: 'segundo@test.com',
+            correoInstitucional: 'segundo@test.com',
           },
         }),
       ).rejects.toMatchObject({

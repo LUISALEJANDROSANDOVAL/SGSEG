@@ -15,6 +15,7 @@ describe('Auditoría TK-16: Migración de Estudiantes desde Excel (E2E)', () => 
   let app: INestApplication<App>;
   let jefeToken: string;
   let prisma: PrismaService;
+  let defaultCarreraId: number;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -34,12 +35,15 @@ describe('Auditoría TK-16: Migración de Estudiantes desde Excel (E2E)', () => 
       .expect(200);
 
     jefeToken = res.body.accessToken;
+
+    const carrera = await prisma.carrera.findFirstOrThrow();
+    defaultCarreraId = Number(carrera.idCarrera);
   });
 
   afterAll(async () => {
     // Limpieza de los registros creados por la prueba (opcional según la estrategia de BD)
     await prisma.estudiante.deleteMany({
-      where: { correo: { contains: 'tk16' } },
+      where: { correoInstitucional: { contains: 'tk16' } },
     });
     await prisma.$disconnect();
     await app.close();
@@ -61,13 +65,13 @@ describe('Auditoría TK-16: Migración de Estudiantes desde Excel (E2E)', () => 
         carnetEstudiantil: values[1] ? String(values[1]) : '',
         carnetIdentidad: values[2] ? String(values[2]) : '',
         nombreCompleto: values[3] ? String(values[3]) : '',
-        correo: values[4] ? String(values[4]) : '',
+        correoInstitucional: values[4] ? String(values[4]) : '',
       });
     });
 
     return {
       estudiantes,
-      idCarreraPorDefecto: 1,
+      idCarreraPorDefecto: defaultCarreraId,
       crearPlanesFaltantes: false,
     };
   };

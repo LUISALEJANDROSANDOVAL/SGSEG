@@ -123,7 +123,8 @@ async function main() {
     }
 
     // Correo destino: correo del estudiante
-    const correoDestino = estudiante.correo;
+    const destinatario = estudiante ? estudiante.correoInstitucional : null;
+    const correoDestino = destinatario;
 
     // Fecha y hora del envío:
     let fechaHoraEnvio: Date;
@@ -149,7 +150,7 @@ async function main() {
         idEstudiante: estudiante.idEstudiante,
         idCasoEstudio: caso.idCasoEstudio,
         idUsuarioEnvio: idUsuarioRemitente,
-        correoDestino,
+        correoDestino: correoDestino ?? 'no-reply@uni.edu.bo',
         fechaHoraEnvio,
         estadoEnvio,
       },
@@ -260,7 +261,7 @@ async function main() {
         idEstudiante: estudiante.idEstudiante,
         idCasoEstudio: caso.idCasoEstudio,
         idUsuarioEnvio: idUsuarioRemitente,
-        correoDestino: estudiante.correo,
+        correoDestino: estudiante.correoInstitucional,
         fechaHoraEnvio: fechaEnvio,
         estadoEnvio: def.estadoDefensa === 'CALIFICADO' ? 'ENTREGADO' : 'ENVIADO',
       },
@@ -283,7 +284,7 @@ async function main() {
           motivo: 'Entrega formal de caso para defensa de grado',
           valorNuevo: {
             idEnvio: nuevoEnvio.idEnvio.toString(),
-            correoDestino: estudiante.correo,
+            correoDestino: estudiante.correoInstitucional,
             estadoEnvio: nuevoEnvio.estadoEnvio,
             tituloCaso: caso.titulo,
             carrera: carrera?.nombre ?? 'General',

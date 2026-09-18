@@ -57,3 +57,39 @@ export class FilterSorteosDto {
   @IsOptional()
   limit?: number;
 }
+
+export class FinalizarSorteoDto {
+  @IsNotEmpty({ message: 'El ID de la defensa es requerido.' })
+  @IsString({ message: 'El ID de la defensa debe ser una cadena.' })
+  idDefensa: string;
+
+  @IsNotEmpty({ message: 'El ID del área es requerido.' })
+  @IsString({ message: 'El ID del área debe ser una cadena.' })
+  idArea: string;
+
+  @IsNotEmpty({ message: 'El ID del caso es requerido.' })
+  @IsString({ message: 'El ID del caso debe ser una cadena.' })
+  idCaso: string;
+
+  @IsOptional()
+  @IsBoolean({ message: 'estudiantePresente debe ser un booleano.' })
+  estudiantePresente?: boolean;
+
+  @IsOptional()
+  @IsString({ message: 'El motivo de inasistencia debe ser texto.' })
+  motivoInasistencia?: string;
+
+  @IsOptional()
+  @IsString()
+  tokenSesionLive?: string;
+}
+
+export class CrearEnlaceEspectadorDto {
+  @IsNotEmpty({ message: 'El ID de la defensa es requerido.' })
+  @IsString({ message: 'El ID de la defensa debe ser una cadena.' })
+  idDefensa: string;
+
+  @IsOptional()
+  duracionMinutos?: number;
+}
+

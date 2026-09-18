@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EstudiantesNormalizerService } from './estudiantes-normalizer.service';
 import { EstudiantesService } from './estudiantes.service';
 import { EstudiantesRepository } from '../repositories/estudiantes.repository';
@@ -25,6 +29,7 @@ describe('EstudiantesService', () => {
       findCarrerasWithPlans: jest.fn(),
       softDelete: jest.fn(),
       restore: jest.fn(),
+      getUserCarreraIds: jest.fn(),
     } as unknown as jest.Mocked<EstudiantesRepository>;
 
     normalizer = new EstudiantesNormalizerService();
@@ -72,7 +77,8 @@ describe('EstudiantesService', () => {
           carnetEstudiantil: 'SIS-20230001',
           carnetIdentidad: '8392011 LP',
           nombreCompleto: 'Juan Carlos Perez',
-          correo: 'juan.perez@uni.edu.bo',
+          correoInstitucional: 'juan.perez@uni.edu.bo',
+          correoPersonal: null,
           estado: 'ACTIVO',
           fechaRegistro: new Date(),
           planEstudio: planMock,
@@ -86,7 +92,7 @@ describe('EstudiantesService', () => {
             carnetEstudiantil: '  sis-20230001 ',
             carnetIdentidad: '8392011 lp',
             nombreCompleto: '  JUAN   CARLOS   PEREZ  ',
-            correo: 'juan.perez@uni.edu.bo',
+            correoInstitucional: 'juan.perez@uni.edu.bo',
             nombreCarrera: 'Ingeniería de Sistemas',
             nombrePlanEstudio: 'Plan 2024',
           },
@@ -132,7 +138,8 @@ describe('EstudiantesService', () => {
           carnetEstudiantil: 'SIS-20230001',
           carnetIdentidad: '8392011 LP',
           nombreCompleto: 'Juan Carlos Perez Modificado',
-          correo: 'juan.perez@uni.edu.bo',
+          correoInstitucional: 'juan.perez@uni.edu.bo',
+          correoPersonal: null,
           estado: 'ACTIVO',
           fechaRegistro: new Date(),
           planEstudio: planMock,
@@ -187,7 +194,8 @@ describe('EstudiantesService', () => {
           carnetEstudiantil: 'IND-20230002',
           carnetIdentidad: '7482910 CB',
           nombreCompleto: 'Valeria Andrea Rojas Mamani',
-          correo: 'ind20230002@estudiante.edu.bo',
+          correoInstitucional: 'ind20230002@estudiante.edu.bo',
+          correoPersonal: null,
           estado: 'ACTIVO',
           fechaRegistro: new Date(),
           planEstudio: planDefaultMock,
@@ -250,7 +258,8 @@ describe('EstudiantesService', () => {
           carnetEstudiantil: 'SIS-20230001',
           carnetIdentidad: '8392011 LP',
           nombreCompleto: 'Alejandro Morales',
-          correo: 'alejandro@uni.edu.bo',
+          correoInstitucional: 'alejandro@uni.edu.bo',
+          correoPersonal: null,
           estado: 'ACTIVO',
           fechaRegistro: new Date(),
           planEstudio: {
@@ -355,6 +364,47 @@ describe('EstudiantesService', () => {
       expect(res).toHaveLength(1);
       expect(res[0].idCarrera).toBe('1');
       expect(res[0].planesEstudio[0].idPlanEstudio).toBe('10');
+    });
+  });
+
+  describe('Aislamiento de Carrera (JEFE_CARRERA)', () => {
+    const mockJefeUser = {
+      idUsuario: '10',
+      correoInstitucional: 'jefe.sistemas@uni.edu.bo',
+      rol: 'JEFE_CARRERA',
+    };
+
+    const estudianteDerecho = {
+      idEstudiante: BigInt(50),
+      carnetEstudiantil: 'DER-20220001',
+      planEstudio: { idCarrera: BigInt(2) }, // Carrera Derecho (2)
+    };
+
+    it('debe impedir que un Jefe de Sistemas consulte un estudiante de Derecho por ID', async () => {
+      repository.findById.mockResolvedValue(estudianteDerecho as any);
+      repository.getUserCarreraIds.mockResolvedValue([BigInt(1)]); // Solo Sistemas (1)
+
+      await expect(service.findById('50', mockJefeUser)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('debe impedir que un Jefe de Sistemas modifique un estudiante de Derecho', async () => {
+      repository.findById.mockResolvedValue(estudianteDerecho as any);
+      repository.getUserCarreraIds.mockResolvedValue([BigInt(1)]);
+
+      await expect(
+        service.update('50', { nombreCompleto: 'Nuevo Nombre' }, mockJefeUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('debe impedir que un Jefe de Sistemas elimine (soft-delete) un estudiante de Derecho', async () => {
+      repository.findById.mockResolvedValue(estudianteDerecho as any);
+      repository.getUserCarreraIds.mockResolvedValue([BigInt(1)]);
+
+      await expect(service.softDelete('50', mockJefeUser)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

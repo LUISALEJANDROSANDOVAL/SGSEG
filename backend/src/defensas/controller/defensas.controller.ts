@@ -104,17 +104,11 @@ export class DefensasController {
 
   /**
    * Programa una nueva fecha de defensa para un estudiante.
+   * Permitido a Coordinación, Secretaría, Jefe de Carrera y SuperAdmin.
+   * Vicerrectorado bloqueado.
    */
   @Post('programar')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async programar(
     @Body() dto: ProgramarDefensaDto,
@@ -125,17 +119,10 @@ export class DefensasController {
 
   /**
    * Actualiza los datos de una defensa.
+   * Vicerrectorado bloqueado.
    */
   @Put(':id')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateDefensaDto,
@@ -146,17 +133,11 @@ export class DefensasController {
 
   /**
    * Registra la calificación formal y dictamen del tribunal para una defensa.
+   * Restringido a Coordinación, Jefe de Carrera, Tribunal (Defensa) y SuperAdmin.
+   * Vicerrectorado y Secretaría bloqueados.
    */
   @Put(':id/calificar')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'JEFE_CARRERA', 'DEFENSA', 'SUPER_ADMIN')
   async calificar(
     @Param('id') id: string,
     @Body() dto: CalificarDefensaDto,

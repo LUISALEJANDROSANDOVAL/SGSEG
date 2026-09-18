@@ -54,6 +54,7 @@ model AreaAcademica {
   casos                CasoEstudio[]
   sorteosResultado     SorteoArea[]
   sorteosPool          SorteoAreaPool[]
+  asignaciones         AsignacionCaso[]
 
   @@unique([idCarrera, nombre])
   @@map("area_academica")
@@ -81,6 +82,7 @@ model CasoEstudio {
   sorteosCaso      SorteoCaso[]
   envios           EnvioCasoEstudio[]
   auditorias       RegistroAuditoria[]
+  asignaciones     AsignacionCaso[]
 
   @@map("caso_estudio")
 }
@@ -109,6 +111,7 @@ model Usuario {
   sorteos             Sorteo[]
   envios              EnvioCasoEstudio[]
   auditorias          RegistroAuditoria[]
+  asignaciones        AsignacionCaso[]
 
   @@map("usuario")
 }
@@ -129,12 +132,15 @@ model Estudiante {
   carnetEstudiantil String               @unique @map("carnet_estudiantil") @db.VarChar(50)
   carnetIdentidad   String               @map("carnet_identidad") @db.VarChar(30)
   nombreCompleto    String               @map("nombre_completo") @db.VarChar(150)
-  correo            String               @db.VarChar(200)
+  correoInstitucional String               @map("correo_institucional") @db.VarChar(200)
+  correoPersonal      String?              @map("correo_personal") @db.VarChar(200)
   estado            String               @default("ACTIVO") @db.VarChar(20)
   fechaRegistro     DateTime             @default(now()) @map("fecha_registro")
   planEstudio       PlanEstudio          @relation(fields: [idPlanEstudio], references: [idPlanEstudio], onDelete: Restrict)
   procesos          ProcesoExamenGrado[]
   envios            EnvioCasoEstudio[]
+  asignaciones      AsignacionCaso[]
+  sesionesEspectador SesionEspectadorSorteo[]
 
   @@index([idPlanEstudio, carnetEstudiantil])
   @@map("estudiante")
@@ -192,6 +198,8 @@ model DefensaExamenGrado {
   casoUtilizado    CasoEstudio?         @relation("CasoDefensa", fields: [idCasoUtilizado], references: [idCasoEstudio], onDelete: Restrict)
   sorteos          Sorteo[]
   auditorias       RegistroAuditoria[]
+  asignacionCaso   AsignacionCaso?
+  sesionesEspectador SesionEspectadorSorteo[]
 
   @@unique([idInstancia, idTipoDefensa])
   @@map("defensa_examen_grado")
@@ -249,6 +257,7 @@ model Sorteo {
   area                  SorteoArea?
   caso                  SorteoCaso?
   auditorias            RegistroAuditoria[]
+  asignaciones          AsignacionCaso[]
 
   @@map("sorteo")
 }
@@ -328,3 +337,47 @@ model RegistroAuditoria {
 
   @@map("registro_auditoria")
 }
+
+model AsignacionCaso {
+  idAsignacion       BigInt             @id @default(autoincrement()) @map("id_asignacion")
+  idEstudiante       BigInt             @map("id_estudiante")
+  idDefensa          BigInt             @unique @map("id_defensa")
+  idArea             BigInt             @map("id_area")
+  idCaso             BigInt             @map("id_caso")
+  idUsuarioEjecutor  BigInt             @map("id_usuario_ejecutor")
+  idSorteo           BigInt?            @map("id_sorteo")
+  tokenActa          String?            @map("token_acta") @db.VarChar(100)
+  codigoActa         String?            @map("codigo_acta") @db.VarChar(100)
+  fechaAsignacion    DateTime           @default(now()) @map("fecha_asignacion")
+  plazoLimiteEntrega DateTime?          @map("plazo_limite_entrega")
+  estado             String             @default("ASIGNADO") @db.VarChar(30)
+
+  estudiante         Estudiante         @relation(fields: [idEstudiante], references: [idEstudiante], onDelete: Restrict)
+  defensa            DefensaExamenGrado @relation(fields: [idDefensa], references: [idDefensa], onDelete: Restrict)
+  area               AreaAcademica      @relation(fields: [idArea], references: [idArea], onDelete: Restrict)
+  caso               CasoEstudio        @relation(fields: [idCaso], references: [idCasoEstudio], onDelete: Restrict)
+  usuarioEjecutor    Usuario            @relation(fields: [idUsuarioEjecutor], references: [idUsuario], onDelete: Restrict)
+  sorteo             Sorteo?            @relation(fields: [idSorteo], references: [idSorteo], onDelete: SetNull)
+
+  @@index([idCaso, estado])
+  @@map("asignacion_caso")
+}
+
+model SesionEspectadorSorteo {
+  idSesion        BigInt             @id @default(autoincrement()) @map("id_sesion")
+  token           String             @unique @db.VarChar(100)
+  slug            String             @unique @db.VarChar(100)
+  idDefensa       BigInt             @map("id_defensa")
+  idEstudiante    BigInt             @map("id_estudiante")
+  fase            String             @default("ESPERANDO") @db.VarChar(30)
+  estadoPayload   Json?              @map("estado_payload")
+  fechaCreacion   DateTime           @default(now()) @map("fecha_creacion")
+  fechaExpiracion DateTime           @map("fecha_expiracion")
+  activo          Boolean            @default(true)
+
+  defensa         DefensaExamenGrado @relation(fields: [idDefensa], references: [idDefensa], onDelete: Restrict)
+  estudiante      Estudiante         @relation(fields: [idEstudiante], references: [idEstudiante], onDelete: Restrict)
+
+  @@map("sesion_espectador_sorteo")
+}
+

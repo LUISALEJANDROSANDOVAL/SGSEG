@@ -49,7 +49,7 @@ interface SeedStudentInput {
   carnetEstudiantil: string;
   carnetIdentidad: string;
   nombreCompleto: string;
-  correo?: string;
+  correoInstitucional?: string;
   facultadNombre: string;
   carreraNombre: string;
   planEstudioNombre?: string;
@@ -61,7 +61,7 @@ const sampleStudents: SeedStudentInput[] = [
     carnetEstudiantil: 'SIS-20210001',
     carnetIdentidad: '8392011 LP',
     nombreCompleto: 'Alejandro Morales Quispe',
-    correo: 'alejandro.morales@estudiante.edu.bo',
+    correoInstitucional: 'alejandro.morales@estudiante.edu.bo',
     facultadNombre: 'Facultad de Ingeniería',
     carreraNombre: 'Ingeniería de Sistemas',
     planEstudioNombre: 'Plan 2024',
@@ -70,7 +70,7 @@ const sampleStudents: SeedStudentInput[] = [
     carnetEstudiantil: 'SIS-20210002',
     carnetIdentidad: '7482910 CB',
     nombreCompleto: 'valeria andrea rojas mamani',
-    correo: 'valeria.rojas@estudiante.edu.bo',
+    correoInstitucional: 'valeria.rojas@estudiante.edu.bo',
     facultadNombre: 'Facultad de Ingeniería',
     carreraNombre: 'Ingeniería de Sistemas',
     planEstudioNombre: 'Plan 2024',
@@ -88,7 +88,7 @@ const sampleStudents: SeedStudentInput[] = [
     carnetEstudiantil: 'SIS-20180045',
     carnetIdentidad: '5829102 LP',
     nombreCompleto: 'Gabriela Patricia Silva Flores',
-    correo: 'gabriela.silva@estudiante.edu.bo',
+    correoInstitucional: 'gabriela.silva@estudiante.edu.bo',
     facultadNombre: 'Facultad de Ingeniería',
     carreraNombre: 'Ingeniería de Sistemas',
     planEstudioNombre: 'Plan 2018',
@@ -97,7 +97,7 @@ const sampleStudents: SeedStudentInput[] = [
     carnetEstudiantil: 'SIS-20190088',
     carnetIdentidad: '6819203 OR',
     nombreCompleto: 'Rodrigo Fernando Vargas Perez',
-    correo: 'rodrigo.vargas@estudiante.edu.bo',
+    correoInstitucional: 'rodrigo.vargas@estudiante.edu.bo',
     facultadNombre: 'Facultad de Ingeniería',
     carreraNombre: 'Ingeniería de Sistemas',
     planEstudioNombre: 'Plan 2018',
@@ -107,7 +107,7 @@ const sampleStudents: SeedStudentInput[] = [
     carnetEstudiantil: 'INF-20220010',
     carnetIdentidad: '9012384 LP',
     nombreCompleto: 'Mariana Sofia Torrico Mendoza',
-    correo: 'mariana.torrico@estudiante.edu.bo',
+    correoInstitucional: 'mariana.torrico@estudiante.edu.bo',
     facultadNombre: 'Facultad de Ingeniería',
     carreraNombre: 'Ingeniería Informática',
     planEstudioNombre: 'Plan 2023',
@@ -116,7 +116,7 @@ const sampleStudents: SeedStudentInput[] = [
     carnetEstudiantil: 'INF-20220011',
     carnetIdentidad: '8172634 PT',
     nombreCompleto: 'DIEGO ALONSO PAREDES RIOS',
-    correo: 'diego.paredes@estudiante.edu.bo',
+    correoInstitucional: 'diego.paredes@estudiante.edu.bo',
     facultadNombre: 'Facultad de Ingeniería',
     carreraNombre: 'Ingeniería Informática',
     planEstudioNombre: 'Plan 2023',
@@ -126,7 +126,7 @@ const sampleStudents: SeedStudentInput[] = [
     carnetEstudiantil: 'INF-20240099',
     carnetIdentidad: '9876543 SC',
     nombreCompleto: 'Luciana Beatriz Aguilar Vega',
-    correo: 'luciana.aguilar@estudiante.edu.bo',
+    correoInstitucional: 'luciana.aguilar@estudiante.edu.bo',
     facultadNombre: 'Facultad de Ingeniería',
     carreraNombre: 'Ingeniería Informática',
     planEstudioNombre: 'Plan 2026 - Mención Ciberseguridad',
@@ -151,7 +151,7 @@ const sampleStudents: SeedStudentInput[] = [
     carnetEstudiantil: 'COM-20220015',
     carnetIdentidad: '6281923 LP',
     nombreCompleto: 'Joaquin Andres Suarez Delgado',
-    correo: 'joaquin.suarez@estudiante.edu.bo',
+    correoInstitucional: 'joaquin.suarez@estudiante.edu.bo',
     facultadNombre: 'Facultad de Ciencias Económicas y Financieras',
     carreraNombre: 'Ingeniería Comercial',
     planEstudioNombre: 'Plan 2022',
@@ -257,7 +257,7 @@ export async function seedEstudiantes() {
     carnetEstudiantil: string;
     carnetIdentidad: string;
     nombreCompleto: string;
-    correo: string;
+    correoInstitucional: string;
     idPlanEstudio: bigint;
   }> = [];
 
@@ -265,7 +265,7 @@ export async function seedEstudiantes() {
     const carnetEstudiantil = normalizeCarnet(item.carnetEstudiantil);
     const carnetIdentidad = normalizeCi(item.carnetIdentidad);
     const nombreCompleto = normalizeNombre(item.nombreCompleto);
-    const correo = normalizeEmail(item.correo, carnetEstudiantil);
+    const correo = normalizeEmail(item.correoInstitucional, carnetEstudiantil);
 
     const idCarrera = carreraMap.get(item.carreraNombre);
     if (!idCarrera) {
@@ -344,7 +344,7 @@ export async function seedEstudiantes() {
       carnetEstudiantil,
       carnetIdentidad,
       nombreCompleto,
-      correo,
+      correoInstitucional: correo,
       idPlanEstudio: planId!,
     });
   }
@@ -365,14 +365,14 @@ export async function seedEstudiantes() {
           carnetEstudiantil: st.carnetEstudiantil,
           carnetIdentidad: st.carnetIdentidad,
           nombreCompleto: st.nombreCompleto,
-          correo: st.correo,
+          correoInstitucional: st.correoInstitucional,
           estado: 'ACTIVO',
         },
         update: {
           idPlanEstudio: st.idPlanEstudio,
           carnetIdentidad: st.carnetIdentidad,
           nombreCompleto: st.nombreCompleto,
-          correo: st.correo,
+          correoInstitucional: st.correoInstitucional,
           estado: 'ACTIVO',
         },
       });

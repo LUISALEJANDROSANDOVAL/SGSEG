@@ -163,6 +163,34 @@ describe('Aislamiento por Carrera y Validación Reglamentaria de Sorteo (e2e)', 
   });
 
   describe('4. Reglas de Negocio del Sorteo y Prevención de Duplicados', () => {
+    beforeEach(async () => {
+      const estDerecho = await prisma.estudiante.findUnique({
+        where: { carnetEstudiantil: 'DER-20220001' },
+        include: {
+          procesos: {
+            include: {
+              instancias: {
+                include: { defensas: true },
+              },
+            },
+          },
+        },
+      });
+      const defId = estDerecho?.procesos[0]?.instancias[0]?.defensas[0]?.idDefensa;
+      if (defId) {
+        await prisma.sorteoAreaPool.deleteMany({ where: { sorteoArea: { sorteo: { idDefensa: defId } } } });
+        await prisma.sorteoArea.deleteMany({ where: { sorteo: { idDefensa: defId } } });
+        await prisma.sorteoCaso.deleteMany({ where: { sorteo: { idDefensa: defId } } });
+        await prisma.sorteo.deleteMany({ where: { idDefensa: defId } });
+        await prisma.sesionEspectadorSorteo.deleteMany({ where: { idDefensa: defId } });
+        await prisma.asignacionCaso.deleteMany({ where: { idDefensa: defId } });
+        await prisma.defensaExamenGrado.update({
+          where: { idDefensa: defId },
+          data: { estadoDefensa: 'PROGRAMADA', idCasoUtilizado: null },
+        });
+      }
+    });
+
     it('Debe ejecutar sorteo de área en defensa limpia de Derecho y rechazar sorteo duplicado con 400', async () => {
       // 1. Obtener la defensa limpia programada de Derecho
       const defensasRes = await request(app.getHttpServer())

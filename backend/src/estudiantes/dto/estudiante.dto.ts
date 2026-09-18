@@ -41,7 +41,11 @@ export class RawEstudianteInputDto {
 
   @IsOptional()
   @IsEmail({}, { message: 'El formato del correo es inválido' })
-  correo?: string;
+  correoInstitucional?: string;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'El formato del correo personal es inválido' })
+  correoPersonal?: string;
 
   @IsOptional()
   idCarrera?: number | string | bigint;
@@ -173,9 +177,13 @@ export class CreateEstudianteDto {
   @IsString()
   nombreCompleto: string;
 
-  @IsNotEmpty({ message: 'El correo es requerido' })
+  @IsNotEmpty({ message: 'El correo institucional es requerido' })
   @IsEmail({}, { message: 'Formato de correo inválido' })
-  correo: string;
+  correoInstitucional: string;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'Formato de correo personal inválido' })
+  correoPersonal?: string;
 
   @IsOptional()
   @IsString()
@@ -198,8 +206,12 @@ export class UpdateEstudianteDto {
   nombreCompleto?: string;
 
   @IsOptional()
-  @IsEmail()
-  correo?: string;
+  @IsEmail({}, { message: 'Formato de correo inválido' })
+  correoInstitucional?: string;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'Formato de correo personal inválido' })
+  correoPersonal?: string;
 
   @IsOptional()
   @IsString()

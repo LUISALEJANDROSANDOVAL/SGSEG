@@ -14,6 +14,7 @@ describe('Módulo Sorteos (e2e)', () => {
   let idAreaSorteada: number | bigint;
   let idCasoSorteado: number | bigint;
   let idDefensa: string;
+  let createdAreaId: number | bigint;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -43,6 +44,7 @@ describe('Módulo Sorteos (e2e)', () => {
 
     // Crear áreas y casos
     const area = await prisma.areaAcademica.create({ data: { nombre: `Area Sorteo ${Date.now()}`, idCarrera: carrera.idCarrera } });
+    createdAreaId = area.idArea;
     await prisma.casoEstudio.create({ data: { titulo: `Caso Sorteo ${Date.now()}`, contenido: 'Contenido extenso de prueba', idArea: area.idArea } });
     
     const estudiante = await prisma.estudiante.create({
@@ -50,7 +52,7 @@ describe('Módulo Sorteos (e2e)', () => {
         carnetEstudiantil: `E2E-SORT-${Date.now()}`,
         carnetIdentidad: '123123',
         nombreCompleto: 'Estudiante Sorteo',
-        correo: 'sorteo@uni.edu.bo',
+        correoInstitucional: 'sorteo@uni.edu.bo',
         idPlanEstudio: plan.idPlanEstudio
       }
     });
@@ -58,8 +60,55 @@ describe('Módulo Sorteos (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.$disconnect();
-    await app.close();
+    try {
+      if (idDefensa) {
+        await prisma.sesionEspectadorSorteo.deleteMany({
+          where: { idDefensa: Number(idDefensa) },
+        });
+        await prisma.asignacionCaso.deleteMany({
+          where: { idDefensa: Number(idDefensa) },
+        });
+        await prisma.sorteoAreaPool.deleteMany({
+          where: { sorteoArea: { sorteo: { idDefensa: Number(idDefensa) } } },
+        });
+        await prisma.sorteoArea.deleteMany({
+          where: { sorteo: { idDefensa: Number(idDefensa) } },
+        });
+        await prisma.sorteoCaso.deleteMany({
+          where: { sorteo: { idDefensa: Number(idDefensa) } },
+        });
+        await prisma.sorteo.deleteMany({
+          where: { idDefensa: Number(idDefensa) },
+        });
+        await prisma.defensaExamenGrado.deleteMany({
+          where: { idDefensa: Number(idDefensa) },
+        });
+      }
+      if (idEstudiante) {
+        await prisma.instanciaExamenGrado.deleteMany({
+          where: { proceso: { idEstudiante: Number(idEstudiante) } },
+        });
+        await prisma.procesoExamenGrado.deleteMany({
+          where: { idEstudiante: Number(idEstudiante) },
+        });
+        await prisma.estudiante.deleteMany({
+          where: { idEstudiante: Number(idEstudiante) },
+        });
+      }
+      if (createdAreaId) {
+        await prisma.casoEstudio.deleteMany({ where: { idArea: Number(createdAreaId) } });
+        await prisma.planArea.deleteMany({ where: { idArea: Number(createdAreaId) } });
+        await prisma.areaAcademica.deleteMany({ where: { idArea: Number(createdAreaId) } });
+      }
+      // Revertir casos de vuelta a DISPONIBLE
+      await prisma.casoEstudio.updateMany({
+        where: { estado: 'AGOTADO' },
+        data: { estado: 'DISPONIBLE' },
+      });
+    } finally {
+      await prisma.$disconnect();
+      await app.close();
+    }
   });
 
   it('1. POST /sorteos/area - Debe sortear un área correctamente', async () => {
@@ -112,10 +161,10 @@ describe('Módulo Sorteos (e2e)', () => {
   });
 
   it('4. POST /sorteos/caso - Debe impedir que un caso con 2 usos (AGOTADO) sea sorteado', async () => {
-    // 1. Simular que el caso de estudio alcanzó su límite de 2 usos (AGOTADO)
-    await prisma.casoEstudio.update({
-      where: { idCasoEstudio: Number(idCasoSorteado) },
-      data: { estado: 'AGOTADO' }
+    // 1. Simular que los casos de estudio del área alcanzaron su límite (AGOTADOS)
+    await prisma.casoEstudio.updateMany({
+      where: { idArea: Number(idAreaSorteada) },
+      data: { estado: 'AGOTADO' },
     });
 
     // 2. Liberar la defensa actual para permitir un nuevo sorteo de caso

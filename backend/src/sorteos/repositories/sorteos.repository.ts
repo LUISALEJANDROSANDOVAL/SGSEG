@@ -1,5 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/services/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SorteosRepository {
@@ -277,6 +283,17 @@ export class SorteosRepository {
     plazoLimiteEntrega?: Date;
   }) {
     return this.prisma.$transaction(async (tx) => {
+      // 0. Control estricto de concurrencia: verificar si el caso ya está asignado activamente
+      const asignacionActiva = await tx.asignacionCaso.findFirst({
+        where: {
+          idCaso: params.idCasoSeleccionado,
+          estado: { in: ['ASIGNADO', 'EN_CURSO'] },
+        },
+      });
+      if (asignacionActiva && asignacionActiva.idDefensa !== params.idDefensa) {
+        throw new ConflictException('El caso de estudio ya se encuentra asignado a otro estudiante.');
+      }
+
       // 1. Crear registro maestro de Sorteo
       const sorteo = await tx.sorteo.create({
         data: {
@@ -309,19 +326,54 @@ export class SorteosRepository {
         },
       });
 
-      // 4. Contar usos actuales del caso para actualizar a AGOTADO si llega a 2
+      // 4. Obtener estudiante y área para registrar AsignacionCaso
+      const defensa = await tx.defensaExamenGrado.findUnique({
+        where: { idDefensa: params.idDefensa },
+        include: {
+          instancia: { include: { proceso: true } },
+          sorteos: { include: { area: true } },
+        },
+      });
+
+      const idEstudiante = defensa?.instancia.proceso.idEstudiante;
+      const idArea = defensa?.sorteos.find((s) => s.area !== null)?.area?.idAreaResultado;
+
+      if (idEstudiante && idArea) {
+        await tx.asignacionCaso.upsert({
+          where: { idDefensa: params.idDefensa },
+          create: {
+            idEstudiante,
+            idDefensa: params.idDefensa,
+            idArea,
+            idCaso: params.idCasoSeleccionado,
+            idUsuarioEjecutor: params.idUsuarioEjecutor,
+            idSorteo: sorteo.idSorteo,
+            plazoLimiteEntrega: params.plazoLimiteEntrega,
+            estado: 'ASIGNADO',
+          },
+          update: {
+            idCaso: params.idCasoSeleccionado,
+            idArea,
+            idUsuarioEjecutor: params.idUsuarioEjecutor,
+            idSorteo: sorteo.idSorteo,
+            plazoLimiteEntrega: params.plazoLimiteEntrega,
+            estado: 'ASIGNADO',
+          },
+        });
+      }
+
+      // 5. Contar usos actuales del caso para actualizar a AGOTADO si llega a 2
       const defensasCount = await tx.defensaExamenGrado.count({
         where: { idCasoUtilizado: params.idCasoSeleccionado },
       });
 
-      if (defensasCount >= 2) {
-        await tx.casoEstudio.update({
-          where: { idCasoEstudio: params.idCasoSeleccionado },
-          data: { estado: 'AGOTADO' },
-        });
-      }
+      const nuevoEstado = defensasCount >= 2 ? 'AGOTADO' : 'EN_USO';
+      await tx.casoEstudio.update({
+        where: { idCasoEstudio: params.idCasoSeleccionado },
+        data: { estado: nuevoEstado },
+      });
 
-      // 5. Registrar auditoría inmutable
+      // 6. Registrar auditoría inmutable
       await tx.registroAuditoria.create({
         data: {
           idUsuario: params.idUsuarioEjecutor,
@@ -329,7 +381,7 @@ export class SorteosRepository {
           idDefensa: params.idDefensa,
           idCasoEstudio: params.idCasoSeleccionado,
           tipoOperacion: 'SORTEO_CASO_EJECUTADO',
-          descripcion: `Sorteo de caso asignado: ${params.idCasoSeleccionado}. Usos registrados acumulados: ${defensasCount}.`,
+          descripcion: `Sorteo de caso asignado: ${params.idCasoSeleccionado}. Usos registrados acumulados: ${defensasCount}. Estado del caso: ${nuevoEstado}.`,
         },
       });
 
@@ -694,4 +746,348 @@ export class SorteosRepository {
       },
     });
   }
+
+  /**
+   * Finaliza el sorteo y persiste atómicamente la asignación oficial del caso con control estricto de concurrencia.
+   */
+  async finalizarYAsignarSorteo(params: {
+    idDefensa: bigint;
+    idEstudiante: bigint;
+    idArea: bigint;
+    idCaso: bigint;
+    idUsuarioEjecutor: bigint;
+    idPlanEstudioContexto: bigint;
+    fechaDefensaContexto: Date;
+    estudiantePresente?: boolean;
+    motivoInasistencia?: string;
+    tokenActa?: string;
+    codigoActa?: string;
+    plazoLimiteEntrega?: Date;
+  }) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Control de concurrencia a nivel de BD: ¿el caso ya está tomado por otra defensa activa?
+        const asignacionActiva = await tx.asignacionCaso.findFirst({
+          where: {
+            idCaso: params.idCaso,
+            estado: { in: ['ASIGNADO', 'EN_CURSO'] },
+          },
+        });
+
+        if (asignacionActiva && asignacionActiva.idDefensa !== params.idDefensa) {
+          throw new ConflictException(
+            'El caso de estudio ya se encuentra asignado a otro estudiante.',
+          );
+        }
+
+        // 2. Validar que el caso existe y no esté agotado
+        const caso = await tx.casoEstudio.findUnique({
+          where: { idCasoEstudio: params.idCaso },
+        });
+
+        if (!caso) {
+          throw new NotFoundException(
+            `Caso de estudio con ID ${params.idCaso} no encontrado.`,
+          );
+        }
+
+        if (caso.estado === 'AGOTADO') {
+          throw new BadRequestException(
+            'El caso de estudio seleccionado ya se encuentra agotado.',
+          );
+        }
+
+        // 3. Validar estado de la defensa
+        const defensa = await tx.defensaExamenGrado.findUnique({
+          where: { idDefensa: params.idDefensa },
+          include: {
+            asignacionCaso: true,
+            sorteos: {
+              orderBy: { fechaHora: 'desc' },
+              take: 1,
+            },
+          },
+        });
+
+        if (!defensa) {
+          throw new NotFoundException(
+            `Defensa con ID ${params.idDefensa} no encontrada.`,
+          );
+        }
+
+        if (
+          defensa.asignacionCaso &&
+          ['ASIGNADO', 'EN_CURSO'].includes(defensa.asignacionCaso.estado)
+        ) {
+          throw new BadRequestException(
+            'Esta defensa ya cuenta con una asignación de caso activa.',
+          );
+        }
+
+        // 4. Obtener o registrar registro maestro de Sorteo si no existiera
+        let idSorteo = defensa.sorteos[0]?.idSorteo;
+        if (!idSorteo) {
+          const nuevoSorteo = await tx.sorteo.create({
+            data: {
+              idDefensa: params.idDefensa,
+              idUsuarioEjecutor: params.idUsuarioEjecutor,
+              idPlanEstudioContexto: params.idPlanEstudioContexto,
+              fechaDefensaContexto: params.fechaDefensaContexto,
+              estadoSorteo: 'ACTIVO',
+              estudiantePresente: params.estudiantePresente ?? true,
+              motivoInasistencia: params.motivoInasistencia,
+            },
+          });
+          idSorteo = nuevoSorteo.idSorteo;
+        }
+
+        // 5. Persistir la asignación definitiva
+        const asignacion = await tx.asignacionCaso.create({
+          data: {
+            idEstudiante: params.idEstudiante,
+            idDefensa: params.idDefensa,
+            idArea: params.idArea,
+            idCaso: params.idCaso,
+            idUsuarioEjecutor: params.idUsuarioEjecutor,
+            idSorteo,
+            tokenActa: params.tokenActa,
+            codigoActa: params.codigoActa,
+            plazoLimiteEntrega: params.plazoLimiteEntrega,
+            estado: 'ASIGNADO',
+          },
+          include: {
+            estudiante: {
+              include: {
+                planEstudio: {
+                  include: {
+                    carrera: true,
+                  },
+                },
+              },
+            },
+            area: true,
+            caso: true,
+            defensa: {
+              include: {
+                tipoDefensa: true,
+              },
+            },
+            usuarioEjecutor: {
+              select: {
+                idUsuario: true,
+                primerNombre: true,
+                primerApellido: true,
+                correoInstitucional: true,
+                rol: true,
+              },
+            },
+          },
+        });
+
+        // 6. Actualizar la defensa
+        await tx.defensaExamenGrado.update({
+          where: { idDefensa: params.idDefensa },
+          data: {
+            idCasoUtilizado: params.idCaso,
+            estadoDefensa: 'CASO_ASIGNADO',
+          },
+        });
+
+        // 7. Contar usos acumulados y actualizar estado del caso a EN_USO o AGOTADO
+        const totalAsignaciones = await tx.asignacionCaso.count({
+          where: {
+            idCaso: params.idCaso,
+            estado: { not: 'ANULADO' },
+          },
+        });
+
+        const nuevoEstadoCaso = totalAsignaciones >= 2 ? 'AGOTADO' : 'EN_USO';
+        await tx.casoEstudio.update({
+          where: { idCasoEstudio: params.idCaso },
+          data: { estado: nuevoEstadoCaso },
+        });
+
+        // 8. Auditoría inmutable de cierre de sorteo y asignación
+        await tx.registroAuditoria.create({
+          data: {
+            idUsuario: params.idUsuarioEjecutor,
+            idDefensa: params.idDefensa,
+            idCasoEstudio: params.idCaso,
+            idSorteo,
+            tipoOperacion: 'SORTEO_FINALIZADO_ASIGNACION',
+            descripcion: `Sorteo finalizado exitosamente. Caso ${params.idCaso} asignado a Estudiante ${params.idEstudiante}. Estado del caso: ${nuevoEstadoCaso}.`,
+            valorNuevo: {
+              idAsignacion: asignacion.idAsignacion.toString(),
+              idEstudiante: params.idEstudiante.toString(),
+              idCaso: params.idCaso.toString(),
+              idArea: params.idArea.toString(),
+              codigoActa: params.codigoActa,
+            },
+          },
+        });
+
+        return asignacion;
+      });
+    } catch (err: any) {
+      if (
+        (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') ||
+        err?.code === 'P2002' ||
+        err?.message?.includes?.('idx_asignacion_caso_activo_unico') ||
+        err?.meta?.target?.includes?.('idx_asignacion_caso_activo_unico')
+      ) {
+        throw new ConflictException(
+          'El caso de estudio ya se encuentra asignado a otro estudiante.',
+        );
+      }
+      throw err;
+    }
+  }
+
+  /**
+   * Consulta la asignación formal de una defensa por su ID.
+   */
+  async findAsignacionByDefensa(idDefensa: bigint) {
+    return this.prisma.asignacionCaso.findUnique({
+      where: { idDefensa },
+      include: {
+        estudiante: {
+          include: {
+            planEstudio: {
+              include: {
+                carrera: true,
+              },
+            },
+          },
+        },
+        area: true,
+        caso: true,
+        defensa: {
+          include: {
+            tipoDefensa: true,
+          },
+        },
+        usuarioEjecutor: {
+          select: {
+            idUsuario: true,
+            primerNombre: true,
+            primerApellido: true,
+            correoInstitucional: true,
+            rol: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Crea una nueva sesión temporal de espectador para que el estudiante siga el sorteo.
+   */
+  async crearSesionEspectador(data: {
+    token: string;
+    slug: string;
+    idDefensa: bigint;
+    idEstudiante: bigint;
+    fechaExpiracion: Date;
+    fase?: string;
+    estadoPayload?: any;
+  }) {
+    return this.prisma.sesionEspectadorSorteo.create({
+      data: {
+        token: data.token,
+        slug: data.slug,
+        idDefensa: data.idDefensa,
+        idEstudiante: data.idEstudiante,
+        fechaExpiracion: data.fechaExpiracion,
+        fase: data.fase ?? 'ESPERANDO',
+        estadoPayload: data.estadoPayload ?? Prisma.JsonNull,
+        activo: true,
+      },
+    });
+  }
+
+  /**
+   * Busca una sesión de espectador activa por token o slug.
+   */
+  async findSesionEspectadorByTokenOrSlug(identificador: string) {
+    return this.prisma.sesionEspectadorSorteo.findFirst({
+      where: {
+        OR: [{ token: identificador }, { slug: identificador }],
+        activo: true,
+      },
+      include: {
+        defensa: {
+          include: {
+            tipoDefensa: true,
+            asignacionCaso: {
+              include: {
+                area: true,
+                caso: true,
+              },
+            },
+          },
+        },
+        estudiante: {
+          include: {
+            planEstudio: {
+              include: {
+                carrera: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Actualiza la fase o el payload en vivo de la sesión de espectador.
+   */
+  async actualizarFaseSesionEspectador(
+    identificador: string,
+    fase: string,
+    payload?: any,
+  ) {
+    const sesion = await this.prisma.sesionEspectadorSorteo.findFirst({
+      where: {
+        OR: [{ token: identificador }, { slug: identificador }],
+        activo: true,
+      },
+    });
+
+    if (!sesion) {
+      throw new NotFoundException(
+        `Sesión de espectador no encontrada: ${identificador}`,
+      );
+    }
+
+    return this.prisma.sesionEspectadorSorteo.update({
+      where: { idSesion: sesion.idSesion },
+      data: {
+        fase,
+        estadoPayload: payload !== undefined ? payload : sesion.estadoPayload,
+      },
+    });
+  }
+
+  /**
+   * Invalida/expira formalmente la sesión de espectador al terminar el acto.
+   */
+  async expirarSesionEspectador(identificador: string) {
+    const sesion = await this.prisma.sesionEspectadorSorteo.findFirst({
+      where: {
+        OR: [{ token: identificador }, { slug: identificador }],
+      },
+    });
+
+    if (!sesion) return null;
+
+    return this.prisma.sesionEspectadorSorteo.update({
+      where: { idSesion: sesion.idSesion },
+      data: {
+        activo: false,
+        fase: 'EXPIRADO',
+      },
+    });
+  }
 }
+

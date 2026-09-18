@@ -3,7 +3,9 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import {
   BulkEstudiantesInputDto,
   BulkEstudiantesResultDto,
@@ -31,6 +33,7 @@ export class EstudiantesService {
    */
   async bulkUpsertEstudiantes(
     dto: BulkEstudiantesInputDto,
+    user?: AuthenticatedUser,
   ): Promise<BulkEstudiantesResultDto> {
     const startTime = Date.now();
     const result: BulkEstudiantesResultDto = {
@@ -66,6 +69,26 @@ export class EstudiantesService {
           dto.nombreCarreraPorDefecto.toLowerCase(),
           carrera.idCarrera,
         );
+      }
+    }
+
+    // Validación de frontera de carrera para Jefe de Carrera
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowedCarreraIds = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (allowedCarreraIds.length === 0) {
+        throw new ForbiddenException(
+          'No tienes carreras asignadas a tu cuenta de Jefe de Carrera.',
+        );
+      }
+      if (defaultCarreraId && !allowedCarreraIds.includes(defaultCarreraId)) {
+        throw new ForbiddenException(
+          'No tienes permisos para realizar importaciones en una carrera ajena.',
+        );
+      }
+      if (!defaultCarreraId && allowedCarreraIds.length > 0) {
+        defaultCarreraId = allowedCarreraIds[0];
       }
     }
 
@@ -124,7 +147,7 @@ export class EstudiantesService {
       carnetEstudiantil: string;
       carnetIdentidad: string;
       nombreCompleto: string;
-      correo: string;
+      correoInstitucional: string;
       estado: string;
       idPlanEstudio: bigint;
     }> = [];
@@ -251,7 +274,7 @@ export class EstudiantesService {
           carnetEstudiantil: norm.carnetEstudiantil,
           carnetIdentidad: norm.carnetIdentidad,
           nombreCompleto: norm.nombreCompleto,
-          correo: norm.correo,
+          correoInstitucional: norm.correoInstitucional,
           estado: norm.estado,
           idPlanEstudio: finalPlanId,
         });
@@ -280,7 +303,7 @@ export class EstudiantesService {
               carnetEstudiantil: student.carnetEstudiantil,
               carnetIdentidad: student.carnetIdentidad,
               nombreCompleto: student.nombreCompleto,
-              correo: student.correo,
+              correoInstitucional: student.correoInstitucional,
               estado: student.estado,
             });
 
@@ -342,7 +365,7 @@ export class EstudiantesService {
       carnetEstudiantil: dto.carnetEstudiantil,
       carnetIdentidad: dto.carnetIdentidad,
       nombreCompleto: dto.nombreCompleto,
-      correo: dto.correo,
+      correoInstitucional: dto.correoInstitucional,
       idCarrera: dto.idCarrera,
       idPlanEstudio: dto.idPlanEstudio,
       nombrePlanEstudio: dto.nombrePlanEstudio,
@@ -381,7 +404,7 @@ export class EstudiantesService {
         carnetEstudiantil: norm.carnetEstudiantil,
         carnetIdentidad: norm.carnetIdentidad,
         nombreCompleto: norm.nombreCompleto,
-        correo: norm.correo,
+        correoInstitucional: norm.correoInstitucional,
         estado: norm.estado,
       }),
     );
@@ -448,9 +471,9 @@ export class EstudiantesService {
   }
 
   /**
-   * Busca un estudiante por su carnet estudiantil.
+   * Busca un estudiante por su carnet estudiantil validando permisos de carrera.
    */
-  async findByCarnet(carnetEstudiantil: string) {
+  async findByCarnet(carnetEstudiantil: string, user?: AuthenticatedUser) {
     const normalizedCarnet = this.normalizer.normalizeCarnet(carnetEstudiantil);
     const estudiante =
       await this.repository.findByCarnetEstudiantil(normalizedCarnet);
@@ -461,13 +484,27 @@ export class EstudiantesService {
       );
     }
 
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(estudiante.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para consultar estudiantes de otra carrera.',
+        );
+      }
+    }
+
     return this.serializeBigInt(estudiante);
   }
 
   /**
-   * Busca un estudiante por su ID primario.
+   * Busca un estudiante por su ID primario validando permisos de carrera.
    */
-  async findById(idEstudiante: number | string | bigint) {
+  async findById(
+    idEstudiante: number | string | bigint,
+    user?: AuthenticatedUser,
+  ) {
     const estudiante = await this.repository.findById(BigInt(idEstudiante));
 
     if (!estudiante) {
@@ -476,15 +513,27 @@ export class EstudiantesService {
       );
     }
 
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(estudiante.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para consultar estudiantes de otra carrera.',
+        );
+      }
+    }
+
     return this.serializeBigInt(estudiante);
   }
 
   /**
-   * Actualiza los datos de un estudiante.
+   * Actualiza los datos de un estudiante validando permisos de carrera.
    */
   async update(
     idEstudiante: number | string | bigint,
     dto: UpdateEstudianteDto,
+    user?: AuthenticatedUser,
   ) {
     const id = BigInt(idEstudiante);
     const existing = await this.repository.findById(id);
@@ -495,11 +544,32 @@ export class EstudiantesService {
       );
     }
 
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(existing.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para modificar estudiantes de otra carrera.',
+        );
+      }
+      if (dto.idPlanEstudio) {
+        const targetPlan = await this.repository.findPlanById(
+          BigInt(dto.idPlanEstudio),
+        );
+        if (targetPlan && !allowed.includes(targetPlan.idCarrera)) {
+          throw new ForbiddenException(
+            'No puedes reasignar al estudiante a un plan de otra carrera.',
+          );
+        }
+      }
+    }
+
     const data: {
       idPlanEstudio?: bigint;
       carnetIdentidad?: string;
       nombreCompleto?: string;
-      correo?: string;
+      correoInstitucional?: string;
       estado?: string;
     } = {};
 
@@ -510,7 +580,7 @@ export class EstudiantesService {
       data.nombreCompleto = this.normalizer.normalizeNombreCompleto(
         dto.nombreCompleto,
       );
-    if (dto.correo) data.correo = this.normalizer.normalizeCorreo(dto.correo);
+    if (dto.correoInstitucional) data.correoInstitucional = this.normalizer.normalizeCorreo(dto.correoInstitucional);
     if (dto.estado) data.estado = dto.estado.trim().toUpperCase();
 
     const result = await this.repository.executeInTransaction((tx) =>
@@ -535,7 +605,10 @@ export class EstudiantesService {
   /**
    * Soft-delete de un estudiante (marca su estado como 'ELIMINADO' para preservar el historial).
    */
-  async softDelete(idEstudiante: number | string | bigint) {
+  async softDelete(
+    idEstudiante: number | string | bigint,
+    user?: AuthenticatedUser,
+  ) {
     const id = BigInt(idEstudiante);
     const existing = await this.repository.findById(id);
 
@@ -543,6 +616,17 @@ export class EstudiantesService {
       throw new NotFoundException(
         `Estudiante con ID ${idEstudiante} no encontrado`,
       );
+    }
+
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(existing.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para eliminar estudiantes de otra carrera.',
+        );
+      }
     }
 
     const updated = await this.repository.softDelete(id);
@@ -555,7 +639,10 @@ export class EstudiantesService {
   /**
    * Restaura un estudiante con soft-delete previo.
    */
-  async restore(idEstudiante: number | string | bigint) {
+  async restore(
+    idEstudiante: number | string | bigint,
+    user?: AuthenticatedUser,
+  ) {
     const id = BigInt(idEstudiante);
     const existing = await this.repository.findById(id);
 
@@ -563,6 +650,17 @@ export class EstudiantesService {
       throw new NotFoundException(
         `Estudiante con ID ${idEstudiante} no encontrado`,
       );
+    }
+
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(existing.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para restaurar estudiantes de otra carrera.',
+        );
+      }
     }
 
     const updated = await this.repository.restore(id);
@@ -595,5 +693,75 @@ export class EstudiantesService {
         typeof value === 'bigint' ? value.toString() : value,
       ),
     ) as T;
+  }
+
+  /**
+   * Importa estudiantes desde un archivo Excel (Módulo 3).
+   */
+  async importarEstudiantesDesdeArchivo(file: any): Promise<BulkEstudiantesResultDto> {
+    if (!file) {
+      throw new BadRequestException('No se ha proporcionado ningún archivo.');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    try {
+      await workbook.xlsx.load(file.buffer);
+    } catch (error) {
+      throw new BadRequestException('El archivo no es un Excel válido (.xlsx).');
+    }
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      throw new BadRequestException('El archivo Excel está vacío.');
+    }
+
+    const estudiantes: RawEstudianteInputDto[] = [];
+    let headers: { [key: string]: number } = {};
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) {
+        row.eachCell((cell, colNumber) => {
+          if (cell.value) {
+            headers[cell.value.toString().trim().toLowerCase()] = colNumber;
+          }
+        });
+        return;
+      }
+
+      // Read values based on header names (flexible mapping)
+      const getValue = (headerName: string) => {
+        const col = headers[headerName.toLowerCase()];
+        return col ? row.getCell(col).text?.trim() : undefined;
+      };
+
+      const carnetEstudiantil = getValue('carnet') || getValue('carnet estudiantil') || getValue('registro');
+      const carnetIdentidad = getValue('ci') || getValue('carnet de identidad') || getValue('documento');
+      const nombreCompleto = getValue('nombre') || getValue('nombre completo');
+      const correoInstitucional = getValue('correo institucional') || getValue('correo');
+      const correoPersonal = getValue('correo personal');
+      const idPlanEstudioRaw = getValue('id plan de estudio') || getValue('id plan') || getValue('idplan');
+
+      let idPlanEstudio: number | undefined;
+      if (idPlanEstudioRaw && !isNaN(Number(idPlanEstudioRaw))) {
+        idPlanEstudio = Number(idPlanEstudioRaw);
+      }
+
+      if (carnetEstudiantil && carnetIdentidad) {
+        estudiantes.push({
+          carnetEstudiantil,
+          carnetIdentidad,
+          nombreCompleto,
+          correoInstitucional,
+          correoPersonal,
+          idPlanEstudio,
+        });
+      }
+    });
+
+    const dto = new BulkEstudiantesInputDto();
+    dto.estudiantes = estudiantes;
+    dto.batchSize = 50;
+
+    return this.bulkUpsertEstudiantes(dto);
   }
 }

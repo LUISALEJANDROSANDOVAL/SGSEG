@@ -5,7 +5,7 @@ export interface NormalizedEstudiante {
   carnetEstudiantil: string;
   carnetIdentidad: string;
   nombreCompleto: string;
-  correo: string;
+  correoInstitucional: string;
   idCarrera?: bigint;
   nombreCarrera?: string;
   idPlanEstudio?: bigint;
@@ -130,7 +130,7 @@ export class EstudiantesNormalizerService {
       raw.primerApellido,
       raw.segundoApellido,
     );
-    const correo = this.normalizeCorreo(raw.correo, carnetEstudiantil);
+    const correo = this.normalizeCorreo(raw.correoInstitucional, carnetEstudiantil);
 
     let idCarrera: bigint | undefined;
     if (
@@ -165,7 +165,7 @@ export class EstudiantesNormalizerService {
       carnetEstudiantil,
       carnetIdentidad,
       nombreCompleto,
-      correo,
+      correoInstitucional: correo,
       idCarrera,
       nombreCarrera,
       idPlanEstudio,
