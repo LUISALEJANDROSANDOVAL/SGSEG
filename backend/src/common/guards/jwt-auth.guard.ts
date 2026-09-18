@@ -37,6 +37,28 @@ export class JwtAuthGuard implements CanActivate {
     ]);
 
     if (isPublic) {
+      const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+      const authHeader = request.headers.authorization;
+      if (authHeader && typeof authHeader === 'string') {
+        const [type, token] = authHeader.split(' ');
+        if (type === 'Bearer' && token) {
+          try {
+            const payload = await this.jwtService.verifyAsync<JwtPayload>(
+              token,
+              {
+                secret: process.env.JWT_SECRET ?? 'sgseg-dev-secret',
+              },
+            );
+            request.user = {
+              idUsuario: payload.sub,
+              correoInstitucional: payload.correoInstitucional,
+              rol: payload.rol,
+            };
+          } catch {
+            // Ruta pública: token opcional no bloqueante
+          }
+        }
+      }
       return true;
     }
 

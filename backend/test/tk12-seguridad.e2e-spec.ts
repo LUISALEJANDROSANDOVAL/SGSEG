@@ -7,8 +7,11 @@ import { PrismaService } from '../src/prisma/services/prisma.service';
 
 describe('Auditoría TK-12: Pruebas de Seguridad y Aislamiento (e2e)', () => {
   let app: INestApplication<App>;
-  let userToken: string;
+  let coordToken: string;
+  let jefeSistemasToken: string;
+  let viceToken: string;
   let prisma: PrismaService;
+  let carreraDerechoId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -20,12 +23,25 @@ describe('Auditoría TK-12: Pruebas de Seguridad y Aislamiento (e2e)', () => {
     
     prisma = app.get(PrismaService);
 
-    // Obtener un token válido para pruebas de rol (Jefe de Carrera / Coordinación)
-    const res = await request(app.getHttpServer())
+    // 1. Obtener tokens para cada rol
+    const loginCoord = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ correoInstitucional: 'coord@uni.edu.bo', password: 'Admin123!' });
-    
-    userToken = res.body.accessToken;
+    coordToken = loginCoord.body.accessToken;
+
+    const loginSistemas = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ correoInstitucional: 'jefe.sistemas@uni.edu.bo', password: 'Admin123!' });
+    jefeSistemasToken = loginSistemas.body.accessToken;
+
+    const loginVice = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ correoInstitucional: 'vicerrector@uni.edu.bo', password: 'Admin123!' });
+    viceToken = loginVice.body.accessToken;
+
+    // Obtener ID de la carrera Derecho
+    const carDerecho = await prisma.carrera.findFirst({ where: { nombre: 'Derecho' } });
+    carreraDerechoId = String(carDerecho?.idCarrera || 2);
   });
 
   afterAll(async () => {
@@ -52,13 +68,62 @@ describe('Auditoría TK-12: Pruebas de Seguridad y Aislamiento (e2e)', () => {
       
       expect(res.body.message).toEqual('Token inválido o expirado');
     });
+
+    it('Debe rechazar consulta por carnet en /estudiantes/carnet/:carnet sin token JWT (revisión de cierre @Public)', async () => {
+      await request(app.getHttpServer())
+        .get('/estudiantes/carnet/SIS-20220001')
+        .expect(401);
+    });
+
+    it('Debe rechazar consulta por ID en /estudiantes/:id sin token JWT (revisión de cierre @Public)', async () => {
+      await request(app.getHttpServer())
+        .get('/estudiantes/1')
+        .expect(401);
+    });
   });
 
-  describe('2. Aislamiento de Privilegios (HTTP 403) - [EN ESPERA DE MÓDULO ACADEMIA]', () => {
-    it.todo('Debe prohibir que un Jefe de Carrera cree planes de estudio de otra carrera');
-    it.todo('Debe prohibir que un Jefe de Carrera edite áreas académicas ajenas a su jurisdicción');
-    
-    // NOTA: Estas pruebas se implementarán completamente cuando se fusione
-    // la rama "feature/modulo-academia" que contiene los controladores de Planes y Áreas.
+  describe('2. Aislamiento de Privilegios por Rol (HTTP 403)', () => {
+    it('Debe prohibir que un Jefe de Sistemas cree áreas académicas para Derecho (403)', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/casos/areas')
+        .set('Authorization', `Bearer ${jefeSistemasToken}`)
+        .send({
+          idCarrera: carreraDerechoId,
+          nombre: 'Área Ilícita de Prueba',
+          umbralDisponibilidad: 2,
+        })
+        .expect(403);
+
+      expect(res.body.message).toContain('No tienes permisos para crear áreas en carreras ajenas');
+    });
+
+    it('Debe prohibir que un Jefe de Carrera acceda a la lista global de usuarios en /auth/users (403)', async () => {
+      await request(app.getHttpServer())
+        .get('/auth/users')
+        .set('Authorization', `Bearer ${jefeSistemasToken}`)
+        .expect(403);
+    });
+
+    it('Debe permitir a Coordinación consultar la lista global de usuarios en /auth/users (200)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/auth/users')
+        .set('Authorization', `Bearer ${coordToken}`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+    });
+
+    it('Debe prohibir que Vicerrectorado ejecute mutaciones en /casos (403)', async () => {
+      await request(app.getHttpServer())
+        .post('/casos')
+        .set('Authorization', `Bearer ${viceToken}`)
+        .send({
+          idArea: '1',
+          titulo: 'Caso Ilícito por Vicerrectorado',
+          contenido: 'Planteamiento...',
+        })
+        .expect(403);
+    });
   });
 });

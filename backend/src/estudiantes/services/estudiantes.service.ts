@@ -33,6 +33,7 @@ export class EstudiantesService {
    */
   async bulkUpsertEstudiantes(
     dto: BulkEstudiantesInputDto,
+    user?: AuthenticatedUser,
   ): Promise<BulkEstudiantesResultDto> {
     const startTime = Date.now();
     const result: BulkEstudiantesResultDto = {
@@ -68,6 +69,26 @@ export class EstudiantesService {
           dto.nombreCarreraPorDefecto.toLowerCase(),
           carrera.idCarrera,
         );
+      }
+    }
+
+    // Validación de frontera de carrera para Jefe de Carrera
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowedCarreraIds = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (allowedCarreraIds.length === 0) {
+        throw new ForbiddenException(
+          'No tienes carreras asignadas a tu cuenta de Jefe de Carrera.',
+        );
+      }
+      if (defaultCarreraId && !allowedCarreraIds.includes(defaultCarreraId)) {
+        throw new ForbiddenException(
+          'No tienes permisos para realizar importaciones en una carrera ajena.',
+        );
+      }
+      if (!defaultCarreraId && allowedCarreraIds.length > 0) {
+        defaultCarreraId = allowedCarreraIds[0];
       }
     }
 
@@ -450,9 +471,9 @@ export class EstudiantesService {
   }
 
   /**
-   * Busca un estudiante por su carnet estudiantil.
+   * Busca un estudiante por su carnet estudiantil validando permisos de carrera.
    */
-  async findByCarnet(carnetEstudiantil: string) {
+  async findByCarnet(carnetEstudiantil: string, user?: AuthenticatedUser) {
     const normalizedCarnet = this.normalizer.normalizeCarnet(carnetEstudiantil);
     const estudiante =
       await this.repository.findByCarnetEstudiantil(normalizedCarnet);
@@ -463,13 +484,27 @@ export class EstudiantesService {
       );
     }
 
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(estudiante.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para consultar estudiantes de otra carrera.',
+        );
+      }
+    }
+
     return this.serializeBigInt(estudiante);
   }
 
   /**
-   * Busca un estudiante por su ID primario.
+   * Busca un estudiante por su ID primario validando permisos de carrera.
    */
-  async findById(idEstudiante: number | string | bigint) {
+  async findById(
+    idEstudiante: number | string | bigint,
+    user?: AuthenticatedUser,
+  ) {
     const estudiante = await this.repository.findById(BigInt(idEstudiante));
 
     if (!estudiante) {
@@ -478,15 +513,27 @@ export class EstudiantesService {
       );
     }
 
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(estudiante.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para consultar estudiantes de otra carrera.',
+        );
+      }
+    }
+
     return this.serializeBigInt(estudiante);
   }
 
   /**
-   * Actualiza los datos de un estudiante.
+   * Actualiza los datos de un estudiante validando permisos de carrera.
    */
   async update(
     idEstudiante: number | string | bigint,
     dto: UpdateEstudianteDto,
+    user?: AuthenticatedUser,
   ) {
     const id = BigInt(idEstudiante);
     const existing = await this.repository.findById(id);
@@ -495,6 +542,27 @@ export class EstudiantesService {
       throw new NotFoundException(
         `Estudiante con ID ${idEstudiante} no encontrado`,
       );
+    }
+
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(existing.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para modificar estudiantes de otra carrera.',
+        );
+      }
+      if (dto.idPlanEstudio) {
+        const targetPlan = await this.repository.findPlanById(
+          BigInt(dto.idPlanEstudio),
+        );
+        if (targetPlan && !allowed.includes(targetPlan.idCarrera)) {
+          throw new ForbiddenException(
+            'No puedes reasignar al estudiante a un plan de otra carrera.',
+          );
+        }
+      }
     }
 
     const data: {
@@ -537,7 +605,10 @@ export class EstudiantesService {
   /**
    * Soft-delete de un estudiante (marca su estado como 'ELIMINADO' para preservar el historial).
    */
-  async softDelete(idEstudiante: number | string | bigint) {
+  async softDelete(
+    idEstudiante: number | string | bigint,
+    user?: AuthenticatedUser,
+  ) {
     const id = BigInt(idEstudiante);
     const existing = await this.repository.findById(id);
 
@@ -545,6 +616,17 @@ export class EstudiantesService {
       throw new NotFoundException(
         `Estudiante con ID ${idEstudiante} no encontrado`,
       );
+    }
+
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(existing.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para eliminar estudiantes de otra carrera.',
+        );
+      }
     }
 
     const updated = await this.repository.softDelete(id);
@@ -557,7 +639,10 @@ export class EstudiantesService {
   /**
    * Restaura un estudiante con soft-delete previo.
    */
-  async restore(idEstudiante: number | string | bigint) {
+  async restore(
+    idEstudiante: number | string | bigint,
+    user?: AuthenticatedUser,
+  ) {
     const id = BigInt(idEstudiante);
     const existing = await this.repository.findById(id);
 
@@ -565,6 +650,17 @@ export class EstudiantesService {
       throw new NotFoundException(
         `Estudiante con ID ${idEstudiante} no encontrado`,
       );
+    }
+
+    if (user && user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.repository.getUserCarreraIds(
+        BigInt(user.idUsuario),
+      );
+      if (!allowed.includes(existing.planEstudio.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para restaurar estudiantes de otra carrera.',
+        );
+      }
     }
 
     const updated = await this.repository.restore(id);

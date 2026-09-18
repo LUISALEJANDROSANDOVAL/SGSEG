@@ -32,15 +32,7 @@ export class CasosController {
    * Obtiene las métricas generales de inventario y alertas de stock crítico.
    */
   @Get('metricas')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
   async getMetricas(
     @Query('idCarrera') idCarrera: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
@@ -52,15 +44,7 @@ export class CasosController {
    * Obtiene la lista de áreas académicas vigentes filtradas para el usuario.
    */
   @Get('areas')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
   async getAreas(
     @Query('idCarrera') idCarrera: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
@@ -70,17 +54,10 @@ export class CasosController {
 
   /**
    * Registra una nueva área académica para la carrera.
+   * Restringido a Jefe de Carrera, Coordinación y SuperAdmin.
    */
   @Post('areas')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createArea(
     @Body() dto: CreateAreaDto,
@@ -93,15 +70,7 @@ export class CasosController {
    * Consulta el inventario paginado de casos de estudio con filtros.
    */
   @Get()
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
   async findAll(
     @Query() query: FilterCasosDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -113,15 +82,7 @@ export class CasosController {
    * Obtiene la lista optimizada de casos de estudio para una carrera mediante vista SQL.
    */
   @Get('vistas/carrera/:idCarrera/casos')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
   async getCasosPorCarreraVista(
     @Param('idCarrera') idCarrera: string,
     @Query() query: FilterVistaCasosDto,
@@ -134,15 +95,7 @@ export class CasosController {
    * Obtiene el resumen consolidado de áreas y stock de casos para una carrera mediante vista SQL.
    */
   @Get('vistas/carrera/:idCarrera/areas')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
   async getAreasPorCarreraVista(
     @Param('idCarrera') idCarrera: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -154,15 +107,7 @@ export class CasosController {
    * Obtiene el detalle de un caso específico.
    */
   @Get(':id')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
   async findById(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -174,15 +119,7 @@ export class CasosController {
    * Registra un nuevo caso de estudio.
    */
   @Post()
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() dto: CreateCasoDto,
@@ -195,15 +132,7 @@ export class CasosController {
    * Actualiza el planteamiento, título o área de un caso.
    */
   @Put(':id')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateCasoDto,
@@ -216,15 +145,7 @@ export class CasosController {
    * Alterna el estado del caso (DISPONIBLE / INACTIVO).
    */
   @Patch(':id/estado')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
   async toggleEstado(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -236,15 +157,7 @@ export class CasosController {
    * Reactivación extraordinaria de un caso agotado por caso especial.
    */
   @Patch(':id/reactivar-especial')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA')
   async reactivarCasoEspecial(
     @Param('id') id: string,
     @Body() dto: ReactivarCasoEspecialDto,
@@ -257,15 +170,7 @@ export class CasosController {
    * Soft-delete / inactivación de un caso de estudio.
    */
   @Delete(':id')
-  @Roles(
-    'JEFE_CARRERA',
-    'COORDINACION',
-    'SECRETARIADO',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
   async softDelete(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,

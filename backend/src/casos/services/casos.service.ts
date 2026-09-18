@@ -266,6 +266,12 @@ export class CasosService {
     dto: ReactivarCasoEspecialDto,
     user: AuthenticatedUser,
   ) {
+    if (user.rol !== 'JEFE_CARRERA') {
+      throw new ForbiddenException(
+        'Solo el Jefe de Carrera asignado puede reactivar casos de estudio por caso especial.',
+      );
+    }
+
     const id = BigInt(idCaso);
     const caso = await this.repository.findCasoById(id);
 
@@ -273,13 +279,11 @@ export class CasosService {
       throw new NotFoundException(`Caso de estudio con ID ${idCaso} no encontrado.`);
     }
 
-    if (user.rol === 'JEFE_CARRERA') {
-      const allowed = await this.resolveAllowedCarreras(user);
-      if (!allowed?.includes(caso.area.idCarrera)) {
-        throw new ForbiddenException(
-          'No tienes permisos para reactivar casos de una carrera distinta a la tuya.',
-        );
-      }
+    const allowed = await this.resolveAllowedCarreras(user);
+    if (!allowed?.includes(caso.area.idCarrera)) {
+      throw new ForbiddenException(
+        'No tienes permisos para reactivar casos de una carrera distinta a la tuya.',
+      );
     }
 
     const updated = await this.repository.reactivarCasoEspecial(

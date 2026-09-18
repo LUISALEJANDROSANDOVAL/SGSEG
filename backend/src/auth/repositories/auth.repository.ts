@@ -64,6 +64,21 @@ export class AuthRepository {
     });
   }
 
+  async updateEstado(idUsuario: number, estado: string) {
+    return this.prisma.usuario.update({
+      where: { idUsuario },
+      data: { estado },
+      include: {
+        rol: true,
+        carreras: {
+          include: {
+            carrera: true,
+          },
+        },
+      },
+    });
+  }
+
   async findAll() {
     return this.prisma.usuario.findMany({
       include: {

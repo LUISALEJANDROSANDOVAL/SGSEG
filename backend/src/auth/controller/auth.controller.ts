@@ -1,5 +1,15 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { Public } from '../../common/decorators/public.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { LoginDto } from '../dto/login.dto';
@@ -7,6 +17,8 @@ import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { RecuperarPasswordDto } from '../dto/recuperar-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { AdminResetPasswordDto } from '../dto/admin-reset-password.dto';
+import { UpdateUserEstadoDto } from '../dto/update-user-estado.dto';
 import { AuthService } from '../services/auth.service';
 
 @Controller('auth')
@@ -57,8 +69,37 @@ export class AuthController {
   }
 
   @Get('users')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async listUsers() {
     return this.authService.listUsers();
+  }
+
+  /**
+   * Endpoint seguro para reseteo administrativo de contraseñas (Superadministrador / Fallback).
+   * Puede ser ejecutado por un usuario con rol COORDINACION o SUPER_ADMIN,
+   * o mediante el adminSecret de contingencia.
+   */
+  @Public()
+  @Post('admin/reset-password')
+  @HttpCode(HttpStatus.OK)
+  async adminResetPassword(
+    @Body() dto: AdminResetPasswordDto,
+    @CurrentUser() user?: AuthenticatedUser,
+  ) {
+    return this.authService.adminResetPassword(dto, user);
+  }
+
+  /**
+   * Endpoint para activación/inactivación de cuentas institucionales.
+   */
+  @Patch('users/:id/estado')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
+  async updateUserEstado(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserEstadoDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.authService.updateUserEstado(id, dto, user);
   }
 }
 
