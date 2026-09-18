@@ -46,7 +46,7 @@ describe('EstudiantesController', () => {
     });
 
     const res = await controller.bulkUpsert(dto);
-    expect(service.bulkUpsertEstudiantes).toHaveBeenCalledWith(dto);
+    expect(service.bulkUpsertEstudiantes).toHaveBeenCalledWith(dto, undefined);
     expect(res.total).toBe(0);
   });
 
@@ -70,7 +70,7 @@ describe('EstudiantesController', () => {
     });
 
     const res = await controller.softDelete('1');
-    expect(service.softDelete).toHaveBeenCalledWith('1');
+    expect(service.softDelete).toHaveBeenCalledWith('1', undefined);
     expect(res.mensaje).toContain('soft delete');
   });
 
@@ -81,7 +81,7 @@ describe('EstudiantesController', () => {
     });
 
     const res = await controller.restore('1');
-    expect(service.restore).toHaveBeenCalledWith('1');
+    expect(service.restore).toHaveBeenCalledWith('1', undefined);
     expect(res.mensaje).toContain('restaurado');
   });
 

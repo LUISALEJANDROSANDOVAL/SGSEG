@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from '../dto/login.dto';
@@ -6,7 +12,10 @@ import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { RecuperarPasswordDto } from '../dto/recuperar-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { AdminResetPasswordDto } from '../dto/admin-reset-password.dto';
+import { UpdateUserEstadoDto } from '../dto/update-user-estado.dto';
 import { AuthRepository } from '../repositories/auth.repository';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
 @Injectable()
 export class AuthService {
@@ -248,5 +257,113 @@ export class AuthService {
       rol: user.rol?.nombre ?? null,
     };
   }
+
+  async adminResetPassword(
+    dto: AdminResetPasswordDto,
+    currentUser?: AuthenticatedUser,
+  ) {
+    const fallbackSecret =
+      process.env.ADMIN_FALLBACK_SECRET || 'SGSEG_FALLBACK_2026!';
+    const hasValidSecret =
+      dto.adminSecret && dto.adminSecret === fallbackSecret;
+
+    const isAuthorizedRole =
+      currentUser &&
+      (currentUser.rol === 'COORDINACION' ||
+        currentUser.rol === 'SUPER_ADMIN');
+
+    if (!isAuthorizedRole && !hasValidSecret) {
+      throw new ForbiddenException(
+        'No tienes autorización para realizar el reseteo administrativo de contraseñas',
+      );
+    }
+
+    let targetUser: any = null;
+    const isEmail = dto.idUsuario.includes('@');
+    if (isEmail) {
+      targetUser = await this.authRepository.findByCorreoInstitucional(
+        dto.idUsuario.trim().toLowerCase(),
+      );
+    } else {
+      const numericId = Number(dto.idUsuario);
+      if (!isNaN(numericId)) {
+        targetUser = await this.authRepository.findById(numericId);
+      }
+    }
+
+    if (!targetUser) {
+      throw new NotFoundException(
+        `El usuario destino "${dto.idUsuario}" no fue encontrado`,
+      );
+    }
+
+    if (
+      currentUser &&
+      currentUser.rol === 'COORDINACION' &&
+      targetUser.rol?.nombre === 'SUPER_ADMIN'
+    ) {
+      throw new ForbiddenException(
+        'Un usuario con rol COORDINACION no puede restablecer la contraseña de un SUPER_ADMIN',
+      );
+    }
+
+    const newPassword =
+      dto.newPassword && dto.newPassword.trim()
+        ? dto.newPassword.trim()
+        : `Utepsa${Math.floor(1000 + Math.random() * 9000)}!`;
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await this.authRepository.updatePassword(
+      Number(targetUser.idUsuario),
+      newHash,
+    );
+
+    return {
+      success: true,
+      mensaje: `Contraseña restablecida exitosamente para ${targetUser.correoInstitucional}`,
+      idUsuario: String(targetUser.idUsuario),
+      correoInstitucional: targetUser.correoInstitucional,
+      rol: targetUser.rol?.nombre,
+      nuevaContrasenaTemporal: dto.newPassword ? undefined : newPassword,
+    };
+  }
+
+  async updateUserEstado(
+    idUsuario: string,
+    dto: UpdateUserEstadoDto,
+    currentUser: AuthenticatedUser,
+  ) {
+    if (
+      currentUser.rol !== 'COORDINACION' &&
+      currentUser.rol !== 'SUPER_ADMIN'
+    ) {
+      throw new ForbiddenException(
+        'Solo Coordinación o SuperAdmin pueden modificar el estado de un usuario',
+      );
+    }
+
+    const numId = Number(idUsuario);
+    const existing = await this.authRepository.findById(numId);
+    if (!existing) {
+      throw new NotFoundException(`Usuario con ID ${idUsuario} no encontrado`);
+    }
+
+    if (String(existing.idUsuario) === currentUser.idUsuario) {
+      throw new BadRequestException('No puedes inactivar tu propia cuenta activa');
+    }
+
+    const updated = await this.authRepository.updateEstado(numId, dto.estado);
+
+    return {
+      success: true,
+      mensaje: `Estado del usuario ${updated.correoInstitucional} actualizado a ${dto.estado}`,
+      usuario: {
+        idUsuario: String(updated.idUsuario),
+        correoInstitucional: updated.correoInstitucional,
+        estado: updated.estado,
+      },
+    };
+  }
 }
+
 

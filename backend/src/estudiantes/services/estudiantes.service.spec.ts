@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { EstudiantesNormalizerService } from './estudiantes-normalizer.service';
 import { EstudiantesService } from './estudiantes.service';
 import { EstudiantesRepository } from '../repositories/estudiantes.repository';
@@ -25,6 +29,7 @@ describe('EstudiantesService', () => {
       findCarrerasWithPlans: jest.fn(),
       softDelete: jest.fn(),
       restore: jest.fn(),
+      getUserCarreraIds: jest.fn(),
     } as unknown as jest.Mocked<EstudiantesRepository>;
 
     normalizer = new EstudiantesNormalizerService();
@@ -355,6 +360,47 @@ describe('EstudiantesService', () => {
       expect(res).toHaveLength(1);
       expect(res[0].idCarrera).toBe('1');
       expect(res[0].planesEstudio[0].idPlanEstudio).toBe('10');
+    });
+  });
+
+  describe('Aislamiento de Carrera (JEFE_CARRERA)', () => {
+    const mockJefeUser = {
+      idUsuario: '10',
+      correoInstitucional: 'jefe.sistemas@uni.edu.bo',
+      rol: 'JEFE_CARRERA',
+    };
+
+    const estudianteDerecho = {
+      idEstudiante: BigInt(50),
+      carnetEstudiantil: 'DER-20220001',
+      planEstudio: { idCarrera: BigInt(2) }, // Carrera Derecho (2)
+    };
+
+    it('debe impedir que un Jefe de Sistemas consulte un estudiante de Derecho por ID', async () => {
+      repository.findById.mockResolvedValue(estudianteDerecho as any);
+      repository.getUserCarreraIds.mockResolvedValue([BigInt(1)]); // Solo Sistemas (1)
+
+      await expect(service.findById('50', mockJefeUser)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('debe impedir que un Jefe de Sistemas modifique un estudiante de Derecho', async () => {
+      repository.findById.mockResolvedValue(estudianteDerecho as any);
+      repository.getUserCarreraIds.mockResolvedValue([BigInt(1)]);
+
+      await expect(
+        service.update('50', { nombreCompleto: 'Nuevo Nombre' }, mockJefeUser),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('debe impedir que un Jefe de Sistemas elimine (soft-delete) un estudiante de Derecho', async () => {
+      repository.findById.mockResolvedValue(estudianteDerecho as any);
+      repository.getUserCarreraIds.mockResolvedValue([BigInt(1)]);
+
+      await expect(service.softDelete('50', mockJefeUser)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

@@ -30,17 +30,10 @@ export class SorteosController {
 
   /**
    * Ejecuta el sorteo digital de Área Temática mediante CSPRNG.
+   * Vicerrectorado bloqueado.
    */
   @Post('area')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sortearArea(
     @Body() dto: SortearAreaDto,
@@ -51,17 +44,10 @@ export class SorteosController {
 
   /**
    * Ejecuta el sorteo digital de Caso de Estudio dentro del área asignada.
+   * Vicerrectorado bloqueado.
    */
   @Post('caso')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sortearCaso(
     @Body() dto: SortearCasoDto,
@@ -72,17 +58,10 @@ export class SorteosController {
 
   /**
    * Ejecuta el sorteo conjunto anticipado de Área y Caso (FCT y Psicología).
+   * Vicerrectorado bloqueado.
    */
   @Post('conjunto')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sorteoConjunto(
     @Body() dto: SorteoConjuntoDto,
@@ -124,15 +103,7 @@ export class SorteosController {
    * Crea una nueva sesión pública de sorteo en vivo.
    */
   @Post('live/crear')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   async crearLiveSession(
     @Body()
     body: {
@@ -151,15 +122,7 @@ export class SorteosController {
    * Actualiza el estado en vivo (giro en proceso, ganador, etc.).
    */
   @Post('live/actualizar')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   async actualizarLiveSession(
     @Body() body: { token: string; update: any },
   ) {
@@ -170,15 +133,7 @@ export class SorteosController {
    * Expira formalmente la sesión en vivo al terminar el acto.
    */
   @Post('live/expirar')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   async expirarLiveSession(@Body() body: { token: string }) {
     return this.sorteosLiveService.expirarSesion(body.token);
   }
@@ -187,15 +142,7 @@ export class SorteosController {
    * Despacha formalmente el acta y el pliego sorteado al correo del estudiante.
    */
   @Post('notificar-estudiante')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   async notificarEstudiante(@Body() dto: NotificacionSorteoDto) {
     return this.sorteosLiveService.enviarNotificacionSorteo(dto);
   }
@@ -222,15 +169,7 @@ export class SorteosController {
    * Despacha el enlace de transmisión en vivo al correo del estudiante al iniciar el acto.
    */
   @Post('live/notificar-inicio')
-  @Roles(
-    'COORDINACION',
-    'SECRETARIADO',
-    'JEFE_CARRERA',
-    'VICERRECTORADO',
-    'REGISTRO',
-    'DEFENSA',
-    'SUPER_ADMIN',
-  )
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   async notificarInicioSorteo(
     @Body()
     body: {

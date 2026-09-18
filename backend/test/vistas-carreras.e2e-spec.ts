@@ -11,6 +11,7 @@ describe('Vistas Optimizadas por Carrera (e2e)', () => {
   let coordToken: string;
   let jefeDerechoToken: string;
   let jefeSistemasToken: string;
+  let derechoId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -38,6 +39,11 @@ describe('Vistas Optimizadas por Carrera (e2e)', () => {
       .post('/auth/login')
       .send({ correoInstitucional: 'jefe.sistemas@uni.edu.bo', password: 'Admin123!' });
     jefeSistemasToken = sistemasRes.body.accessToken;
+
+    const carreraDerecho = await prisma.carrera.findFirstOrThrow({
+      where: { nombre: { contains: 'Derecho' } },
+    });
+    derechoId = String(carreraDerecho.idCarrera);
   });
 
   afterAll(async () => {
@@ -46,9 +52,9 @@ describe('Vistas Optimizadas por Carrera (e2e)', () => {
   });
 
   describe('1. Consulta de Casos mediante Vista por idCarrera', () => {
-    it('Debe permitir a Coordinación consultar casos de Derecho (idCarrera: 85)', async () => {
+    it('Debe permitir a Coordinación consultar casos de Derecho', async () => {
       const res = await request(app.getHttpServer())
-        .get('/casos/vistas/carrera/85/casos')
+        .get(`/casos/vistas/carrera/${derechoId}/casos`)
         .set('Authorization', `Bearer ${coordToken}`)
         .expect(200);
 
@@ -60,16 +66,16 @@ describe('Vistas Optimizadas por Carrera (e2e)', () => {
         const item = res.body.items[0];
         expect(item).toHaveProperty('idCasoEstudio');
         expect(item).toHaveProperty('titulo');
-        expect(item).toHaveProperty('idCarrera', '85');
+        expect(item).toHaveProperty('idCarrera', derechoId);
         expect(item).toHaveProperty('totalUsos');
         expect(item).toHaveProperty('estadoEfectivo');
         expect(item).toHaveProperty('esDisponibleParaSorteo');
       }
     });
 
-    it('Debe permitir al Jefe de Carrera de Derecho consultar casos de su carrera (85)', async () => {
+    it('Debe permitir al Jefe de Carrera de Derecho consultar casos de su carrera', async () => {
       const res = await request(app.getHttpServer())
-        .get('/casos/vistas/carrera/85/casos')
+        .get(`/casos/vistas/carrera/${derechoId}/casos`)
         .set('Authorization', `Bearer ${jefeDerechoToken}`)
         .expect(200);
 
@@ -77,9 +83,9 @@ describe('Vistas Optimizadas por Carrera (e2e)', () => {
       expect(Array.isArray(res.body.items)).toBe(true);
     });
 
-    it('Debe PROHIBIR (403) que el Jefe de Carrera de Sistemas consulte casos de Derecho (85)', async () => {
+    it('Debe PROHIBIR (403) que el Jefe de Carrera de Sistemas consulte casos de Derecho', async () => {
       const res = await request(app.getHttpServer())
-        .get('/casos/vistas/carrera/85/casos')
+        .get(`/casos/vistas/carrera/${derechoId}/casos`)
         .set('Authorization', `Bearer ${jefeSistemasToken}`)
         .expect(403);
 
@@ -88,9 +94,9 @@ describe('Vistas Optimizadas por Carrera (e2e)', () => {
   });
 
   describe('2. Consulta de Áreas mediante Vista por idCarrera', () => {
-    it('Debe permitir a Coordinación consultar áreas con stock de Derecho (85)', async () => {
+    it('Debe permitir a Coordinación consultar áreas con stock de Derecho', async () => {
       const res = await request(app.getHttpServer())
-        .get('/casos/vistas/carrera/85/areas')
+        .get(`/casos/vistas/carrera/${derechoId}/areas`)
         .set('Authorization', `Bearer ${coordToken}`)
         .expect(200);
 
@@ -99,7 +105,7 @@ describe('Vistas Optimizadas por Carrera (e2e)', () => {
         const area = res.body[0];
         expect(area).toHaveProperty('idArea');
         expect(area).toHaveProperty('nombreArea');
-        expect(area).toHaveProperty('idCarrera', '85');
+        expect(area).toHaveProperty('idCarrera', derechoId);
         expect(area).toHaveProperty('totalCasos');
         expect(area).toHaveProperty('casosDisponibles');
         expect(area).toHaveProperty('stockCritico');
@@ -107,9 +113,9 @@ describe('Vistas Optimizadas por Carrera (e2e)', () => {
       }
     });
 
-    it('Debe PROHIBIR (403) que el Jefe de Carrera de Sistemas consulte áreas de Derecho (85)', async () => {
+    it('Debe PROHIBIR (403) que el Jefe de Carrera de Sistemas consulte áreas de Derecho', async () => {
       await request(app.getHttpServer())
-        .get('/casos/vistas/carrera/85/areas')
+        .get(`/casos/vistas/carrera/${derechoId}/areas`)
         .set('Authorization', `Bearer ${jefeSistemasToken}`)
         .expect(403);
     });
