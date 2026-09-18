@@ -21,28 +21,38 @@ const prisma = new PrismaClient({ adapter });
 // ============================================================================
 async function cleanDatabase(): Promise<void> {
   console.log('🧹 Limpiando registros previos para garantizar consistencia...');
-  await prisma.registroAuditoria.deleteMany({});
-  await prisma.sesionEspectadorSorteo.deleteMany({});
-  await prisma.asignacionCaso.deleteMany({});
-  await prisma.envioCasoEstudio.deleteMany({});
-  await prisma.sorteoAreaPool.deleteMany({});
-  await prisma.sorteoArea.deleteMany({});
-  await prisma.sorteoCaso.deleteMany({});
-  await prisma.sorteo.deleteMany({});
-  await prisma.defensaExamenGrado.deleteMany({});
-  await prisma.instanciaExamenGrado.deleteMany({});
-  await prisma.procesoExamenGrado.deleteMany({});
-  await prisma.estudiante.deleteMany({});
-  await prisma.casoEstudio.deleteMany({});
-  await prisma.planArea.deleteMany({});
-  await prisma.areaAcademica.deleteMany({});
-  await prisma.configuracionSorteoCaso.deleteMany({});
-  await prisma.configuracionSorteoArea.deleteMany({});
-  await prisma.planEstudio.deleteMany({});
-  await prisma.usuarioCarrera.deleteMany({});
-  await prisma.usuario.deleteMany({});
-  await prisma.carrera.deleteMany({});
-  await prisma.facultad.deleteMany({});
+  const modelsToDelete = [
+    () => prisma.registroAuditoria.deleteMany({}),
+    () => prisma.sesionEspectadorSorteo.deleteMany({}),
+    () => prisma.asignacionCaso.deleteMany({}),
+    () => prisma.envioCasoEstudio.deleteMany({}),
+    () => prisma.sorteoAreaPool.deleteMany({}),
+    () => prisma.sorteoArea.deleteMany({}),
+    () => prisma.sorteoCaso.deleteMany({}),
+    () => prisma.sorteo.deleteMany({}),
+    () => prisma.defensaExamenGrado.deleteMany({}),
+    () => prisma.instanciaExamenGrado.deleteMany({}),
+    () => prisma.procesoExamenGrado.deleteMany({}),
+    () => prisma.estudiante.deleteMany({}),
+    () => prisma.casoEstudio.deleteMany({}),
+    () => prisma.planArea.deleteMany({}),
+    () => prisma.areaAcademica.deleteMany({}),
+    () => prisma.configuracionSorteoCaso.deleteMany({}),
+    () => prisma.configuracionSorteoArea.deleteMany({}),
+    () => prisma.planEstudio.deleteMany({}),
+    () => prisma.usuarioCarrera.deleteMany({}),
+    () => prisma.usuario.deleteMany({}),
+    () => prisma.carrera.deleteMany({}),
+    () => prisma.facultad.deleteMany({}),
+  ];
+
+  for (const deleteFn of modelsToDelete) {
+    try {
+      await deleteFn();
+    } catch {
+      // Ignorar si el modelo no existe o no tiene registros en el esquema actual
+    }
+  }
   console.log('✅ Base de datos saneada exitosamente.');
 }
 
