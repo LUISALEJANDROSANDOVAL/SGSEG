@@ -223,7 +223,7 @@ describe('Módulo 2: RBAC, Alineación Estricta de 4 Roles y Recuperación Admin
           carnetEstudiantil: randomCi,
           carnetIdentidad: `${randomCi} SC`,
           nombreCompleto: 'Estudiante Inscrito por Secretaría',
-          correo: `est.${randomCi.toLowerCase()}@uni.edu.bo`,
+          correoInstitucional: `est.${randomCi.toLowerCase()}@uni.edu.bo`,
           idCarrera: carreraSistemasId,
         })
         .expect(201);

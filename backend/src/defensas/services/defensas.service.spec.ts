@@ -134,7 +134,8 @@ describe('DefensasService', () => {
         carnetEstudiantil: 'DER-1234',
         carnetIdentidad: '7891234 LP',
         nombreCompleto: 'Juan Perez',
-        correo: 'juan@uni.edu.bo',
+        correoInstitucional: 'juan@uni.edu.bo',
+        correoPersonal: null,
         estado: 'ACTIVO',
         fechaRegistro: new Date(),
         planEstudio: {
@@ -172,7 +173,8 @@ describe('DefensasService', () => {
         carnetEstudiantil: 'SIS-20210001',
         carnetIdentidad: '8392011 LP',
         nombreCompleto: 'Alejandro Morales',
-        correo: 'alejandro@estudiante.edu.bo',
+        correoInstitucional: 'alejandro@estudiante.edu.bo',
+        correoPersonal: null,
         estado: 'ACTIVO',
         fechaRegistro: new Date(),
         planEstudio: {
@@ -230,7 +232,8 @@ describe('DefensasService', () => {
               carnetEstudiantil: 'SIS-20210001',
               carnetIdentidad: '8392011 LP',
               nombreCompleto: 'Alejandro Morales',
-              correo: 'alejandro@estudiante.edu.bo',
+              correoInstitucional: 'alejandro@estudiante.edu.bo',
+              correoPersonal: null,
               estado: 'ACTIVO',
               fechaRegistro: new Date(),
               planEstudio: {

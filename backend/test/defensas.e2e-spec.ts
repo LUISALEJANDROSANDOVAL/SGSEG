@@ -42,7 +42,7 @@ describe('Módulo Defensas (e2e)', () => {
         carnetEstudiantil: `E2E-DEF-${Date.now()}`,
         carnetIdentidad: '1234567-LP',
         nombreCompleto: 'Estudiante Defensa',
-        correo: 'defensa@uni.edu.bo',
+        correoInstitucional: 'defensa@uni.edu.bo',
         idPlanEstudio: plan.idPlanEstudio
       }
     });

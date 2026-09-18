@@ -200,7 +200,7 @@ async function runValidations(): Promise<boolean> {
         carnetEstudiantil: carnetDuplicado,
         carnetIdentidad: '1234567-LP',
         nombreCompleto: 'Juan Pérez Test',
-        correo: 'juan.test@correo.com',
+        correoInstitucional: 'juan.test@correo.com',
       },
     });
 
@@ -214,7 +214,7 @@ async function runValidations(): Promise<boolean> {
           carnetEstudiantil: carnetDuplicado,
           carnetIdentidad: '7654321-CBBA',
           nombreCompleto: 'Pedro Morales Test',
-          correo: 'pedro.test@correo.com',
+          correoInstitucional: 'pedro.test@correo.com',
         },
       });
       p4Detail = 'ERROR: La base de datos permitió duplicar carnet_estudiantil en Estudiante.';

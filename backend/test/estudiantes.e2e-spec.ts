@@ -54,7 +54,7 @@ describe('Módulo Estudiantes (e2e)', () => {
         carnetEstudiantil: carnetPrueba,
         carnetIdentidad: '1234567-LP',
         nombreCompleto: 'Estudiante E2E de Prueba',
-        correo: 'estudiante.e2e@uni.edu.bo'
+        correoInstitucional: 'estudiante.e2e@uni.edu.bo'
       })
       .expect(201);
     

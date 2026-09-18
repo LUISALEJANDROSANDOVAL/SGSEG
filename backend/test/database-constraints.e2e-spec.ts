@@ -180,7 +180,7 @@ describe('Restricciones de Base de Datos y DDL (e2e)', () => {
           carnetEstudiantil: carnetUnico,
           carnetIdentidad: '98765432-LP',
           nombreCompleto: 'Estudiante Primero',
-          correo: 'primero@test.com',
+          correoInstitucional: 'primero@test.com',
         },
       });
 
@@ -192,7 +192,7 @@ describe('Restricciones de Base de Datos y DDL (e2e)', () => {
             carnetEstudiantil: carnetUnico,
             carnetIdentidad: '11223344-CBBA',
             nombreCompleto: 'Estudiante Segundo',
-            correo: 'segundo@test.com',
+            correoInstitucional: 'segundo@test.com',
           },
         }),
       ).rejects.toMatchObject({

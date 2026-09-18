@@ -52,7 +52,7 @@ describe('Módulo Sorteos (e2e)', () => {
         carnetEstudiantil: `E2E-SORT-${Date.now()}`,
         carnetIdentidad: '123123',
         nombreCompleto: 'Estudiante Sorteo',
-        correo: 'sorteo@uni.edu.bo',
+        correoInstitucional: 'sorteo@uni.edu.bo',
         idPlanEstudio: plan.idPlanEstudio
       }
     });
