@@ -62,6 +62,12 @@ describe('Módulo Sorteos (e2e)', () => {
   afterAll(async () => {
     try {
       if (idDefensa) {
+        await prisma.sesionEspectadorSorteo.deleteMany({
+          where: { idDefensa: Number(idDefensa) },
+        });
+        await prisma.asignacionCaso.deleteMany({
+          where: { idDefensa: Number(idDefensa) },
+        });
         await prisma.sorteoAreaPool.deleteMany({
           where: { sorteoArea: { sorteo: { idDefensa: Number(idDefensa) } } },
         });

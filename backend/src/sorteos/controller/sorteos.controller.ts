@@ -13,7 +13,9 @@ import type { AuthenticatedUser } from '../../common/decorators/current-user.dec
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
+  CrearEnlaceEspectadorDto,
   FilterSorteosDto,
+  FinalizarSorteoDto,
   SortearAreaDto,
   SortearCasoDto,
   SorteoConjuntoDto,
@@ -68,6 +70,63 @@ export class SorteosController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.sorteosService.sorteoConjunto(dto, user);
+  }
+
+  /**
+   * Finaliza el sorteo y formaliza la asignación atómica (estudiante, área y caso).
+   * Vicerrectorado bloqueado (403 Forbidden).
+   */
+  @Post('finalizar')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @HttpCode(HttpStatus.CREATED)
+  async finalizarSorteo(
+    @Body() dto: FinalizarSorteoDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.sorteosService.finalizarSorteo(dto, user);
+  }
+
+  /**
+   * Genera un enlace temporal de visualización con token/slug y fecha de expiración.
+   * Vicerrectorado bloqueado.
+   */
+  @Post('enlace-espectador')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @HttpCode(HttpStatus.CREATED)
+  async generarEnlaceEspectador(
+    @Body() dto: CrearEnlaceEspectadorDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.sorteosService.generarEnlaceEspectador(dto, user);
+  }
+
+  /**
+   * Vista de espectador en tiempo real para el celular del estudiante (solo lectura, sin JWT).
+   */
+  @Get('espectador/:slugOrToken')
+  @Public()
+  async obtenerVistaEspectador(@Param('slugOrToken') slugOrToken: string) {
+    return this.sorteosService.obtenerVistaEspectador(slugOrToken);
+  }
+
+  /**
+   * Consulta la asignación formal de una defensa por su ID.
+   */
+  @Get('asignacion/:idDefensa')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
+  async consultarAsignacion(
+    @Param('idDefensa') idDefensa: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.sorteosService.consultarAsignacion(idDefensa, user);
   }
 
   /**

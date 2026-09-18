@@ -30,6 +30,12 @@ describe('SorteosService', () => {
       ejecutarSorteoArea: jest.fn(),
       ejecutarSorteoCaso: jest.fn(),
       ejecutarSorteoConjunto: jest.fn(),
+      finalizarYAsignarSorteo: jest.fn(),
+      crearSesionEspectador: jest.fn(),
+      findSesionEspectadorByTokenOrSlug: jest.fn(),
+      actualizarFaseSesionEspectador: jest.fn(),
+      expirarSesionEspectador: jest.fn(),
+      findAsignacionByDefensa: jest.fn(),
       findHistorial: jest.fn(),
       countHistorial: jest.fn(),
       findSorteoById: jest.fn(),
@@ -215,4 +221,159 @@ describe('SorteosService', () => {
       ).rejects.toThrow(BadRequestException);
     });
   });
+
+  describe('Finalizar Sorteo y Persistencia de Asignación', () => {
+    it('debe persistir exitosamente la asignación con cálculo de plazo y token de acta', async () => {
+      repository.findDefensaWithDetails.mockResolvedValue({
+        idDefensa: BigInt(1),
+        fechaDefensa: new Date('2026-11-20'),
+        tipoDefensa: { nombre: 'INTERNA' },
+        sorteos: [{ idSorteo: BigInt(10) }],
+        instancia: {
+          proceso: {
+            estudiante: {
+              idEstudiante: BigInt(50),
+              idPlanEstudio: BigInt(2),
+              nombreCompleto: 'Carlos Mendoza',
+              carnetEstudiantil: 'CARNET-001',
+              correoInstitucional: 'carlos@uni.edu.bo',
+              planEstudio: {
+                carrera: { idCarrera: BigInt(1), nombre: 'Ingeniería de Sistemas' },
+              },
+            },
+          },
+        },
+      } as any);
+
+      repository.finalizarYAsignarSorteo.mockResolvedValue({
+        idAsignacion: BigInt(100),
+        idEstudiante: BigInt(50),
+        idDefensa: BigInt(1),
+        idArea: BigInt(4),
+        idCaso: BigInt(9),
+        idUsuarioEjecutor: BigInt(5),
+        codigoActa: 'ACTA-DEF-1-2026',
+        tokenActa: 'HASH-TEST-32-CHARS',
+        estado: 'ASIGNADO',
+      } as any);
+
+      const result = await service.finalizarSorteo(
+        {
+          idDefensa: '1',
+          idArea: '4',
+          idCaso: '9',
+          estudiantePresente: true,
+        },
+        mockSecretariaUser,
+      );
+
+      expect(result.mensaje).toContain('Sorteo finalizado');
+      expect(result.codigoActa).toBe('ACTA-DEF-1-2026');
+      expect(result.tokenActa).toBeDefined();
+      expect(result.plazoLimiteEntrega).toBeDefined();
+      expect(repository.finalizarYAsignarSorteo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idDefensa: BigInt(1),
+          idEstudiante: BigInt(50),
+          idArea: BigInt(4),
+          idCaso: BigInt(9),
+        }),
+      );
+    });
+
+    it('debe impedir que Jefe de Carrera finalice un sorteo de otra carrera', async () => {
+      repository.findDefensaWithDetails.mockResolvedValue({
+        idDefensa: BigInt(1),
+        tipoDefensa: { nombre: 'EXTERNA' },
+        sorteos: [],
+        instancia: {
+          proceso: {
+            estudiante: {
+              idEstudiante: BigInt(50),
+              planEstudio: {
+                carrera: { idCarrera: BigInt(99), nombre: 'Medicina' },
+              },
+            },
+          },
+        },
+      } as any);
+
+      repository.getUserCarreraIds.mockResolvedValue([BigInt(1)]); // Solo Sistemas
+
+      await expect(
+        service.finalizarSorteo(
+          { idDefensa: '1', idArea: '2', idCaso: '3' },
+          mockJefeUser,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('Enlaces de Espectador Móvil (Sin Autenticación)', () => {
+    it('debe generar un enlace temporal con token y slug únicos', async () => {
+      repository.findDefensaWithDetails.mockResolvedValue({
+        idDefensa: BigInt(1),
+        instancia: {
+          proceso: {
+            estudiante: {
+              idEstudiante: BigInt(50),
+              nombreCompleto: 'Ana Belén',
+              carnetEstudiantil: 'SIS-99',
+              correoInstitucional: 'ana@uni.edu.bo',
+              planEstudio: {
+                carrera: { idCarrera: BigInt(1), nombre: 'Sistemas' },
+              },
+            },
+          },
+        },
+      } as any);
+
+      repository.crearSesionEspectador.mockResolvedValue({
+        idSesion: BigInt(1),
+        token: 'uuid-test-token',
+        slug: 'sorteo-ab12',
+        fechaExpiracion: new Date(Date.now() + 7200000),
+      } as any);
+
+      const res = await service.generarEnlaceEspectador(
+        { idDefensa: '1', duracionMinutos: 120 },
+        mockSecretariaUser,
+      );
+
+      expect(res.token).toBe('uuid-test-token');
+      expect(res.slug).toBe('sorteo-ab12');
+      expect(res.urlEspectador).toContain('/sorteos/espectador/sorteo-ab12');
+      expect(res.estudiante.nombreCompleto).toBe('Ana Belén');
+    });
+
+    it('debe retornar estado EXPIRADO si la sesión ya pasó su tiempo límite', async () => {
+      repository.findSesionEspectadorByTokenOrSlug.mockResolvedValue({
+        idSesion: BigInt(1),
+        token: 'expired-token',
+        slug: 'sorteo-exp',
+        fechaExpiracion: new Date('2020-01-01'), // Fecha pasada
+        activo: true,
+        fase: 'ESPERANDO',
+        defensa: { idDefensa: BigInt(1), tipoDefensa: { nombre: 'INTERNA' } },
+        estudiante: {
+          nombreCompleto: 'Test',
+          carnetEstudiantil: 'TEST',
+          planEstudio: { carrera: { nombre: 'Test' } },
+        },
+      } as any);
+
+      const vista = await service.obtenerVistaEspectador('sorteo-exp');
+      expect(vista.expirado).toBe(true);
+      expect(vista.fase).toBe('EXPIRADO');
+    });
+
+    it('debe arrojar NotFoundException si el slug o token no existe', async () => {
+      repository.findSesionEspectadorByTokenOrSlug.mockResolvedValue(null);
+
+      await expect(
+        service.obtenerVistaEspectador('slug-invalido'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });
+

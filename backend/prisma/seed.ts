@@ -22,6 +22,8 @@ const prisma = new PrismaClient({ adapter });
 async function cleanDatabase(): Promise<void> {
   console.log('🧹 Limpiando registros previos para garantizar consistencia...');
   await prisma.registroAuditoria.deleteMany({});
+  await prisma.sesionEspectadorSorteo.deleteMany({});
+  await prisma.asignacionCaso.deleteMany({});
   await prisma.envioCasoEstudio.deleteMany({});
   await prisma.sorteoAreaPool.deleteMany({});
   await prisma.sorteoArea.deleteMany({});

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,7 +8,9 @@ import {
 import * as crypto from 'crypto';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import {
+  CrearEnlaceEspectadorDto,
   FilterSorteosDto,
+  FinalizarSorteoDto,
   SortearAreaDto,
   SortearCasoDto,
   SorteoConjuntoDto,
@@ -391,6 +394,218 @@ export class SorteosService {
       ...this.serializeBigInt(sorteo),
       tokenActa,
     };
+  }
+
+  /**
+   * Finaliza el sorteo y persiste atómicamente la asignación del caso (Área, Caso, Estudiante).
+   * Controla concurrencia y genera el código y token de integridad del acta.
+   */
+  async finalizarSorteo(dto: FinalizarSorteoDto, user: AuthenticatedUser) {
+    const idDefensa = BigInt(dto.idDefensa);
+    const defensa = await this.repository.findDefensaWithDetails(idDefensa);
+
+    if (!defensa) {
+      throw new NotFoundException(`Defensa con ID ${dto.idDefensa} no encontrada.`);
+    }
+
+    const estudiante = defensa.instancia.proceso.estudiante;
+    const carrera = estudiante.planEstudio.carrera;
+
+    // Validación RBAC de carrera para Jefe de Carrera
+    if (user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.resolveAllowedCarreras(user);
+      if (!allowed?.includes(carrera.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para finalizar sorteos de otra carrera.',
+        );
+      }
+    }
+
+    // Calcular plazo reglamentario según tipo de defensa
+    const ahora = new Date();
+    let plazoLimite: Date | undefined;
+    if (defensa.tipoDefensa.nombre === 'INTERNA') {
+      plazoLimite = new Date(ahora.getTime() + 60 * 60 * 1000); // 1 hora
+    } else {
+      plazoLimite = new Date(ahora.getTime() + 90 * 60 * 1000); // 1.5 horas
+    }
+
+    const ano = ahora.getFullYear();
+    const codigoActa = `ACTA-DEF-${defensa.idDefensa}-${ano}`;
+    const tokenActa = this.generarTokenActa(
+      defensa.sorteos[0]?.idSorteo ?? BigInt(0),
+      defensa.idDefensa,
+      BigInt(dto.idCaso),
+      ahora,
+    );
+
+    const asignacion = await this.repository.finalizarYAsignarSorteo({
+      idDefensa,
+      idEstudiante: estudiante.idEstudiante,
+      idArea: BigInt(dto.idArea),
+      idCaso: BigInt(dto.idCaso),
+      idUsuarioEjecutor: BigInt(user.idUsuario),
+      idPlanEstudioContexto: estudiante.idPlanEstudio,
+      fechaDefensaContexto: defensa.fechaDefensa,
+      estudiantePresente: dto.estudiantePresente ?? true,
+      motivoInasistencia: dto.motivoInasistencia,
+      tokenActa,
+      codigoActa,
+      plazoLimiteEntrega: plazoLimite,
+    });
+
+    // Si había una sesión de espectador activa vinculada, notificar la finalización
+    if (dto.tokenSesionLive) {
+      try {
+        await this.repository.actualizarFaseSesionEspectador(
+          dto.tokenSesionLive,
+          'ACTA_OFICIALIZADA',
+          { asignacion: this.serializeBigInt(asignacion) },
+        );
+      } catch {
+        // No bloquear la finalización si la sesión de espectador no existía
+      }
+    }
+
+    return {
+      mensaje: 'Sorteo finalizado y asignación de caso persistida oficialmente.',
+      asignacion: this.serializeBigInt(asignacion),
+      codigoActa,
+      tokenActa,
+      plazoLimiteEntrega: plazoLimite.toISOString(),
+    };
+  }
+
+  /**
+   * Genera un enlace temporal con expiración y slug único para el espectador móvil.
+   */
+  async generarEnlaceEspectador(
+    dto: CrearEnlaceEspectadorDto,
+    user: AuthenticatedUser,
+  ) {
+    const idDefensa = BigInt(dto.idDefensa);
+    const defensa = await this.repository.findDefensaWithDetails(idDefensa);
+
+    if (!defensa) {
+      throw new NotFoundException(`Defensa con ID ${dto.idDefensa} no encontrada.`);
+    }
+
+    const estudiante = defensa.instancia.proceso.estudiante;
+    const carrera = estudiante.planEstudio.carrera;
+
+    if (user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.resolveAllowedCarreras(user);
+      if (!allowed?.includes(carrera.idCarrera)) {
+        throw new ForbiddenException(
+          'No tienes permisos para generar enlaces de otra carrera.',
+        );
+      }
+    }
+
+    const duracionMinutos = dto.duracionMinutos && dto.duracionMinutos > 0 ? dto.duracionMinutos : 120;
+    const fechaExpiracion = new Date(Date.now() + duracionMinutos * 60 * 1000);
+    const token = crypto.randomUUID();
+    const slug = `sorteo-${crypto.randomBytes(4).toString('hex')}`;
+
+    const sesion = await this.repository.crearSesionEspectador({
+      token,
+      slug,
+      idDefensa,
+      idEstudiante: estudiante.idEstudiante,
+      fechaExpiracion,
+      fase: 'ESPERANDO',
+    });
+
+    return {
+      mensaje: 'Enlace de espectador generado exitosamente.',
+      token: sesion.token,
+      slug: sesion.slug,
+      urlEspectador: `/sorteos/espectador/${sesion.slug}`,
+      fechaExpiracion: sesion.fechaExpiracion.toISOString(),
+      estudiante: {
+        nombreCompleto: estudiante.nombreCompleto,
+        carnetEstudiantil: estudiante.carnetEstudiantil,
+        correoInstitucional: estudiante.correoInstitucional,
+      },
+    };
+  }
+
+  /**
+   * Consulta pública en modo solo lectura del estado del sorteo para el estudiante.
+   */
+  async obtenerVistaEspectador(identificador: string) {
+    const sesion = await this.repository.findSesionEspectadorByTokenOrSlug(
+      identificador,
+    );
+
+    if (!sesion) {
+      throw new NotFoundException('Enlace de sorteo no encontrado o inexistente.');
+    }
+
+    const ahora = new Date();
+    if (ahora > sesion.fechaExpiracion || !sesion.activo) {
+      return {
+        fase: 'EXPIRADO',
+        mensaje: 'Este enlace temporal de sorteo ha expirado.',
+        expirado: true,
+      };
+    }
+
+    const asignacion = sesion.defensa.asignacionCaso;
+
+    return {
+      token: sesion.token,
+      slug: sesion.slug,
+      fase: sesion.fase,
+      estadoPayload: sesion.estadoPayload,
+      estudiante: {
+        nombreCompleto: sesion.estudiante.nombreCompleto,
+        carnetEstudiantil: sesion.estudiante.carnetEstudiantil,
+        carrera: sesion.estudiante.planEstudio.carrera.nombre,
+      },
+      defensa: {
+        idDefensa: sesion.defensa.idDefensa.toString(),
+        fechaDefensa: sesion.defensa.fechaDefensa,
+        tipoDefensa: sesion.defensa.tipoDefensa.nombre,
+        estadoDefensa: sesion.defensa.estadoDefensa,
+        asignacion: asignacion
+          ? {
+              idAsignacion: asignacion.idAsignacion.toString(),
+              area: asignacion.area.nombre,
+              casoTitulo: asignacion.caso.titulo,
+              casoContenido: asignacion.caso.contenido,
+              codigoActa: asignacion.codigoActa,
+              tokenActa: asignacion.tokenActa,
+              plazoLimiteEntrega: asignacion.plazoLimiteEntrega,
+              estado: asignacion.estado,
+            }
+          : null,
+      },
+      fechaExpiracion: sesion.fechaExpiracion.toISOString(),
+      expirado: false,
+    };
+  }
+
+  /**
+   * Consulta la asignación de una defensa por ID.
+   */
+  async consultarAsignacion(idDefensa: string, user: AuthenticatedUser) {
+    const idDef = BigInt(idDefensa);
+    const asignacion = await this.repository.findAsignacionByDefensa(idDef);
+
+    if (!asignacion) {
+      throw new NotFoundException(`No existe asignación de caso para la defensa ${idDefensa}.`);
+    }
+
+    if (user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.resolveAllowedCarreras(user);
+      const idCarrera = asignacion.estudiante.planEstudio.carrera.idCarrera;
+      if (!allowed?.includes(idCarrera)) {
+        throw new ForbiddenException('No tienes permisos para ver la asignación de otra carrera.');
+      }
+    }
+
+    return this.serializeBigInt(asignacion);
   }
 
   /**
