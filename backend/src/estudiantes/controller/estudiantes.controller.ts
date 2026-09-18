@@ -10,7 +10,10 @@ import {
   Post,
   Put,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
@@ -34,6 +37,17 @@ export class EstudiantesController {
   @Get('carreras')
   async getCarreras(@CurrentUser() user?: AuthenticatedUser) {
     return this.estudiantesService.getCarreras(user);
+  }
+
+  /**
+   * Endpoint para carga masiva de estudiantes mediante archivo Excel/CSV.
+   */
+  @Post('importar')
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  async importarDesdeArchivo(@UploadedFile() file: any) {
+    return this.estudiantesService.importarEstudiantesDesdeArchivo(file);
   }
 
   /**

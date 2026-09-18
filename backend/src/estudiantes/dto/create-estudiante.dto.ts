@@ -3,5 +3,5 @@ export class CreateEstudianteDto {
   carnetEstudiantil: string;
   carnetIdentidad: string;
   nombreCompleto: string;
-  correo: string;
+  correoInstitucional: string;
 }

@@ -4,5 +4,5 @@ export class EstudianteEntity {
   carnetEstudiantil?: string;
   carnetIdentidad?: string;
   nombreCompleto?: string;
-  correo?: string;
+  correoInstitucional?: string;
 }

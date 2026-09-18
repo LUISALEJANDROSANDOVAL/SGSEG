@@ -334,7 +334,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'SIS-20220001',
       carnetIdentidad: '8392011 SC',
       nombreCompleto: 'Alejandro Morales Quispe',
-      correo: 'alejandro.morales@estudiante.edu.bo',
+      correoInstitucional: 'alejandro.morales@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });
@@ -364,7 +364,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'SIS-20220002',
       carnetIdentidad: '7482910 CB',
       nombreCompleto: 'Valeria Andrea Rojas Mamani',
-      correo: 'valeria.rojas@estudiante.edu.bo',
+      correoInstitucional: 'valeria.rojas@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });
@@ -397,7 +397,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'DER-20220001',
       carnetIdentidad: '6391024 SC',
       nombreCompleto: 'Carlos Eduardo De La Barra Gutiérrez',
-      correo: 'carlos.delabarra@estudiante.edu.bo',
+      correoInstitucional: 'carlos.delabarra@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });
@@ -427,7 +427,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'DER-20220002',
       carnetIdentidad: '9012384 LP',
       nombreCompleto: 'Mariana Sofía Torrico Mendoza',
-      correo: 'mariana.torrico@estudiante.edu.bo',
+      correoInstitucional: 'mariana.torrico@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });
@@ -489,7 +489,7 @@ async function seedEstudiantesYDefensas(
       carnetEstudiantil: 'DER-20210088',
       carnetIdentidad: '8172634 PT',
       nombreCompleto: 'Diego Alonso Paredes Ríos',
-      correo: 'diego.paredes@estudiante.edu.bo',
+      correoInstitucional: 'diego.paredes@estudiante.edu.bo',
       estado: 'ACTIVO',
     },
   });

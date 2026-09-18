@@ -3,7 +3,9 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import {
   BulkEstudiantesInputDto,
   BulkEstudiantesResultDto,
@@ -124,7 +126,7 @@ export class EstudiantesService {
       carnetEstudiantil: string;
       carnetIdentidad: string;
       nombreCompleto: string;
-      correo: string;
+      correoInstitucional: string;
       estado: string;
       idPlanEstudio: bigint;
     }> = [];
@@ -251,7 +253,7 @@ export class EstudiantesService {
           carnetEstudiantil: norm.carnetEstudiantil,
           carnetIdentidad: norm.carnetIdentidad,
           nombreCompleto: norm.nombreCompleto,
-          correo: norm.correo,
+          correoInstitucional: norm.correoInstitucional,
           estado: norm.estado,
           idPlanEstudio: finalPlanId,
         });
@@ -280,7 +282,7 @@ export class EstudiantesService {
               carnetEstudiantil: student.carnetEstudiantil,
               carnetIdentidad: student.carnetIdentidad,
               nombreCompleto: student.nombreCompleto,
-              correo: student.correo,
+              correoInstitucional: student.correoInstitucional,
               estado: student.estado,
             });
 
@@ -342,7 +344,7 @@ export class EstudiantesService {
       carnetEstudiantil: dto.carnetEstudiantil,
       carnetIdentidad: dto.carnetIdentidad,
       nombreCompleto: dto.nombreCompleto,
-      correo: dto.correo,
+      correoInstitucional: dto.correoInstitucional,
       idCarrera: dto.idCarrera,
       idPlanEstudio: dto.idPlanEstudio,
       nombrePlanEstudio: dto.nombrePlanEstudio,
@@ -381,7 +383,7 @@ export class EstudiantesService {
         carnetEstudiantil: norm.carnetEstudiantil,
         carnetIdentidad: norm.carnetIdentidad,
         nombreCompleto: norm.nombreCompleto,
-        correo: norm.correo,
+        correoInstitucional: norm.correoInstitucional,
         estado: norm.estado,
       }),
     );
@@ -499,7 +501,7 @@ export class EstudiantesService {
       idPlanEstudio?: bigint;
       carnetIdentidad?: string;
       nombreCompleto?: string;
-      correo?: string;
+      correoInstitucional?: string;
       estado?: string;
     } = {};
 
@@ -510,7 +512,7 @@ export class EstudiantesService {
       data.nombreCompleto = this.normalizer.normalizeNombreCompleto(
         dto.nombreCompleto,
       );
-    if (dto.correo) data.correo = this.normalizer.normalizeCorreo(dto.correo);
+    if (dto.correoInstitucional) data.correoInstitucional = this.normalizer.normalizeCorreo(dto.correoInstitucional);
     if (dto.estado) data.estado = dto.estado.trim().toUpperCase();
 
     const result = await this.repository.executeInTransaction((tx) =>
@@ -595,5 +597,75 @@ export class EstudiantesService {
         typeof value === 'bigint' ? value.toString() : value,
       ),
     ) as T;
+  }
+
+  /**
+   * Importa estudiantes desde un archivo Excel (Módulo 3).
+   */
+  async importarEstudiantesDesdeArchivo(file: any): Promise<BulkEstudiantesResultDto> {
+    if (!file) {
+      throw new BadRequestException('No se ha proporcionado ningún archivo.');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    try {
+      await workbook.xlsx.load(file.buffer);
+    } catch (error) {
+      throw new BadRequestException('El archivo no es un Excel válido (.xlsx).');
+    }
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      throw new BadRequestException('El archivo Excel está vacío.');
+    }
+
+    const estudiantes: RawEstudianteInputDto[] = [];
+    let headers: { [key: string]: number } = {};
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) {
+        row.eachCell((cell, colNumber) => {
+          if (cell.value) {
+            headers[cell.value.toString().trim().toLowerCase()] = colNumber;
+          }
+        });
+        return;
+      }
+
+      // Read values based on header names (flexible mapping)
+      const getValue = (headerName: string) => {
+        const col = headers[headerName.toLowerCase()];
+        return col ? row.getCell(col).text?.trim() : undefined;
+      };
+
+      const carnetEstudiantil = getValue('carnet') || getValue('carnet estudiantil') || getValue('registro');
+      const carnetIdentidad = getValue('ci') || getValue('carnet de identidad') || getValue('documento');
+      const nombreCompleto = getValue('nombre') || getValue('nombre completo');
+      const correoInstitucional = getValue('correo institucional') || getValue('correo');
+      const correoPersonal = getValue('correo personal');
+      const idPlanEstudioRaw = getValue('id plan de estudio') || getValue('id plan') || getValue('idplan');
+
+      let idPlanEstudio: number | undefined;
+      if (idPlanEstudioRaw && !isNaN(Number(idPlanEstudioRaw))) {
+        idPlanEstudio = Number(idPlanEstudioRaw);
+      }
+
+      if (carnetEstudiantil && carnetIdentidad) {
+        estudiantes.push({
+          carnetEstudiantil,
+          carnetIdentidad,
+          nombreCompleto,
+          correoInstitucional,
+          correoPersonal,
+          idPlanEstudio,
+        });
+      }
+    });
+
+    const dto = new BulkEstudiantesInputDto();
+    dto.estudiantes = estudiantes;
+    dto.batchSize = 50;
+
+    return this.bulkUpsertEstudiantes(dto);
   }
 }
