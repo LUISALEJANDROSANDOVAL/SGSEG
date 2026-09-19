@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import {
+  AlertTriangle,
+  Building2,
   Download,
+  Filter,
   Printer,
   ShieldCheck,
 } from 'lucide-react'
@@ -9,6 +12,7 @@ import { EncabezadoPagina } from '@/components/encabezado-pagina'
 import { defensasApi, type EmbudoEstados, type Defensa } from '@/lib/defensas.api'
 import { casosApi, type AreaAcademica, type MetricasCasos } from '@/lib/casos.api'
 import { sorteosApi, type SorteoItem } from '@/lib/sorteos.api'
+import { reportesApi, type DashboardEjecutivoData } from '@/lib/reportes.api'
 import { useAuth } from '@/context/AuthContext'
 import { esJefeCarrera, getJefeCarreraId, getJefeCarreraNombre } from '@/lib/auth-helpers'
 
@@ -17,6 +21,11 @@ export default function PaginaReportes() {
   const isJefe = esJefeCarrera(user)
   const jefeCarreraId = getJefeCarreraId(user)
   const carreraNombre = getJefeCarreraNombre(user)
+
+  const [dashboardData, setDashboardData] = useState<DashboardEjecutivoData | null>(null)
+  const [filtroFacultad, setFiltroFacultad] = useState<string>('')
+  const [filtroCarrera, setFiltroCarrera] = useState<string>('')
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string>('')
 
   const [embudo, setEmbudo] = useState<EmbudoEstados | null>(null)
   const [metricasCasos, setMetricasCasos] = useState<MetricasCasos | null>(null)
@@ -28,19 +37,33 @@ export default function PaginaReportes() {
   const cargarReportes = async () => {
     setLoading(true)
     try {
-      const idCarreraFiltro = isJefe && jefeCarreraId ? jefeCarreraId : undefined
-      const [embudoData, casosData, areasData, sorteosData, defensasData] = await Promise.all([
+      const idCarreraFiltro = isJefe && jefeCarreraId ? jefeCarreraId : filtroCarrera || undefined
+      const idFacultadFiltro = isJefe ? undefined : filtroFacultad || undefined
+
+      const [embudoData, casosData, areasData, sorteosData, defensasData, dashboardEjecutivo] = await Promise.all([
         defensasApi.getEmbudo(),
         casosApi.getMetricas(idCarreraFiltro),
         casosApi.getAreas(idCarreraFiltro),
         sorteosApi.getHistorial({ idCarrera: idCarreraFiltro, limit: 100 }),
         defensasApi.getDefensas({ idCarrera: idCarreraFiltro, limit: 100 }),
+        reportesApi.getDashboardEjecutivo({
+          idCarrera: idCarreraFiltro,
+          idFacultad: idFacultadFiltro,
+          periodoAcademico: filtroPeriodo || undefined,
+        }).catch((err) => {
+          console.warn('Dashboard ejecutivo endpoint fallback:', err);
+          return null;
+        }),
       ])
+
       setEmbudo(embudoData)
       setMetricasCasos(casosData)
       setAreas(areasData)
       setSorteos(sorteosData.items)
       setDefensas(defensasData.items)
+      if (dashboardEjecutivo) {
+        setDashboardData(dashboardEjecutivo)
+      }
     } catch (e) {
       console.error('Error cargando reportes consolidados:', e)
     } finally {
@@ -50,7 +73,7 @@ export default function PaginaReportes() {
 
   useEffect(() => {
     cargarReportes()
-  }, [user, isJefe, jefeCarreraId])
+  }, [user, isJefe, jefeCarreraId, filtroFacultad, filtroCarrera, filtroPeriodo])
 
   // Exportar reporte consolidado en CSV
   const exportarCSV = () => {
@@ -161,52 +184,170 @@ export default function PaginaReportes() {
           </div>
         )}
 
-        {/* Tarjetas KPI de Supervisión Global */}
-        <section className="grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-4">
-          <div className="bg-white px-5 py-4">
-            <p className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
-              Total Defensas en Pipeline
+        {/* Barra de Filtros Ejecutivos (para Vicerrectorado y Coordinación) */}
+        {!isJefe && (
+          <div className="flex flex-wrap items-center justify-between gap-4 border border-line bg-surface p-3.5 text-xs">
+            <div className="flex items-center gap-2 text-neutral-600 font-medium">
+              <Filter className="size-4 text-crimson" />
+              <span>Filtros Ejecutivos:</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-neutral-500">Facultad:</span>
+                <select
+                  value={filtroFacultad}
+                  onChange={(e) => setFiltroFacultad(e.target.value)}
+                  className="border border-line bg-white px-2.5 py-1 text-xs text-neutral-800 focus:outline-none focus:border-crimson"
+                >
+                  <option value="">Todas las Facultades</option>
+                  <option value="1">Ciencias y Tecnología (FCT)</option>
+                  <option value="2">Ciencias Empresariales (FCE)</option>
+                  <option value="3">Ciencias Jurídicas y Sociales (FCJS)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-neutral-500">Carrera:</span>
+                <select
+                  value={filtroCarrera}
+                  onChange={(e) => setFiltroCarrera(e.target.value)}
+                  className="border border-line bg-white px-2.5 py-1 text-xs text-neutral-800 focus:outline-none focus:border-crimson"
+                >
+                  <option value="">Todas las Carreras</option>
+                  {dashboardData?.distribucionCarreras.map((c) => (
+                    <option key={c.idCarrera} value={c.idCarrera}>
+                      {c.carrera}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="text-neutral-500">Período:</span>
+                <select
+                  value={filtroPeriodo}
+                  onChange={(e) => setFiltroPeriodo(e.target.value)}
+                  className="border border-line bg-white px-2.5 py-1 text-xs text-neutral-800 focus:outline-none focus:border-crimson"
+                >
+                  <option value="">Todos los Períodos</option>
+                  <option value="2-2026">Semestre 2-2026</option>
+                  <option value="1-2026">Semestre 1-2026</option>
+                </select>
+              </div>
+
+              {(filtroFacultad || filtroCarrera || filtroPeriodo) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFiltroFacultad('')
+                    setFiltroCarrera('')
+                    setFiltroPeriodo('')
+                  }}
+                  className="text-[11px] text-crimson hover:underline"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tarjetas KPI de Supervisión Ejecutiva */}
+        <section className="grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-5">
+          {/* KPI 1: Casos Disponibles */}
+          <div className="bg-white px-4 py-4">
+            <p className="text-[10.5px] tracking-[0.1em] text-neutral-500 uppercase font-semibold">
+              Casos Disponibles
             </p>
             <p className="mt-1.5 text-2xl font-bold text-neutral-900">
-              {loading ? '—' : embudo ? embudo.total : 0}
+              {loading
+                ? '—'
+                : dashboardData
+                ? dashboardData.resumenGlobal.casosDisponibles
+                : metricasCasos
+                ? metricasCasos.disponibles
+                : 0}
             </p>
-            <p className="text-[11px] text-neutral-500 mt-0.5">Programadas en semestre 2-2026</p>
+            <p className="text-[10.5px] text-neutral-500 mt-0.5">
+              {dashboardData ? `${dashboardData.resumenGlobal.casosAgotados} agotados (≥ 2 usos)` : '< 2 usos reglamentarios'}
+            </p>
           </div>
 
-          <div className="bg-white px-5 py-4">
-            <p className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
-              Actas de Sorteo Emitidas
+          {/* KPI 2: Áreas en Stock Crítico */}
+          <div className="bg-white px-4 py-4">
+            <p className="text-[10.5px] tracking-[0.1em] text-neutral-500 uppercase font-semibold">
+              Stock Crítico Áreas
+            </p>
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span
+                className={`text-2xl font-bold ${
+                  (dashboardData?.resumenGlobal.areasStockCritico || 0) > 0 ? 'text-red-600' : 'text-emerald-700'
+                }`}
+              >
+                {loading
+                  ? '—'
+                  : dashboardData
+                  ? dashboardData.resumenGlobal.areasStockCritico
+                  : metricasCasos
+                  ? metricasCasos.stockCritico.length
+                  : 0}
+              </span>
+              {(dashboardData?.resumenGlobal.areasStockCritico || 0) > 0 && (
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-700 px-1.5 py-0.5 rounded-xs">
+                  Alerta
+                </span>
+              )}
+            </div>
+            <p className="text-[10.5px] text-neutral-500 mt-0.5">Por debajo de umbral mínimo</p>
+          </div>
+
+          {/* KPI 3: Defensas Concluidas */}
+          <div className="bg-white px-4 py-4">
+            <p className="text-[10.5px] tracking-[0.1em] text-neutral-500 uppercase font-semibold">
+              Defensas Concluidas
             </p>
             <p className="mt-1.5 text-2xl font-bold text-neutral-900">
-              {loading ? '—' : sorteos.length}
+              {loading
+                ? '—'
+                : dashboardData
+                ? dashboardData.resumenGlobal.defensasConcluidas
+                : embudo
+                ? embudo.calificados
+                : 0}
             </p>
-            <p className="text-[11px] text-neutral-500 mt-0.5">Con hash criptográfico verificado</p>
+            <p className="text-[10.5px] text-emerald-700 mt-0.5 font-medium">
+              {dashboardData
+                ? `${dashboardData.resumenGlobal.defensasAprobadas} aprobadas · Nota prom: ${dashboardData.resumenGlobal.promedioGeneralNotas}`
+                : 'Con dictamen de tribunal'}
+            </p>
           </div>
 
-          <div className="bg-white px-5 py-4">
-            <p className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
-              Casos Disponibles (&lt; 2 usos)
+          {/* KPI 4: Postulantes Pendientes */}
+          <div className="bg-white px-4 py-4">
+            <p className="text-[10.5px] tracking-[0.1em] text-neutral-500 uppercase font-semibold">
+              Postulantes Pendientes
+            </p>
+            <p className="mt-1.5 text-2xl font-bold text-amber-700">
+              {loading
+                ? '—'
+                : dashboardData
+                ? dashboardData.resumenGlobal.postulantesPendientes
+                : embudo
+                ? embudo.programados + embudo.areaSorteada + embudo.casoAsignado
+                : 0}
+            </p>
+            <p className="text-[10.5px] text-neutral-500 mt-0.5">En espera de sorteo o defensa</p>
+          </div>
+
+          {/* KPI 5: Actas Oficiales Emitidas */}
+          <div className="bg-white px-4 py-4">
+            <p className="text-[10.5px] tracking-[0.1em] text-neutral-500 uppercase font-semibold">
+              Actas Emitidas
             </p>
             <p className="mt-1.5 text-2xl font-bold text-neutral-900">
-              {loading ? '—' : metricasCasos ? metricasCasos.disponibles : 0}
+              {loading ? '—' : dashboardData ? dashboardData.resumenGlobal.actasEmitidas : sorteos.length}
             </p>
-            <p className="text-[11px] text-emerald-700 mt-0.5">
-              {metricasCasos ? `${metricasCasos.agotados} agotados reglamentariamente` : ''}
-            </p>
-          </div>
-
-          <div className="bg-white px-5 py-4">
-            <p className="text-[11px] tracking-[0.12em] text-neutral-500 uppercase">
-              Tasa de Conclusión
-            </p>
-            <p className="mt-1.5 text-2xl font-bold text-emerald-700">
-              {embudo && embudo.total > 0
-                ? `${Math.round(((embudo.defendidos + embudo.calificados) / embudo.total) * 100)}%`
-                : '100%'}
-            </p>
-            <p className="text-[11px] text-neutral-500 mt-0.5">
-              {embudo ? `${embudo.calificados} postulantes calificados` : ''}
-            </p>
+            <p className="text-[10.5px] text-neutral-500 mt-0.5">Certificadas con hash SHA-256</p>
           </div>
         </section>
 
@@ -302,6 +443,134 @@ export default function PaginaReportes() {
             </ul>
           </section>
         </div>
+        {/* Alerta de Áreas en Stock Crítico */}
+        {dashboardData && dashboardData.stockCritico.length > 0 && (
+          <section className="border-l-4 border-l-red-600 border border-line bg-white shadow-xs">
+            <header className="border-b border-line px-5 py-3.5 flex items-center justify-between bg-red-50/50">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="size-4 text-red-600" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-red-700">
+                  Alerta Operativa: Áreas Temáticas con Stock Crítico de Casos
+                </h2>
+              </div>
+              <span className="text-[11px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-xs">
+                {dashboardData.stockCritico.length} en riesgo
+              </span>
+            </header>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-line bg-surface text-neutral-500 font-semibold text-[10.5px] uppercase">
+                    <th className="px-5 py-2.5">Área Académica</th>
+                    <th className="px-5 py-2.5">Carrera / Facultad</th>
+                    <th className="px-5 py-2.5 text-center">Disponibles</th>
+                    <th className="px-5 py-2.5 text-center">Umbral Requerido</th>
+                    <th className="px-5 py-2.5 text-right">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {dashboardData.stockCritico.map((item) => (
+                    <tr key={item.idArea} className="hover:bg-red-50/30">
+                      <td className="px-5 py-2.5 font-bold text-neutral-900">{item.nombreArea}</td>
+                      <td className="px-5 py-2.5 text-neutral-600">
+                        {item.carrera} · <span className="text-neutral-400">{item.facultad}</span>
+                      </td>
+                      <td className="px-5 py-2.5 text-center font-bold text-red-600">
+                        {item.casosDisponibles} casos
+                      </td>
+                      <td className="px-5 py-2.5 text-center text-neutral-500">
+                        {item.umbralRequerido} casos
+                      </td>
+                      <td className="px-5 py-2.5 text-right">
+                        <span
+                          className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-xs ${
+                            item.estadoAlerta === 'AGOTADO'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {item.estadoAlerta}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {/* Matriz Ejecutiva por Facultad (Vicerrectorado y Coordinación) */}
+        {!isJefe && dashboardData && dashboardData.distribucionFacultades.length > 0 && (
+          <section className="border border-line bg-white shadow-xs">
+            <header className="border-b border-line px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="size-4 text-crimson" />
+                <div>
+                  <h2 className="text-sm font-semibold tracking-tight text-neutral-900">
+                    Consolidado Institucional por Facultad
+                  </h2>
+                  <p className="text-xs text-neutral-500">
+                    Métricas de supervisión universitaria, aprobación y casos activos en FCT, FCE y FCJS
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-semibold bg-surface border border-line px-2.5 py-1">
+                {dashboardData.distribucionFacultades.length} Facultades
+              </span>
+            </header>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-line bg-surface text-neutral-500 font-semibold text-[10.5px] uppercase">
+                    <th className="px-5 py-2.5">Facultad</th>
+                    <th className="px-5 py-2.5 text-center">Carreras</th>
+                    <th className="px-5 py-2.5 text-center">Casos Disponibles</th>
+                    <th className="px-5 py-2.5 text-center">Stock Crítico</th>
+                    <th className="px-5 py-2.5 text-center">Defensas Concluidas</th>
+                    <th className="px-5 py-2.5 text-center">En Pipeline</th>
+                    <th className="px-5 py-2.5 text-center">Nota Promedio</th>
+                    <th className="px-5 py-2.5 text-right">Tasa Aprobación</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {dashboardData.distribucionFacultades.map((fac) => (
+                    <tr key={fac.idFacultad} className="hover:bg-neutral-50/60">
+                      <td className="px-5 py-3 font-bold text-neutral-900">{fac.nombreFacultad}</td>
+                      <td className="px-5 py-3 text-center text-neutral-600">{fac.totalCarreras}</td>
+                      <td className="px-5 py-3 text-center font-bold text-neutral-800">
+                        {fac.casosDisponibles}
+                      </td>
+                      <td className="px-5 py-3 text-center">
+                        <span
+                          className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-xs ${
+                            fac.areasStockCritico > 0
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-neutral-100 text-neutral-600'
+                          }`}
+                        >
+                          {fac.areasStockCritico} áreas
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-center text-emerald-700 font-bold">
+                        {fac.defensasConcluidas}
+                      </td>
+                      <td className="px-5 py-3 text-center text-amber-700 font-semibold">
+                        {fac.postulantesPendientes}
+                      </td>
+                      <td className="px-5 py-3 text-center font-mono text-neutral-800">
+                        {fac.promedioNota > 0 ? fac.promedioNota : '—'}
+                      </td>
+                      <td className="px-5 py-3 text-right font-bold text-neutral-900">
+                        {fac.tasaAprobacion}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
       </div>
     </DashboardShell>
   )

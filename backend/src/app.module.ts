@@ -10,6 +10,8 @@ import { DefensasModule } from './defensas/defensas.module';
 import { EstudiantesModule } from './estudiantes/estudiantes.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SorteosModule } from './sorteos/sorteos.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { ReportesModule } from './reportes/reportes.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { SorteosModule } from './sorteos/sorteos.module';
     CasosModule,
     DefensasModule,
     SorteosModule,
+    NotificacionesModule,
+    ReportesModule,
   ],
   controllers: [AppController],
   providers: [

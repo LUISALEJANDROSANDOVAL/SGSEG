@@ -954,7 +954,11 @@ export class SorteosRepository {
           include: {
             planEstudio: {
               include: {
-                carrera: true,
+                carrera: {
+                  include: {
+                    facultad: true,
+                  },
+                },
               },
             },
           },

@@ -274,5 +274,15 @@ export const sorteosApi = {
     const { data } = await api.post('/sorteos/live/notificar-inicio', payload);
     return data;
   },
+
+  /**
+   * Descarga el documento PDF del Acta Oficial de Sorteo.
+   */
+  async descargarActaPdf(idDefensa: string): Promise<Blob> {
+    const response = await api.get(`/sorteos/acta/${idDefensa}/pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
 

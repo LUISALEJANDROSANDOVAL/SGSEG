@@ -7,7 +7,9 @@ import {
   Param,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -127,6 +129,31 @@ export class SorteosController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.sorteosService.consultarAsignacion(idDefensa, user);
+  }
+
+  /**
+   * Genera y descarga el documento oficial de Acta de Sorteo en formato PDF.
+   */
+  @Get('acta/:idDefensa/pdf')
+  @Roles(
+    'COORDINACION',
+    'SECRETARIADO',
+    'JEFE_CARRERA',
+    'VICERRECTORADO',
+    'REGISTRO',
+    'DEFENSA',
+    'SUPER_ADMIN',
+  )
+  async descargarActaPdf(
+    @Param('idDefensa') idDefensa: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename } = await this.sorteosService.generarActaPdf(idDefensa, user);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    return res.end(buffer);
   }
 
   /**

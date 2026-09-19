@@ -94,10 +94,15 @@ El sorteo se ejecuta en presencia del postulante y las autoridades correspondien
 
 ---
 
-### Etapa 4: Emisión de Documentación Oficial
-Una vez confirmado el sorteo, Secretaría o Jefatura de Carrera descargan e imprimen:
-1. **Acta Oficial de Sorteo:** Contiene número correlativo, fecha/hora, datos del postulante, área sorteada, fecha programada de defensa, tribunal y espacio para firmas (Jefe de Carrera, Secretario/Testigo, Postulante).
-2. **Documento del Caso de Estudio:** Se entrega en sobre cerrado o copia formal con el enunciado y preguntas guía para la defensa.
+### Etapa 4: Emisión de Documentación Oficial y Notificaciones (Módulo 5)
+Una vez confirmado el sorteo, el sistema formaliza legalmente la asignación y dispara los canales de comunicación oficial:
+1. **Generación de Actas en PDF (`GET /sorteos/acta/:idDefensa/pdf`):**
+   * Renderizado en memoria mediante `pdfkit` con membrete institucional UTEPSA.
+   * Incluye: código oficial de acta correlativo (`ACTA-DEF-X-YYYY`), token criptográfico SHA-256 (`tokenActa`), datos del postulante, área temática y caso asignado, plazo reglamentario de preparación (1h, 1.5h, 5d, 7d, 10d, 14d) y cuadro de firmas formales a 3 columnas (Postulante, Jefe de Carrera y Secretaría como Testigo de Fe Pública).
+2. **Servicio de Notificaciones Asíncronas por Correo:**
+   * Encolamiento automático en background (`ColaNotificacionesService`) sin demorar la respuesta del sorteo.
+   * Persistencia del estado de despacho en la tabla `EnvioCasoEstudio` (`PENDIENTE` ➔ `ENVIADO` / `FALLIDO`) y trazabilidad en `RegistroAuditoria`.
+   * Correo HTML responsivo institucional con resumen del sorteo, fecha de defensa, caso adjudicado y certificación criptográfica.
 
 ---
 
@@ -115,10 +120,21 @@ Una vez confirmado el sorteo, Secretaría o Jefatura de Carrera descargan e impr
 
 ---
 
-### Etapa 6: Monitoreo Institucional y Reportes (`/reportes`)
-1. **KPIs en Tiempo Real:** Total de postulantes inscritos, casos activos por área, sorteos realizados en el período y porcentaje de aprobación.
-2. **Vista de Vicerrectorado:** Supervisión de la totalidad de facultades con filtros por período académico y alertas tempranas sobre áreas con bajo stock de casos disponibles.
-3. **Auditoría:** Registro de eventos críticos (creación de casos, ejecuciones de sorteos, reaperturas o modificaciones de calificaciones).
+### Etapa 6: Monitoreo Institucional y Dashboard Ejecutivo (`/reportes`)
+1. **Dashboard Ejecutivo (`GET /reportes/dashboard-ejecutivo`):**
+   * Endpoint de analítica agregada para Vicerrectorado, Coordinación y Jefaturas.
+   * **Contadores en Tiempo Real:**
+     * Casos disponibles (< 2 usos) y agotados (≥ 2 usos).
+     * Áreas en stock crítico (por debajo del umbral mínimo de disponibilidad).
+     * Defensas concluidas con desglose de aprobadas, reprobadas y nota promedio institucional.
+     * Postulantes en pipeline (programados y en curso de sorteo/defensa).
+     * Actas de sorteo oficiales emitidas con hash SHA-256.
+   * **Filtros Flexibles:** Filtrable por facultad (FCT, FCE, FCJS), carrera o período académico.
+   * **Aislamiento Estricto (RNF-02):** Vicerrectorado y Super Admin supervisan globalmente; los Jefes de Carrera quedan restringidos exclusivamente a su carrera.
+2. **Alertas Operativas de Stock Crítico:**
+   * Listado prioritario de áreas temáticas en riesgo de desabastecimiento para reposición inmediata.
+3. **Matriz Comparativa Universitaria:**
+   * Desglose institucional por facultad para la toma de decisiones ejecutivas en Vicerrectorado.
 
 ---
 

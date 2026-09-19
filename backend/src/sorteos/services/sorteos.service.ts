@@ -3,7 +3,9 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -16,10 +18,18 @@ import {
   SorteoConjuntoDto,
 } from '../dto/sorteos.dto';
 import { SorteosRepository } from '../repositories/sorteos.repository';
+import { ActasPdfService, DatosActaSorteo } from './actas-pdf.service';
+import { ColaNotificacionesService } from '../../notificaciones/services/cola-notificaciones.service';
 
 @Injectable()
 export class SorteosService {
-  constructor(private readonly repository: SorteosRepository) {}
+  private readonly logger = new Logger(SorteosService.name);
+
+  constructor(
+    private readonly repository: SorteosRepository,
+    private readonly actasPdfService: ActasPdfService,
+    @Optional() private readonly colaNotificacionesService?: ColaNotificacionesService,
+  ) {}
 
   /**
    * Genera un token hash SHA-256 criptográfico para el acta de sorteo.
@@ -467,6 +477,36 @@ export class SorteosService {
       }
     }
 
+    // Despacho asíncrono y encolamiento de correo oficial al estudiante
+    if (this.colaNotificacionesService && estudiante.correoInstitucional) {
+      try {
+        await this.colaNotificacionesService.encolarNotificacion({
+          idEstudiante: estudiante.idEstudiante,
+          idCasoEstudio: BigInt(dto.idCaso),
+          idDefensa,
+          idUsuarioEnvio: BigInt(user.idUsuario),
+          correoDestino: estudiante.correoInstitucional,
+          nombreEstudiante: estudiante.nombreCompleto,
+          carnetEstudiantil: estudiante.carnetEstudiantil,
+          carnetIdentidad: estudiante.carnetIdentidad,
+          carrera: carrera.nombre,
+          facultad: (carrera as any).facultad?.nombre || 'UTEPSA',
+          areaNombre: asignacion.area?.nombre || 'Área Sorteada',
+          casoCodigo: `CASO-${dto.idCaso}`,
+          casoTitulo: asignacion.caso?.titulo || 'Caso de Estudio',
+          casoContenido: asignacion.caso?.contenido,
+          plazoHoras: defensa.tipoDefensa.nombre === 'INTERNA' ? 1 : 1.5,
+          plazoLimiteEntrega: plazoLimite,
+          fechaDefensa: defensa.fechaDefensa,
+          tipoDefensa: defensa.tipoDefensa.nombre,
+          codigoActa,
+          tokenActa,
+        });
+      } catch (err: any) {
+        this.logger.warn(`No se pudo encolar la notificación por correo: ${err.message}`);
+      }
+    }
+
     return {
       mensaje: 'Sorteo finalizado y asignación de caso persistida oficialmente.',
       asignacion: this.serializeBigInt(asignacion),
@@ -606,6 +646,80 @@ export class SorteosService {
     }
 
     return this.serializeBigInt(asignacion);
+  }
+
+  /**
+   * Genera el documento PDF formal del Acta Oficial de Sorteo con sus metadatos y firmas.
+   */
+  async generarActaPdf(
+    idDefensa: string,
+    user: AuthenticatedUser,
+  ): Promise<{ buffer: Buffer; filename: string; codigoActa: string }> {
+    const idDef = BigInt(idDefensa);
+    const asignacion = await this.repository.findAsignacionByDefensa(idDef);
+
+    if (!asignacion) {
+      throw new NotFoundException(`No existe asignación ni acta oficial para la defensa ${idDefensa}.`);
+    }
+
+    // RBAC: Jefe de Carrera solo puede descargar de su propia carrera
+    if (user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.resolveAllowedCarreras(user);
+      const idCarrera = asignacion.estudiante.planEstudio.carrera.idCarrera;
+      if (!allowed?.includes(idCarrera)) {
+        throw new ForbiddenException('No tienes permisos para descargar el acta de otra carrera.');
+      }
+    }
+
+    const est = asignacion.estudiante;
+    const car = est.planEstudio.carrera;
+    const fac = (car as any).facultad?.nombre || 'Facultad de Tecnología';
+    const def = asignacion.defensa;
+    const usuarioEjec = asignacion.usuarioEjecutor;
+
+    const datosActa: DatosActaSorteo = {
+      codigoActa: asignacion.codigoActa || `ACTA-DEF-${asignacion.idDefensa}-${new Date().getFullYear()}`,
+      tokenActa: asignacion.tokenActa || undefined,
+      fechaAsignacion: asignacion.fechaAsignacion,
+      plazoLimiteEntrega: asignacion.plazoLimiteEntrega,
+      estudiante: {
+        nombreCompleto: est.nombreCompleto,
+        carnetIdentidad: est.carnetIdentidad,
+        carnetEstudiantil: est.carnetEstudiantil,
+        correoInstitucional: est.correoInstitucional,
+        carrera: car.nombre,
+        facultad: fac,
+        planEstudio: est.planEstudio.nombre,
+      },
+      defensa: {
+        idDefensa: String(def.idDefensa),
+        tipoDefensa: def.tipoDefensa?.nombre || 'INTERNA',
+        fechaDefensa: def.fechaDefensa,
+        periodoAcademico: def.periodoAcademico,
+      },
+      area: {
+        nombre: asignacion.area.nombre,
+      },
+      caso: {
+        idCaso: String(asignacion.caso.idCasoEstudio),
+        titulo: asignacion.caso.titulo,
+        contenido: asignacion.caso.contenido,
+      },
+      usuarioEjecutor: {
+        nombreCompleto: `${usuarioEjec.primerNombre} ${usuarioEjec.primerApellido}`,
+        correo: usuarioEjec.correoInstitucional,
+        rol: usuarioEjec.rol.nombre || 'COMISIÓN DE SORTEO',
+      },
+    };
+
+    const buffer = await this.actasPdfService.generarActaPdfBuffer(datosActa);
+    const filename = `Acta-Sorteo-${datosActa.codigoActa}.pdf`;
+
+    return {
+      buffer,
+      filename,
+      codigoActa: datosActa.codigoActa,
+    };
   }
 
   /**

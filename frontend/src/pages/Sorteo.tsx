@@ -1044,8 +1044,26 @@ export default function PaginaSorteo() {
   }
 
   // Descargar acta oficial
-  const handleDescargarPDF = () => {
-    alert(`Descargando Acta Oficial ${codigoActa || 'ACTA-UTEPSA'}.pdf...`)
+  const handleDescargarPDF = async () => {
+    if (!postulanteSeleccionado) {
+      alert('Seleccione un postulante para generar el acta.')
+      return
+    }
+    try {
+      const idDefensa = postulanteSeleccionado.id
+      const blob = await sorteosApi.descargarActaPdf(idDefensa)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Acta-Sorteo-${codigoActa || idDefensa}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Error al descargar acta PDF:', e)
+      alert('No se pudo generar el acta en PDF. Asegúrese de haber finalizado el sorteo para esta defensa.')
+    }
   }
 
   // Activar modo pantalla completa / proyector, generar enlace en vivo, código QR y despachar invitación por correo
