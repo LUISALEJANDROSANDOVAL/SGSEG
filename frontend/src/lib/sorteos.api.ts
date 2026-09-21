@@ -121,7 +121,31 @@ export interface HistorialSorteosResponse {
   };
 }
 
+export interface FinalizarSorteoResponse {
+  mensaje: string;
+  asignacion: any;
+  codigoActa: string;
+  tokenActa: string;
+}
+
+export interface FinalizarSorteoPayload {
+  idDefensa: string;
+  idArea: string;
+  idCaso: string;
+  estudiantePresente?: boolean;
+  motivoInasistencia?: string;
+  tokenSesionLive?: string;
+}
+
 export const sorteosApi = {
+  /**
+   * Finaliza el sorteo y formaliza atómicamente la asignación oficial (Área, Caso y Estudiante) en PostgreSQL.
+   */
+  async finalizarSorteo(payload: FinalizarSorteoPayload): Promise<FinalizarSorteoResponse> {
+    const { data } = await api.post<FinalizarSorteoResponse>('/sorteos/finalizar', payload);
+    return data;
+  },
+
   /**
    * Ejecuta el sorteo digital de Área Temática.
    */

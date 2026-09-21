@@ -26,14 +26,16 @@ import {
 import type { Defensa, EmbudoEstados } from '@/lib/defensas.api'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Estudiante } from '@/lib/estudiantes.api'
-import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
+import { esJefeCarrera, getJefeCarreraId, esVicerrectorado, puedeGestionarDefensas } from '@/lib/auth-helpers'
 
 export default function PaginaDefensas() {
   // Rol de usuario autenticado
   const { user } = useAuth()
   const isJefe = esJefeCarrera(user)
+  const isVice = esVicerrectorado(user)
+  const puedeEditar = puedeGestionarDefensas(user)
   const jefeCarreraId = getJefeCarreraId(user)
-  const esSoloLectura = user?.rol === 'Vicerrectorado' || isJefe
+  const esSoloLectura = !puedeEditar
 
   // Datos
   const [defensas, setDefensas] = useState<Defensa[]>([])
@@ -241,7 +243,7 @@ export default function PaginaDefensas() {
           titulo="Cronograma y Embudo de Defensas"
           descripcion="Gestión integral de fechas para examen de grado. Monitoreo del embudo de postulantes, verificación automatizada de plazos reglamentarios por carrera y alertas de sorteo."
           accion={
-            !isJefe && (
+            puedeEditar ? (
               <button
                 type="button"
                 onClick={abrirModalProgramar}
@@ -250,7 +252,12 @@ export default function PaginaDefensas() {
                 <Plus className="size-3.5" />
                 Programar Fecha de Defensa
               </button>
-            )
+            ) : isVice ? (
+              <div className="inline-flex items-center gap-1.5 border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-2xs">
+                <ShieldCheck className="size-3.5 text-blue-600" />
+                <span>Modo Supervisión y Auditoría de Defensas (Solo Lectura)</span>
+              </div>
+            ) : null
           }
         />
 

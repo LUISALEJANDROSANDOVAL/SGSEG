@@ -40,4 +40,5 @@ async function bootstrap() {
   console.log(`🚀 Application is running on port ${port} (0.0.0.0)`);
 }
 
+// Servidor institucional SGSEG iniciado con prisma client actualizado
 void bootstrap();

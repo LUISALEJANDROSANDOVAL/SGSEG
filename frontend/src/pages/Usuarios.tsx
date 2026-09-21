@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { EncabezadoPagina } from '@/components/encabezado-pagina';
 import api from '../lib/api';
-import { Edit2, ToggleRight, Plus, AlertCircle, X, Shield } from 'lucide-react';
+import { Edit2, ToggleRight, Plus, AlertCircle, X, Shield, Lock } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { puedeGestionarUsuarios } from '@/lib/auth-helpers';
 
 export default function PaginaUsuarios() {
+  const { user } = useAuth();
+  const puedeAdministrar = puedeGestionarUsuarios(user);
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [carreras, setCarreras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,15 +130,29 @@ export default function PaginaUsuarios() {
           titulo="Usuarios y Roles"
           descripcion="Panel de control para registrar cuentas institucionales, asignar roles y controlar estados de activación."
           accion={
-            <button
-              onClick={abrirModalCrear}
-              className="flex items-center gap-2 bg-ink px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 cursor-pointer"
-            >
-              <Plus className="size-4" />
-              Nuevo usuario
-            </button>
+            puedeAdministrar ? (
+              <button
+                onClick={abrirModalCrear}
+                className="flex items-center gap-2 bg-ink px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 cursor-pointer"
+              >
+                <Plus className="size-4" />
+                Nuevo usuario
+              </button>
+            ) : undefined
           }
         />
+
+        {!puedeAdministrar && (
+          <div className="flex items-start gap-3 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-xs">
+            <Lock className="size-5 shrink-0 text-amber-700 mt-0.5" />
+            <div>
+              <p className="font-semibold">Acceso de Auditoría y Consulta (Solo Lectura)</p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                La creación de cuentas y asignación de roles es potestad exclusiva del <strong>Vicerrectorado</strong> y la <strong>Administración General</strong>. Su rol actual no dispone de permisos para crear usuarios ni modificar roles.
+              </p>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="flex items-center gap-3 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-600">
@@ -196,24 +214,28 @@ export default function PaginaUsuarios() {
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => abrirModalEditar(u)}
-                            className="p-1.5 text-neutral-500 hover:text-ink transition-colors hover:bg-neutral-100 rounded"
-                            title="Editar usuario"
-                          >
-                            <Edit2 className="size-4" />
-                          </button>
-                          {u.activo && (
+                        {puedeAdministrar ? (
+                          <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => desactivarUsuario(u.id)}
-                              className="p-1.5 text-neutral-500 hover:text-red-600 transition-colors hover:bg-red-50 rounded"
-                              title="Desactivar cuenta"
+                              onClick={() => abrirModalEditar(u)}
+                              className="p-1.5 text-neutral-500 hover:text-ink transition-colors hover:bg-neutral-100 rounded"
+                              title="Editar usuario"
                             >
-                              <ToggleRight className="size-5" />
+                              <Edit2 className="size-4" />
                             </button>
-                          )}
-                        </div>
+                            {u.activo && (
+                              <button
+                                onClick={() => desactivarUsuario(u.id)}
+                                className="p-1.5 text-neutral-500 hover:text-red-600 transition-colors hover:bg-red-50 rounded"
+                                title="Desactivar cuenta"
+                              >
+                                <ToggleRight className="size-5" />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-neutral-400 italic">Solo lectura</span>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -14,8 +14,64 @@ import { RecuperarPasswordDto } from '../dto/recuperar-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AdminResetPasswordDto } from '../dto/admin-reset-password.dto';
 import { UpdateUserEstadoDto } from '../dto/update-user-estado.dto';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
 import { AuthRepository } from '../repositories/auth.repository';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+
+const ROL_MAP_INV: Record<string, string> = {
+  'coordinador general': 'COORDINACION',
+  'secretario de facultad': 'SECRETARIADO',
+  'jefe de carrera': 'JEFE_CARRERA',
+  'vicerrectorado': 'VICERRECTORADO',
+  'registro': 'REGISTRO',
+  'defensas de grado': 'DEFENSA',
+  'administrador general': 'SUPER_ADMIN',
+  'coordinacion': 'COORDINACION',
+  'secretariado': 'SECRETARIADO',
+  'jefe_carrera': 'JEFE_CARRERA',
+  'super_admin': 'SUPER_ADMIN',
+  'defensa': 'DEFENSA',
+};
+
+function splitNombre(nombre: string): {
+  primerNombre: string;
+  segundoNombre: string | null;
+  primerApellido: string;
+  segundoApellido: string | null;
+} {
+  const parts = nombre.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return {
+      primerNombre: parts[0],
+      segundoNombre: null,
+      primerApellido: 'Docente',
+      segundoApellido: null,
+    };
+  }
+  if (parts.length === 2) {
+    return {
+      primerNombre: parts[0],
+      segundoNombre: null,
+      primerApellido: parts[1],
+      segundoApellido: null,
+    };
+  }
+  if (parts.length === 3) {
+    return {
+      primerNombre: parts[0],
+      segundoNombre: null,
+      primerApellido: parts[1],
+      segundoApellido: parts[2],
+    };
+  }
+  return {
+    primerNombre: parts[0],
+    segundoNombre: parts.slice(1, parts.length - 2).join(' ') || null,
+    primerApellido: parts[parts.length - 2],
+    segundoApellido: parts[parts.length - 1],
+  };
+}
 
 @Injectable()
 export class AuthService {
@@ -334,11 +390,11 @@ export class AuthService {
     currentUser: AuthenticatedUser,
   ) {
     if (
-      currentUser.rol !== 'COORDINACION' &&
-      currentUser.rol !== 'SUPER_ADMIN'
+      currentUser.rol !== 'SUPER_ADMIN' &&
+      currentUser.rol !== 'VICERRECTORADO'
     ) {
       throw new ForbiddenException(
-        'Solo Coordinación o SuperAdmin pueden modificar el estado de un usuario',
+        'Solo Vicerrectorado o SuperAdmin pueden modificar el estado de un usuario',
       );
     }
 
@@ -364,6 +420,132 @@ export class AuthService {
       },
     };
   }
+
+  async createUser(dto: CreateUserDto, currentUser: AuthenticatedUser) {
+    if (
+      currentUser.rol !== 'SUPER_ADMIN' &&
+      currentUser.rol !== 'VICERRECTORADO'
+    ) {
+      throw new ForbiddenException(
+        'Solo Vicerrectorado o SuperAdmin pueden crear usuarios y asignar roles',
+      );
+    }
+
+    const email = dto.email.trim().toLowerCase();
+    const existing = await this.authRepository.findByCorreoInstitucional(email);
+    if (existing) {
+      throw new BadRequestException(`Ya existe un usuario registrado con el correo ${email}`);
+    }
+
+    const rolKey = String(dto.rol || '').trim().toLowerCase();
+    const rolNombre = ROL_MAP_INV[rolKey] || dto.rol.toUpperCase().trim();
+    const rolRecord = await this.authRepository.findRolByNombre(rolNombre);
+    if (!rolRecord) {
+      throw new BadRequestException(`El rol '${dto.rol}' no es válido en el sistema institucional`);
+    }
+
+    if (rolNombre === 'JEFE_CARRERA' && (!dto.carreraId || String(dto.carreraId).trim() === '')) {
+      throw new BadRequestException(
+        'Debe asignar obligatoriamente una Carrera al usuario con rol "Jefe de Carrera".',
+      );
+    }
+
+    const { primerNombre, segundoNombre, primerApellido, segundoApellido } = splitNombre(dto.nombre);
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.authRepository.createUser({
+      primerNombre,
+      segundoNombre,
+      primerApellido,
+      segundoApellido,
+      correoInstitucional: email,
+      passwordHash,
+      idRol: rolRecord.idRol,
+      estado: dto.activo === false ? 'INACTIVO' : 'ACTIVO',
+    });
+
+    if (rolNombre === 'JEFE_CARRERA' && dto.carreraId) {
+      await this.authRepository.assignCarrera(Number(user.idUsuario), Number(dto.carreraId));
+    }
+
+    return {
+      success: true,
+      mensaje: `Usuario ${user.correoInstitucional} creado exitosamente con rol ${rolRecord.nombre}`,
+      id: String(user.idUsuario),
+      idUsuario: String(user.idUsuario),
+      nombre: [user.primerNombre, user.primerApellido].filter(Boolean).join(' '),
+      email: user.correoInstitucional,
+      rol: user.rol.nombre,
+      activo: user.estado === 'ACTIVO',
+    };
+  }
+
+  async updateUser(idUsuario: string, dto: UpdateUserDto, currentUser: AuthenticatedUser) {
+    if (
+      currentUser.rol !== 'SUPER_ADMIN' &&
+      currentUser.rol !== 'VICERRECTORADO'
+    ) {
+      throw new ForbiddenException(
+        'Solo Vicerrectorado o SuperAdmin pueden editar usuarios',
+      );
+    }
+
+    const numId = Number(idUsuario);
+    const existing = await this.authRepository.findById(numId);
+    if (!existing) {
+      throw new NotFoundException(`Usuario con ID ${idUsuario} no encontrado`);
+    }
+
+    const updateData: any = {};
+    if (dto.nombre) {
+      const { primerNombre, segundoNombre, primerApellido, segundoApellido } = splitNombre(dto.nombre);
+      updateData.primerNombre = primerNombre;
+      updateData.segundoNombre = segundoNombre;
+      updateData.primerApellido = primerApellido;
+      updateData.segundoApellido = segundoApellido;
+    }
+    if (dto.email) {
+      updateData.correoInstitucional = dto.email.trim().toLowerCase();
+    }
+    if (dto.password) {
+      updateData.passwordHash = await bcrypt.hash(dto.password, 10);
+    }
+    if (dto.activo !== undefined) {
+      updateData.estado = dto.activo ? 'ACTIVO' : 'INACTIVO';
+    }
+
+    let rolNombre = existing.rol.nombre;
+    if (dto.rol) {
+      const rolKey = String(dto.rol || '').trim().toLowerCase();
+      rolNombre = ROL_MAP_INV[rolKey] || dto.rol.toUpperCase().trim();
+      const rolRecord = await this.authRepository.findRolByNombre(rolNombre);
+      if (!rolRecord) {
+        throw new BadRequestException(`El rol '${dto.rol}' no es válido`);
+      }
+      updateData.idRol = rolRecord.idRol;
+    }
+
+    if (rolNombre === 'JEFE_CARRERA' && dto.carreraId) {
+      await this.authRepository.assignCarrera(numId, Number(dto.carreraId));
+    }
+
+    const updated = await this.authRepository.updateUserFull(numId, updateData);
+
+    return {
+      success: true,
+      mensaje: `Usuario ${updated.correoInstitucional} actualizado exitosamente`,
+      id: String(updated.idUsuario),
+      idUsuario: String(updated.idUsuario),
+      email: updated.correoInstitucional,
+      rol: updated.rol.nombre,
+      activo: updated.estado === 'ACTIVO',
+    };
+  }
+
+  async deactivateUser(idUsuario: string, currentUser: AuthenticatedUser) {
+    return this.updateUserEstado(idUsuario, { estado: 'INACTIVO' }, currentUser);
+  }
 }
+
 
 

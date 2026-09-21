@@ -34,13 +34,15 @@ import {
 import { TableSkeleton } from '@/components/table-skeleton'
 import { EmptyState } from '@/components/empty-state'
 import { useAuth } from '@/context/AuthContext'
-import { esJefeCarrera as checkEsJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
+import { esJefeCarrera as checkEsJefeCarrera, getJefeCarreraId, esVicerrectorado, puedeGestionarEstudiantes } from '@/lib/auth-helpers'
 
 export default function PaginaEstudiantes() {
   // Auth y perfil de rol
   const { user } = useAuth()
   const esJefeCarrera = checkEsJefeCarrera(user)
   const isJefe = esJefeCarrera
+  const isVice = esVicerrectorado(user)
+  const puedeEditar = puedeGestionarEstudiantes(user)
   const jefeCarreraId = getJefeCarreraId(user)
 
   // Estado principal de datos
@@ -446,7 +448,7 @@ export default function PaginaEstudiantes() {
                 />
                 <span>Actualizar</span>
               </button>
-              {!esJefeCarrera && (
+              {puedeEditar ? (
                 <>
                   <button
                     type="button"
@@ -468,7 +470,12 @@ export default function PaginaEstudiantes() {
                     <span>+ Inscribir Estudiante</span>
                   </button>
                 </>
-              )}
+              ) : isVice ? (
+                <div className="inline-flex items-center gap-1.5 border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-2xs">
+                  <ShieldCheck className="size-3.5 text-blue-600" />
+                  <span>Modo Auditoría de Padrón (Solo Lectura)</span>
+                </div>
+              ) : null}
             </div>
           }
         />
@@ -852,9 +859,9 @@ export default function PaginaEstudiantes() {
                         {/* Acciones */}
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {esJefeCarrera ? (
+                            {!puedeEditar ? (
                               <span className="text-[11px] font-medium text-neutral-400 italic">
-                                Solo consulta
+                                {isVice ? 'Auditoría / Solo lectura' : 'Solo consulta'}
                               </span>
                             ) : esEliminado ? (
                               <button

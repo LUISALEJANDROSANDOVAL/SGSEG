@@ -92,5 +92,86 @@ export class AuthRepository {
       orderBy: { idUsuario: 'asc' },
     });
   }
+
+  async findRolByNombre(nombre: string) {
+    return this.prisma.rol.findUnique({
+      where: { nombre },
+    });
+  }
+
+  async createUser(data: {
+    primerNombre: string;
+    segundoNombre?: string | null;
+    primerApellido: string;
+    segundoApellido?: string | null;
+    correoInstitucional: string;
+    passwordHash: string;
+    idRol: bigint;
+    estado?: string;
+  }) {
+    return this.prisma.usuario.create({
+      data: {
+        primerNombre: data.primerNombre,
+        segundoNombre: data.segundoNombre ?? null,
+        primerApellido: data.primerApellido,
+        segundoApellido: data.segundoApellido ?? null,
+        correoInstitucional: data.correoInstitucional,
+        passwordHash: data.passwordHash,
+        idRol: data.idRol,
+        estado: data.estado ?? 'ACTIVO',
+      },
+      include: {
+        rol: true,
+        carreras: {
+          include: {
+            carrera: true,
+          },
+        },
+      },
+    });
+  }
+
+  async updateUserFull(
+    idUsuario: number,
+    data: {
+      primerNombre?: string;
+      segundoNombre?: string | null;
+      primerApellido?: string;
+      segundoApellido?: string | null;
+      correoInstitucional?: string;
+      passwordHash?: string;
+      idRol?: bigint;
+      estado?: string;
+    },
+  ) {
+    return this.prisma.usuario.update({
+      where: { idUsuario },
+      data,
+      include: {
+        rol: true,
+        carreras: {
+          include: {
+            carrera: true,
+          },
+        },
+      },
+    });
+  }
+
+  async assignCarrera(idUsuario: number, idCarrera: number) {
+    await this.prisma.usuarioCarrera.deleteMany({
+      where: { idUsuario: BigInt(idUsuario) },
+    });
+    return this.prisma.usuarioCarrera.create({
+      data: {
+        idUsuario: BigInt(idUsuario),
+        idCarrera: BigInt(idCarrera),
+      },
+      include: {
+        carrera: true,
+      },
+    });
+  }
 }
+
 

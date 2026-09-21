@@ -41,7 +41,7 @@ describe('SorteosService', () => {
       findSorteoById: jest.fn(),
     } as unknown as jest.Mocked<SorteosRepository>;
 
-    service = new SorteosService(repository);
+    service = new SorteosService(repository, {} as any);
   });
 
   describe('Criptografía y Token del Acta (CSPRNG)', () => {

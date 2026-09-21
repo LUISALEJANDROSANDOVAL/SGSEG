@@ -24,6 +24,22 @@ Todos los usuarios preconfigurados se inicializan con la contraseña estándar d
 
 ---
 
+## 📊 1.1 Porcentaje de Cumplimiento y Operatividad por Rol
+
+$$\mathbf{ESTADO\ GENERAL:\ 90.1\%\ DE\ CUMPLIMIENTO\ GLOBAL}$$
+
+| Rol Institucional | % Cumplimiento | Funcionalidades Habilitadas y Validadas | Pendientes Técnicos |
+| :--- | :---: | :--- | :--- |
+| **Jefe de Carrera** | **100%** | • CRUD de casos y áreas de su carrera<br>• Monitoreo de stock crítico ($<2$ casos)<br>• Reactivación especial justificada<br>• Aislamiento multi-tenancy estricto (RNF-02) | Ninguno en su operativa crítica. |
+| **Coordinación General** | **100%** | • Padrón de postulantes e importador masivo Excel/CSV<br>• Programación de fechas de defensa<br>• Embudo y alertas a 15 días | Ninguno en su operativa crítica. |
+| **Secretaría de Facultad** | **100%** | • Operación de ruleta criptográfica CSPRNG<br>• Generación y descarga de Acta oficial en PDF<br>• Registro de nota y dictamen final | Ninguno en su operativa crítica. |
+| **Vicerrectorado** | **85%** | • **Auditar y Observar:** Dashboard ejecutivo con 5 KPIs, alertas de stock, supervisión de actas y trazabilidad forense.<br>• **Restricción:** **NO puede iniciar sorteos** (solo observación de actas).<br>• **Función Activa Única:** **Añadir roles y usuarios al sistema**, principalmente dar de alta al **Jefe de Carrera** y asignarle su carrera correspondiente. | Implementar endpoints `POST /users` y `PUT /users/:id` para permitir el alta desde la UI de `/usuarios`. |
+| **Super Administrador** | **60%** | • Activación/desactivación de usuarios<br>• Reseteo administrativo de contraseñas<br>• Sembrado de catálogo universitario | Endpoints `POST /users`, `PUT /users/:id` y visor web de auditoría en frontend. |
+
+> 📌 Para la auditoría exhaustiva con ponderaciones matemáticas, consulte el informe: [Evaluación de Cumplimiento por Rol y Pendientes](file:///c:/SGSEG/docs/evaluacion_cumplimiento_roles.md).
+
+---
+
 ## 🚪 2. Cómo Iniciar Sesión en el Sistema
 
 ### A. Desde la Interfaz Web (Frontend)
@@ -151,22 +167,26 @@ Operar el acto formal de sorteo digital en sesión presencial o virtual, verific
 ### 📊 Actor 4: Vicerrectorado / Dirección Académica
 
 #### 🎯 Objetivo:
-Supervisión ejecutiva del semestre, auditoría de actas emitidas y exportación del padrón consolidado para acreditación institucional.
+1. **Auditar y Observar:** Supervisión institucional de calidad, monitoreo de cumplimiento de plazos reglamentarios, verificación de actas emitidas y exportación del padrón consolidado para acreditación.
+2. **Restricción Estricta:** **NO puede iniciar un nuevo proceso de sorteo** (imparcialidad reglamentaria; no puede accionar la ruleta).
+3. **Única Función Activa Permitida:** **Añadir roles y usuarios al sistema**, principalmente dar de alta al **Jefe de Carrera** y asignarle su carrera académica correspondiente.
 
 #### 🔐 Credenciales para ingresar:
 - **Correo:** `vicerrector@uni.edu.bo`
 - **Contraseña:** `Admin123!`
 
-#### 📋 Flujo de Trabajo en `/reportes`:
-1. **Métricas Consolidadas:**
-   - Revisión del total de defensas en pipeline y tasa de conclusión global.
-   - Total de actas emitidas con firma electrónica.
-   - Disponibilidad global de casos de estudio frente a casos agotados.
-2. **Auditoría de Áreas y Casos:**
-   - Listado de áreas académicas con indicador de stock: `Stock Óptimo` vs `Stock Crítico`.
-3. **Exportación de Padrones e Informes:**
-   - **Exportar Padrón (CSV):** Descarga una planilla compatible con Excel con todas las defensas, postulantes, carnet, carrera, fechas y reglas de sorteo.
-   - **Imprimir Resumen:** Genera una versión lista para impresión del estado del periodo académico.
+#### 📋 Flujo de Trabajo:
+
+##### A. En `/reportes` y `/sorteo` (Auditar y Observar):
+1. **Métricas Consolidadas:** Revisión del total de defensas en pipeline, tasa de aprobación/reprobación global y actas con firma SHA-256.
+2. **Auditoría de Áreas y Casos:** Alertas prioritarias de stock crítico ($<2$ casos disponibles).
+3. **Exportación de Padrones e Informes:** Descarga del padrón completo en CSV compatible con Excel.
+4. **Inspección de Actas:** Consulta y descarga de las Actas Oficiales en PDF (`/sorteos/acta/:id/pdf`). **No tiene habilitado el botón de iniciar sorteo ni de giro de ruleta.**
+
+##### B. En `/usuarios` (Añadir Roles y Usuarios):
+1. **Dar de Alta Nuevas Autoridades:** Crear la cuenta institucional de nuevos Jefes de Carrera, Coordinadores o Secretarios.
+2. **Asignación Obligatoria de Carrera:** Al registrar a un **Jefe de Carrera**, vincularlo estrictamente a su respectiva carrera académica (`carreraId`) para garantizar el aislamiento multi-tenancy (RNF-02).
+3. **Control de Accesos:** Desactivar o reactivar cuentas ante rotación de autoridades.
 
 ---
 
@@ -174,14 +194,14 @@ Supervisión ejecutiva del semestre, auditoría de actas emitidas y exportación
 
 | Ruta en el Frontend | Nombre de la Página | Coordinación | Secretaría | Jefe de Carrera | Vicerrectorado |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `/` | Panel Principal | ✅ | ✅ | ✅ | ✅ |
-| `/sorteo` | Sorteo Digital y Actas | ✅ | ✅ | ✅ | ✅ |
-| `/casos` | Banco de Casos y Áreas | ✅ | ❌ | ✅ *(Aislado)* | ✅ |
-| `/estudiantes` | Padrón de Postulantes | ✅ | ✅ | ✅ *(Aislado)* | ✅ |
-| `/defensas` | Cronograma y Embudo | ✅ | ✅ | ✅ *(Aislado)* | ✅ |
-| `/reportes` | Reportes y Exportación CSV | ✅ | ✅ | ✅ | ✅ |
-| `/academia` | Estructura Académica | ✅ | ✅ | ✅ | ✅ |
-| `/usuarios` | Gestión de Usuarios | ✅ | ❌ | ❌ | ❌ |
+| `/` | Panel Principal | ✅ | ✅ | ✅ | ✅ *(Observación)* |
+| `/sorteo` | Sorteo Digital y Actas | ✅ | ✅ *(Operador)* | 👁️ *(Espectador)* | 👁️ *(Solo Observación / Prohibido Iniciar)* |
+| `/casos` | Banco de Casos y Áreas | ✅ | ❌ | ✅ *(Aislado a su Carrera)* | 👁️ *(Solo Lectura / Auditoría)* |
+| `/estudiantes` | Padrón de Postulantes | ✅ | ✅ | ✅ *(Aislado a su Carrera)* | 👁️ *(Solo Lectura / Auditoría)* |
+| `/defensas` | Cronograma y Embudo | ✅ | ✅ | ✅ *(Aislado a su Carrera)* | 👁️ *(Solo Lectura / Auditoría)* |
+| `/reportes` | Reportes y Exportación CSV | ✅ | ✅ | ✅ | ✅ *(Supervisión y Auditoría)* |
+| `/academia` | Estructura Académica | ✅ | ✅ | ✅ | 👁️ *(Solo Lectura)* |
+| `/usuarios` | Gestión de Usuarios y Roles | ✅ | ❌ | ❌ | ✅ **(Añadir Roles y Usuarios: Jefes de Carrera)** |
 
 ---
 

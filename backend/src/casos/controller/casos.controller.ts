@@ -32,7 +32,7 @@ export class CasosController {
    * Obtiene las métricas generales de inventario y alertas de stock crítico.
    */
   @Get('metricas')
-  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SECRETARIADO', 'VICERRECTORADO', 'SUPER_ADMIN')
   async getMetricas(
     @Query('idCarrera') idCarrera: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
@@ -44,7 +44,7 @@ export class CasosController {
    * Obtiene la lista de áreas académicas vigentes filtradas para el usuario.
    */
   @Get('areas')
-  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SECRETARIADO', 'VICERRECTORADO', 'SUPER_ADMIN')
   async getAreas(
     @Query('idCarrera') idCarrera: string | undefined,
     @CurrentUser() user: AuthenticatedUser,
@@ -70,7 +70,7 @@ export class CasosController {
    * Consulta el inventario paginado de casos de estudio con filtros.
    */
   @Get()
-  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SECRETARIADO', 'VICERRECTORADO', 'SUPER_ADMIN')
   async findAll(
     @Query() query: FilterCasosDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -82,7 +82,7 @@ export class CasosController {
    * Obtiene la lista optimizada de casos de estudio para una carrera mediante vista SQL.
    */
   @Get('vistas/carrera/:idCarrera/casos')
-  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SECRETARIADO', 'VICERRECTORADO', 'SUPER_ADMIN')
   async getCasosPorCarreraVista(
     @Param('idCarrera') idCarrera: string,
     @Query() query: FilterVistaCasosDto,
@@ -95,7 +95,7 @@ export class CasosController {
    * Obtiene el resumen consolidado de áreas y stock de casos para una carrera mediante vista SQL.
    */
   @Get('vistas/carrera/:idCarrera/areas')
-  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SECRETARIADO', 'VICERRECTORADO', 'SUPER_ADMIN')
   async getAreasPorCarreraVista(
     @Param('idCarrera') idCarrera: string,
     @CurrentUser() user: AuthenticatedUser,
@@ -107,7 +107,7 @@ export class CasosController {
    * Obtiene el detalle de un caso específico.
    */
   @Get(':id')
-  @Roles('JEFE_CARRERA', 'COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SECRETARIADO', 'VICERRECTORADO', 'SUPER_ADMIN')
   async findById(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,

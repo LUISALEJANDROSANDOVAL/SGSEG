@@ -1,9 +1,12 @@
 import { useAuth } from '@/context/AuthContext'
-import { Calendar, Shuffle, PlusCircle, ShieldCheck, Activity, ChevronRight } from 'lucide-react'
+import { esVicerrectorado, esJefeCarrera } from '@/lib/auth-helpers'
+import { Calendar, Shuffle, PlusCircle, ShieldCheck, Activity, ChevronRight, FileBarChart, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export function DashboardBanner() {
   const { user } = useAuth()
+  const isVice = esVicerrectorado(user)
+  const isJefe = esJefeCarrera(user)
 
   const primerNombre = user?.primerNombre || user?.nombre?.split(' ')[0] || 'Usuario'
 
@@ -55,34 +58,98 @@ export function DashboardBanner() {
           </div>
         </div>
 
-        {/* Columna Derecha: Acciones Rápidas Sobrias */}
+        {/* Columna Derecha: Acciones Rápidas adaptadas según Rol */}
         <div className="flex flex-wrap items-center gap-2.5 lg:flex-col lg:items-stretch sm:shrink-0">
-          <Link
-            to="/sorteo"
-            className="flex items-center justify-center gap-2 bg-crimson px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:opacity-95 transition-opacity"
-          >
-            <Shuffle className="size-3.5" />
-            <span>Ejecutar Sorteo Digital</span>
-            <ChevronRight className="size-3.5 opacity-80" />
-          </Link>
+          {isVice ? (
+            <>
+              <Link
+                to="/reportes"
+                className="flex items-center justify-center gap-2 bg-crimson px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:opacity-95 transition-opacity"
+              >
+                <FileBarChart className="size-3.5" />
+                <span>Supervisión y Reportes Globales</span>
+                <ChevronRight className="size-3.5 opacity-80" />
+              </Link>
 
-          <div className="flex gap-2">
-            <Link
-              to="/defensas"
-              className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
-            >
-              <Calendar className="size-3.5 text-neutral-500" />
-              <span>Cronograma</span>
-            </Link>
+              <div className="flex gap-2">
+                <Link
+                  to="/usuarios"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
+                  title="Añadir nuevos roles y usuarios como Jefe de Carrera"
+                >
+                  <Users className="size-3.5 text-neutral-500" />
+                  <span>Usuarios y Roles</span>
+                </Link>
 
-            <Link
-              to="/casos"
-              className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
-            >
-              <PlusCircle className="size-3.5 text-neutral-500" />
-              <span>Casos</span>
-            </Link>
-          </div>
+                <Link
+                  to="/sorteo"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
+                  title="Auditar asignaciones de sorteos y verificar actas"
+                >
+                  <Shuffle className="size-3.5 text-neutral-500" />
+                  <span>Auditar Sorteos</span>
+                </Link>
+              </div>
+            </>
+          ) : isJefe ? (
+            <>
+              <Link
+                to="/casos"
+                className="flex items-center justify-center gap-2 bg-crimson px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:opacity-95 transition-opacity"
+              >
+                <PlusCircle className="size-3.5" />
+                <span>Gestión de Casos de Estudio</span>
+                <ChevronRight className="size-3.5 opacity-80" />
+              </Link>
+
+              <div className="flex gap-2">
+                <Link
+                  to="/defensas"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
+                >
+                  <Calendar className="size-3.5 text-neutral-500" />
+                  <span>Cronograma</span>
+                </Link>
+
+                <Link
+                  to="/sorteo"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
+                >
+                  <Shuffle className="size-3.5 text-neutral-500" />
+                  <span>Sorteos (Veedor)</span>
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/sorteo"
+                className="flex items-center justify-center gap-2 bg-crimson px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:opacity-95 transition-opacity"
+              >
+                <Shuffle className="size-3.5" />
+                <span>Ejecutar Sorteo Digital</span>
+                <ChevronRight className="size-3.5 opacity-80" />
+              </Link>
+
+              <div className="flex gap-2">
+                <Link
+                  to="/defensas"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
+                >
+                  <Calendar className="size-3.5 text-neutral-500" />
+                  <span>Cronograma</span>
+                </Link>
+
+                <Link
+                  to="/casos"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:border-ink hover:text-ink shadow-xs"
+                >
+                  <PlusCircle className="size-3.5 text-neutral-500" />
+                  <span>Casos</span>
+                </Link>
+              </div>
+            </>
+          )}
         </div>
 
       </div>

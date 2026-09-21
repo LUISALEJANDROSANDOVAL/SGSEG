@@ -12,6 +12,29 @@ El **SGSEG** es una plataforma integral diseñada para automatizar, blindar y au
 
 ---
 
+## 1.1 Estado del Proyecto y Porcentaje de Cumplimiento
+
+$$\mathbf{ESTADO\ DEL\ SOFTWARE:\ 90.1\%\ TERMINADO\ (NÚCLEO\ 100\%\ OPERATIVO)}$$
+
+* **Núcleo de Negocio Troncal (100% Funcional):** Los 7 pasos del flujo operativo del Examen de Grado (Padrón, Banco de Casos, Sorteo CSPRNG, Actas PDF, Correos Asíncronos, Defensas y Dashboard de Vicerrectorado) se encuentran completamente codificados, testeados e integrados.
+* **Aislamiento Multi-Tenancy (100% Blindado):** Garantizado a nivel de base de datos y endpoints con bloqueo HTTP 403.
+* **Pendientes Técnicos (9.9% Restante):** CRUD completo de usuarios en backend/frontend, visor web de auditoría para Super Admin y configuración dinámica en caliente de plazos.
+
+| Etapa del Flujo Operativo | Estado Funcional | % Terminado | Documento de Auditoría |
+| :--- | :---: | :---: | :--- |
+| **1. Padrón e Importación de Estudiantes** | 🟢 Operativo | **97.5%** | [Módulo 3](file:///c:/SGSEG/docs/modulo3_importador_estudiantes.md) |
+| **2. Banco de Casos y Control de 2 Usos** | 🟢 Operativo | **97.5%** | [Análisis Cumplimiento](file:///c:/SGSEG/docs/analisis_cumplimiento_sistema.md#módulo-2-casos-de-estudio-y-stock-crítico) |
+| **3. Sorteo Criptográfico CSPRNG + En Vivo** | 🟢 Operativo | **97.5%** | [Sorteo Digital](file:///c:/SGSEG/docs/analisis_cumplimiento_sistema.md#módulo-4-sorteo-digital-criptográfico-csprng--en-vivo) |
+| **4. Generación de Actas PDF y Notificaciones** | 🟢 Operativo | **97.5%** | [Actas y Reportes](file:///c:/SGSEG/docs/analisis_cumplimiento_sistema.md#módulo-5-actas-notificaciones-y-dashboard-ejecutivo) |
+| **5. Programación y Calificación de Defensas** | 🟢 Operativo | **97.5%** | [Defensas](file:///c:/SGSEG/docs/analisis_cumplimiento_sistema.md#módulo-6-programación-y-calificación-de-defensas) |
+| **6. Dashboard Ejecutivo Vicerrectorado** | 🟢 Operativo | **100%** | [Dashboard](file:///c:/SGSEG/docs/evaluacion_cumplimiento_roles.md#4-evaluación-de-cumplimiento-por-rol-de-usuario) |
+| **7. Soporte Técnico, CRUD Usuarios y Auditoría** | 🟡 Parcial | **55.0%** | [Plan de Cierre al 100%](file:///c:/SGSEG/docs/plan_implementacion_pendientes.md) |
+
+> 📊 Para consultar el desglose matemático detallado, consulte la [Evaluación de Cumplimiento por Rol y Pendientes](file:///c:/SGSEG/docs/evaluacion_cumplimiento_roles.md).
+
+
+---
+
 ## 2. Matriz de Actores y Control de Acceso (RBAC)
 
 El acceso a las vistas y endpoints está regulado por tokens JWT y roles estrictos:
@@ -19,7 +42,7 @@ El acceso a las vistas y endpoints está regulado por tokens JWT y roles estrict
 | Rol | Alcance / Visibilidad | Principales Responsabilidades |
 | :--- | :--- | :--- |
 | **👑 Super Admin** | Global Universitario | Mantenimiento técnico, gestión de usuarios, parametrización de facultades/carreras y auditoría profunda. |
-| **👁️ Vicerrectorado** | Global Universitario (**Solo Lectura**) | Supervisión institucional de calidad, monitoreo de cumplimiento de plazos reglamentarios, métricas y reportes ejecutivos. |
+| **👁️ Vicerrectorado** | Global Universitario (**Auditoría, Observación y Gestión de Usuarios**) | • **Auditar y Observar:** Supervisión institucional de calidad, cumplimiento de plazos reglamentarios, métricas y reportes ejecutivos.<br>• **Restricción:** **NO puede iniciar un nuevo proceso de sorteo** (garantía de fe pública y neutralidad).<br>• **Única Función Activa:** **Añadir roles y usuarios al sistema**, principalmente dar de alta al **Jefe de Carrera** y asignarle su carrera académica correspondiente. |
 | **📅 Coordinación General** | Global Operativo | Administración del padrón de postulantes, habilitaciones académicas, programación de defensas y asignación de tribunales. |
 | **🎓 Jefe de Carrera** | **Exclusivo de su Carrera** (Aislamiento Total) | Administración del banco de casos de estudio por área, control de stock, reactivación especial de casos y ejecución del sorteo digital. |
 | **📝 Secretariado Académico** | Soporte por Facultad / Carrera | Habilitación documental, impresión y entrega de actas oficiales, control de temporizadores de resolución y registro de notas del jurado. |
@@ -148,7 +171,7 @@ Para verificar cada perspectiva del flujo operativo, el sistema cuenta con acces
 | **Jefe de Carrera (Derecho)** | `jefe.derecho@uni.edu.bo` | `Admin123!` | Casos y sorteos exclusivos de Derecho (FCJS). |
 | **Jefe de Carrera (Sistemas)** | `jefe.sistemas@uni.edu.bo` | `Admin123!` | Casos y sorteos exclusivos de Sistemas (FCT). |
 | **Secretaría Académica** | `secretaria@uni.edu.bo` | `Admin123!` | Impresión de actas, entregas y registro de notas. |
-| **Vicerrectorado** | `vicerrector@uni.edu.bo` | `Admin123!` | Monitoreo global de solo lectura y reportes institucionales. |
+| **Vicerrectorado** | `vicerrector@uni.edu.bo` | `Admin123!` | Auditoría y supervisión institucional (sin inicio de sorteo); alta de roles y usuarios (Jefes de Carrera). |
 
 ---
 

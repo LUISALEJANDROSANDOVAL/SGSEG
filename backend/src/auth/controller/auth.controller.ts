@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -19,6 +20,8 @@ import { RecuperarPasswordDto } from '../dto/recuperar-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { AdminResetPasswordDto } from '../dto/admin-reset-password.dto';
 import { UpdateUserEstadoDto } from '../dto/update-user-estado.dto';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { UpdateUserDto } from '../dto/update-user.dto';
 import { AuthService } from '../services/auth.service';
 
 @Controller('auth')
@@ -69,9 +72,28 @@ export class AuthController {
   }
 
   @Get('users')
-  @Roles('COORDINACION', 'SUPER_ADMIN')
+  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
   async listUsers() {
     return this.authService.listUsers();
+  }
+
+  @Post('users')
+  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  async createUser(
+    @Body() dto: CreateUserDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.authService.createUser(dto, user);
+  }
+
+  @Put('users/:id')
+  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  async updateUser(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.authService.updateUser(id, dto, user);
   }
 
   /**
@@ -93,7 +115,7 @@ export class AuthController {
    * Endpoint para activación/inactivación de cuentas institucionales.
    */
   @Patch('users/:id/estado')
-  @Roles('COORDINACION', 'SUPER_ADMIN')
+  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
   async updateUserEstado(
     @Param('id') id: string,
     @Body() dto: UpdateUserEstadoDto,
@@ -101,5 +123,15 @@ export class AuthController {
   ) {
     return this.authService.updateUserEstado(id, dto, user);
   }
+
+  @Patch('users/:id/deactivate')
+  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  async deactivateUser(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.authService.deactivateUser(id, user);
+  }
 }
+
 

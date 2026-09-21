@@ -1,8 +1,14 @@
-# Sistema de Gestión de Sorteos - Examen de Grado (UPTECSA)
+# Sistema de Gestión de Sorteos - Examen de Grado (UTEPSA)
+
+$$\mathbf{ESTADO\ GENERAL\ DEL\ SISTEMA:\ 90.1\%\ TERMINADO\ (NÚCLEO\ 100\%\ OPERATIVO)}$$
+
+> 📌 **Estado de Implementación:** El flujo global especificado en este documento se encuentra implementado al **100% en sus procesos clave** (sorteos anticipados FCT, sorteos simultáneos FCE/FCJS, control estricto de casos y actas oficiales). Para la auditoría técnica y desglose de cumplimiento, consulte el [Informe de Cumplimiento por Roles](file:///c:/SGSEG/docs/evaluacion_cumplimiento_roles.md).
+
+---
 
 ## 1. Mapeo de Sorteos y Plazos por Carrera
 
-El sistema debe gestionar los sorteos de **Área del Conocimiento** y **Caso de Estudio** basándose en la **Facultad** a la que pertenece la carrera del postulante.
+El sistema gestiona los sorteos de **Área del Conocimiento** y **Caso de Estudio** basándose en la **Facultad** a la que pertenece la carrera del postulante.
 
 > **Importante:** El estudiante no tiene interacción ni credenciales de acceso; existe únicamente como un dato o registro en el sistema.
 

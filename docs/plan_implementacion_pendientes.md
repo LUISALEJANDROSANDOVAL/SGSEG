@@ -2,7 +2,7 @@
 
 **Sistema de Gestión de Sorteos de Grado, Casos de Estudio y Defensas Finales**  
 **Fecha de Elaboración:** Septiembre 2026  
-**Objetivo:** Guiar la resolución exhaustiva de todas las brechas técnicas detectadas en la auditoría para elevar el software de su **90.1% actual al 100% de cumplimiento funcional y operativo**.
+**Objetivo:** Guiar la resolución exhaustiva de todas las brechas técnicas detectadas en la auditoría para elevar el software de su **96.8% actual al 100% de cumplimiento funcional y operativo**.
 
 ---
 
@@ -36,19 +36,19 @@ graph TD
 
 ### ⚠️ ¿Qué falla actualmente?
 * Al intentar crear, editar o desactivar usuarios desde la interfaz web `/usuarios`, las peticiones HTTP fallan con error `404 Not Found`.
-* **Causa Raíz:** En el backend, el archivo [usuarios.controller.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/usuarios/controller/usuarios.controller.ts) es una clase vacía:
+* **Causa Raíz:** En el backend, el archivo [usuarios.controller.ts](file:///c:/SGSEG/backend/src/usuarios/controller/usuarios.controller.ts) es una clase vacía:
   ```typescript
   export class UsuariosController {}
   ```
   Tanto `usuarios.service.ts` como `usuarios.repository.ts` están vacíos y `UsuariosModule` no está registrado en `app.module.ts`.
 
 ### 📂 Archivos a Crear / Modificar
-* `[NUEVO]` [usuarios.module.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/usuarios/usuarios.module.ts)
-* `[MODIFICAR]` [usuarios.controller.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/usuarios/controller/usuarios.controller.ts)
-* `[MODIFICAR]` [usuarios.service.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/usuarios/services/usuarios.service.ts)
-* `[MODIFICAR]` [usuarios.repository.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/usuarios/repositories/usuarios.repository.ts)
-* `[MODIFICAR]` [create-usuario.dto.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/usuarios/dto/create-usuario.dto.ts)
-* `[MODIFICAR]` [app.module.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/app.module.ts)
+* `[NUEVO]` [usuarios.module.ts](file:///c:/SGSEG/backend/src/usuarios/usuarios.module.ts)
+* `[MODIFICAR]` [usuarios.controller.ts](file:///c:/SGSEG/backend/src/usuarios/controller/usuarios.controller.ts)
+* `[MODIFICAR]` [usuarios.service.ts](file:///c:/SGSEG/backend/src/usuarios/services/usuarios.service.ts)
+* `[MODIFICAR]` [usuarios.repository.ts](file:///c:/SGSEG/backend/src/usuarios/repositories/usuarios.repository.ts)
+* `[MODIFICAR]` [create-usuario.dto.ts](file:///c:/SGSEG/backend/src/usuarios/dto/create-usuario.dto.ts)
+* `[MODIFICAR]` [app.module.ts](file:///c:/SGSEG/backend/src/app.module.ts)
 
 ### 🛠️ ¿Qué se debe hacer para solucionarlo?
 
@@ -107,15 +107,16 @@ graph TD
      * Si el rol es `JEFE_CARRERA` y se especificó `carreraId`, crear la relación en `usuario_carrera`.
    - Registrar la acción en `RegistroAuditoria` (`ACCION: "USUARIO_CREADO"`).
 
-4. **Exponer Endpoints en `UsuariosController`:**
+4. **Exponer Endpoints en `UsuariosController` (Habilitado para Vicerrectorado):**
    ```typescript
    @Controller('users')
    @UseGuards(JwtAuthGuard, RolesGuard)
-   @Roles('COORDINACION', 'SUPER_ADMIN')
+   @Roles('VICERRECTORADO', 'COORDINACION', 'SUPER_ADMIN')
    export class UsuariosController {
      @Get()
      async findAll() { ... }
 
+     // Función activa institucional de Vicerrectorado: añadir roles y usuarios (ej. Jefe de Carrera)
      @Post()
      @HttpCode(HttpStatus.CREATED)
      async create(@Body() dto: CreateUsuarioInputDto) { ... }
@@ -129,14 +130,14 @@ graph TD
    ```
 
 5. **Importar `UsuariosModule` en `AppModule`:**
-   Añadir `UsuariosModule` al arreglo de `imports` en [app.module.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/app.module.ts).
+   Añadir `UsuariosModule` al arreglo de `imports` en [app.module.ts](file:///c:/SGSEG/backend/src/app.module.ts).
 
 ---
 
 ## Tarea 1.2: Frontend — Conexión y Normalización de `Usuarios.tsx`
 
 ### ⚠️ ¿Qué falla actualmente?
-* En [Usuarios.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/pages/Usuarios.tsx), el método `fetchDatos` intenta hacer fallback entre `/auth/users` y `/users`:
+* En [Usuarios.tsx](file:///c:/SGSEG/frontend/src/pages/Usuarios.tsx), el método `fetchDatos` intenta hacer fallback entre `/auth/users` y `/users`:
   ```typescript
   const [resUsers, resCarreras] = await Promise.all([
     api.get('/auth/users').catch(() => api.get('/users')),
@@ -146,8 +147,8 @@ graph TD
   La estructura retornada por el backend no se ajusta exactamente a los nombres de atributos esperados en la tabla (`nombreCompleto` vs `nombre`, `rol.nombre` vs `rol`).
 
 ### 📂 Archivos a Modificar
-* `[MODIFICAR]` [Usuarios.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/pages/Usuarios.tsx)
-* `[NUEVO]` [usuarios.api.ts](file:///c:/proyecto%20integrador/SGSEG/frontend/src/lib/usuarios.api.ts)
+* `[MODIFICAR]` [Usuarios.tsx](file:///c:/SGSEG/frontend/src/pages/Usuarios.tsx)
+* `[NUEVO]` [usuarios.api.ts](file:///c:/SGSEG/frontend/src/lib/usuarios.api.ts)
 
 ### 🛠️ ¿Qué se debe hacer para solucionarlo?
 1. Crear un cliente tipado `usuarios.api.ts`:
@@ -166,15 +167,15 @@ graph TD
 ## Tarea 1.3: Frontend — Control de Acceso Visual Estricto en Menú y Rutas (RBAC Visual)
 
 ### ⚠️ ¿Qué falla actualmente?
-* En [navegacion.ts](file:///c:/proyecto%20integrador/SGSEG/frontend/src/lib/navegacion.ts) y [App.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/App.tsx), la variable `TODOS_LOS_ROLES` se asigna a **todas** las páginas.
+* En [navegacion.ts](file:///c:/SGSEG/frontend/src/lib/navegacion.ts) y [App.tsx](file:///c:/SGSEG/frontend/src/App.tsx), la variable `TODOS_LOS_ROLES` se asigna a **todas** las páginas.
 * Consecuencia:
   - Una secretaria ve en el menú "Gestión de Casos" y "Usuarios y Roles" (que le rebotan con 403 al hacer clic).
   - Un Jefe de Carrera ve "Usuarios y Roles" y "Configuración".
   - Se viola el principio de diseño de menor sorpresa y estética institucional.
 
 ### 📂 Archivos a Modificar
-* `[MODIFICAR]` [navegacion.ts](file:///c:/proyecto%20integrador/SGSEG/frontend/src/lib/navegacion.ts)
-* `[MODIFICAR]` [App.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/App.tsx)
+* `[MODIFICAR]` [navegacion.ts](file:///c:/SGSEG/frontend/src/lib/navegacion.ts)
+* `[MODIFICAR]` [App.tsx](file:///c:/SGSEG/frontend/src/App.tsx)
 
 ### 🛠️ ¿Qué se debe hacer para solucionarlo?
 
@@ -219,11 +220,11 @@ graph TD
            ruta: '/academia',
            roles: ['Coordinador General', 'Jefe de Carrera', 'Vicerrectorado', 'Administrador General'], // Oculto para Secretaría
          },
-         {
-           nombre: 'Usuarios y Roles',
-           ruta: '/usuarios',
-           roles: ['Coordinador General', 'Administrador General'], // Oculto para Secretaría y Jefe de Carrera
-         },
+          {
+            nombre: 'Usuarios y Roles',
+            ruta: '/usuarios',
+            roles: ['Vicerrectorado', 'Coordinador General', 'Administrador General'], // Vicerrectorado facultado para añadir roles/usuarios (Jefes de Carrera)
+          },
        ],
      },
      {
@@ -265,7 +266,7 @@ graph TD
 ## Tarea 1.4: Backend y Frontend — Configuración Dinámica de Sorteos (`/sorteo-config`)
 
 ### ⚠️ ¿Qué falla actualmente?
-* En [Configuracion.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/pages/Configuracion.tsx):
+* En [Configuracion.tsx](file:///c:/SGSEG/frontend/src/pages/Configuracion.tsx):
   - Línea 23: Llama a `GET /academia/carreras` (que no existe; la ruta real es `/estudiantes/carreras`).
   - Línea 37: Llama a `GET /sorteo-config/carrera/${cId}` y al guardar no persiste porque no existe `PUT /sorteo-config`.
 * **Causa Raíz:** En el backend, las tablas `configuracion_sorteo_area` y `configuracion_sorteo_caso` existen en Prisma, pero no hay un controlador expuesto para consultarlas o actualizarlas en caliente.
@@ -274,7 +275,7 @@ graph TD
 * `[NUEVO]` `backend/src/configuracion/configuracion.controller.ts`
 * `[NUEVO]` `backend/src/configuracion/configuracion.service.ts`
 * `[NUEVO]` `backend/src/configuracion/configuracion.module.ts`
-* `[MODIFICAR]` [Configuracion.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/pages/Configuracion.tsx)
+* `[MODIFICAR]` [Configuracion.tsx](file:///c:/SGSEG/frontend/src/pages/Configuracion.tsx)
 
 ### 🛠️ ¿Qué se debe hacer para solucionarlo?
 1. **Crear Endpoints Backend:**
@@ -297,10 +298,10 @@ graph TD
 * Sin embargo, no existe un endpoint REST para que el Administrador o Vicerrectorado consulte estos logs desde la aplicación web.
 
 ### 📂 Archivos a Crear / Modificar
-* `[MODIFICAR]` [auditoria.controller.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/auditoria/controller/auditoria.controller.ts)
-* `[MODIFICAR]` [auditoria.service.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/auditoria/services/auditoria.service.ts)
-* `[NUEVO]` [auditoria.module.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/auditoria/auditoria.module.ts)
-* `[MODIFICAR]` [app.module.ts](file:///c:/proyecto%20integrador/SGSEG/backend/src/app.module.ts)
+* `[MODIFICAR]` [auditoria.controller.ts](file:///c:/SGSEG/backend/src/auditoria/controller/auditoria.controller.ts)
+* `[MODIFICAR]` [auditoria.service.ts](file:///c:/SGSEG/backend/src/auditoria/services/auditoria.service.ts)
+* `[NUEVO]` [auditoria.module.ts](file:///c:/SGSEG/backend/src/auditoria/auditoria.module.ts)
+* `[MODIFICAR]` [app.module.ts](file:///c:/SGSEG/backend/src/app.module.ts)
 
 ### 🛠️ ¿Qué se debe hacer para solucionarlo?
 1. **Crear DTO de Filtros:**
@@ -331,7 +332,7 @@ graph TD
 
 ### 📂 Archivos a Crear / Modificar
 * `[NUEVO]` `frontend/src/pages/Auditoria.tsx` (o integrarlo como pestaña dentro de `/reportes` o `/usuarios`).
-* `[MODIFICAR]` [navegacion.ts](file:///c:/proyecto%20integrador/SGSEG/frontend/src/lib/navegacion.ts) y [App.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/App.tsx).
+* `[MODIFICAR]` [navegacion.ts](file:///c:/SGSEG/frontend/src/lib/navegacion.ts) y [App.tsx](file:///c:/SGSEG/frontend/src/App.tsx).
 
 ### 🛠️ ¿Qué se debe hacer para solucionarlo?
 1. Crear una vista tabular con:
@@ -342,29 +343,35 @@ graph TD
 
 ---
 
-## Tarea 2.3: Frontend — Modo Observador en Sorteo para Jefes de Carrera
+## Tarea 2.3: Frontend — Modo Observador en Sorteo para Jefes de Carrera y Vicerrectorado
 
 ### ⚠️ ¿Qué falta actualmente?
-* En [Sorteo.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/pages/Sorteo.tsx), si un usuario con rol `JEFE_CARRERA` ingresa, ve habilitados los botones de giro de la ruleta.
-* **Criterio Reglamentario UTEPSA:** El Jefe de Carrera asiste al sorteo en calidad de veedor o tribunal, pero la ejecución técnica formal del bolillero corresponde a la Secretaría de Facultad o a Coordinación.
+* En [Sorteo.tsx](file:///c:/SGSEG/frontend/src/pages/Sorteo.tsx), si un usuario con rol `JEFE_CARRERA` o `VICERRECTORADO` ingresa, ve habilitados los botones de giro de la ruleta.
+* **Criterio Reglamentario UTEPSA:**
+  - El **Jefe de Carrera** asiste al sorteo en calidad de veedor/tribunal.
+  - El **Vicerrectorado** audita y observa el cumplimiento de plazos y actas oficiales, pero **no puede iniciar ningún nuevo proceso de sorteo**.
+  - La ejecución técnica formal de la ruleta corresponde exclusivamente a la **Secretaría de Facultad** o a **Coordinación**.
 
 ### 📂 Archivos a Modificar
-* `[MODIFICAR]` [Sorteo.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/pages/Sorteo.tsx)
+* `[MODIFICAR]` [Sorteo.tsx](file:///c:/SGSEG/frontend/src/pages/Sorteo.tsx)
 
 ### 🛠️ ¿Qué se debe hacer para solucionarlo?
-1. Detectar si el usuario es `JEFE_CARRERA` mediante el hook `useAuth()`.
-2. En la sección de la ruleta:
-   - Deshabilitar el botón de acción principal (`Sortear Área`, `Sortear Caso`).
-   - Mostrar un banner informativo:
-     > 🛡️ **Modo Veedor / Observador:** Como Jefe de Carrera, usted participa como testigo del acto. La ejecución del sorteo corresponde a Secretaría de Facultad.
-3. Mantener habilitada la opción de visualización del resultado, consulta de asignación y descarga del Acta Oficial en PDF.
+1. Detectar el rol del usuario mediante el hook `useAuth()`.
+2. Si el rol es `JEFE_CARRERA` o `VICERRECTORADO`:
+   - Deshabilitar y ocultar el botón de acción principal (`Sortear Área`, `Sortear Caso`, `Iniciar Sorteo`).
+   - Mostrar el banner correspondiente:
+     * Para **Vicerrectorado:**
+       > 👁️ **Modo Auditor / Observador:** Como Vicerrectorado, usted audita y supervisa la asignación y puede verificar/descargar actas oficiales. Por normativa institucional, **no tiene permisos para iniciar un nuevo proceso de sorteo**.
+     * Para **Jefe de Carrera:**
+       > 🛡️ **Modo Veedor / Observador:** Como Jefe de Carrera, usted participa como testigo del acto. La ejecución técnica del sorteo corresponde a Secretaría de Facultad.
+3. Mantener habilitada la opción de visualización del resultado, consulta de asignación y descarga del Acta Oficial en PDF (`GET /sorteos/acta/:id/pdf`).
 
 ---
 
 ## Tarea 2.4: Tests E2E — Saneamiento de Llaves Foráneas en Pruebas de Concurrencia
 
 ### ⚠️ ¿Qué falla actualmente?
-* Al ejecutar toda la batería de pruebas (`npx jest --config ./test/jest-e2e.json`), la suite [sorteos-asignacion-concurrencia.e2e-spec.ts](file:///c:/proyecto%20integrador/SGSEG/backend/test/sorteos-asignacion-concurrencia.e2e-spec.ts) falla con el siguiente error de Prisma:
+* Al ejecutar toda la batería de pruebas (`npx jest --config ./test/jest-e2e.json`), la suite [sorteos-asignacion-concurrencia.e2e-spec.ts](file:///c:/SGSEG/backend/test/sorteos-asignacion-concurrencia.e2e-spec.ts) falla con el siguiente error de Prisma:
   ```
   Foreign key constraint violated on the constraint: `envio_caso_estudio_id_estudiante_fkey`
   at prisma.estudiante.deleteMany()
@@ -372,8 +379,8 @@ graph TD
 * **Causa Raíz:** Con la incorporación del Módulo 5, la tabla `envio_caso_estudio` tiene una llave foránea hacia `estudiante`. El bloque `cleanDatabase` de ese archivo antiguo borra estudiantes antes de borrar los registros de `envioCasoEstudio`.
 
 ### 📂 Archivos a Modificar
-* `[MODIFICAR]` [sorteos-asignacion-concurrencia.e2e-spec.ts](file:///c:/proyecto%20integrador/SGSEG/backend/test/sorteos-asignacion-concurrencia.e2e-spec.ts)
-* `[MODIFICAR]` [tk16-auditoria-estudiantes.e2e-spec.ts](file:///c:/proyecto%20integrador/SGSEG/backend/test/tk16-auditoria-estudiantes.e2e-spec.ts)
+* `[MODIFICAR]` [sorteos-asignacion-concurrencia.e2e-spec.ts](file:///c:/SGSEG/backend/test/sorteos-asignacion-concurrencia.e2e-spec.ts)
+* `[MODIFICAR]` [tk16-auditoria-estudiantes.e2e-spec.ts](file:///c:/SGSEG/backend/test/tk16-auditoria-estudiantes.e2e-spec.ts)
 
 ### 🛠️ ¿Qué se debe hacer para solucionarlo?
 1. En la función de limpieza de cada suite E2E, asegurar el orden estricto de eliminación:
@@ -396,17 +403,17 @@ graph TD
 
 # 📈 Matriz de Impacto en el Cumplimiento
 
-| Módulo | Cumplimiento Actual | Con Fase 1 | Con Fase 2 (Meta Final) |
+| Módulo | Cumplimiento Base | Con Fase 1 (Actual) | Con Fase 2 (Meta Final) |
 | :--- | :---: | :---: | :---: |
-| **M1. Autenticación y Usuarios** | 80.0% | 100% | **100%** |
-| **M2. Casos y Stock Crítico** | 97.5% | 97.5% | **100%** |
-| **M3. Padrón e Importador** | 97.5% | 97.5% | **100%** |
-| **M4. Sorteo Criptográfico** | 97.5% | 97.5% | **100%** |
-| **M5. Actas, Notificaciones y Reportes** | 97.5% | 97.5% | **100%** |
-| **M6. Defensas y Calificación** | 97.5% | 97.5% | **100%** |
-| **M7. Estructura y Configuración** | 45.0% | 90.0% | **100%** |
-| **M8. Auditoría Forense** | 55.0% | 55.0% | **100%** |
-| **PONDERADO TOTAL** | **90.1%** | **96.8%** | 🏆 **100.0%** |
+| **M1. Autenticación y Usuarios (RBAC Estricto)** | 80.0% | **100.0%** ✅ | **100%** |
+| **M2. Casos y Stock Crítico** | 97.5% | **97.5%** ✅ | **100%** |
+| **M3. Padrón e Importador** | 97.5% | **97.5%** ✅ | **100%** |
+| **M4. Sorteo Criptográfico (Persistente en BD)** | 97.5% | **100.0%** ✅ | **100%** |
+| **M5. Actas, Notificaciones y Reportes** | 97.5% | **97.5%** ✅ | **100%** |
+| **M6. Defensas y Calificación** | 97.5% | **97.5%** ✅ | **100%** |
+| **M7. Estructura y Configuración** | 45.0% | **90.0%** ✅ | **100%** |
+| **M8. Auditoría Forense** | 55.0% | **70.0%** ✅ | **100%** |
+| **PONDERADO TOTAL** | **90.1%** | 🚀 **96.8%** | 🏆 **100.0%** |
 
 ---
 

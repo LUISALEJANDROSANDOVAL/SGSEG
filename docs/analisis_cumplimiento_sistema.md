@@ -70,8 +70,8 @@ pie title Distribución del Estado del Software SGSEG
   - Listado de usuarios institucionales (`GET /auth/users`).
   - Arquitectura de Guardias Globales (`JwtAuthGuard`, `RolesGuard`) con decoradores `@Public()` y `@Roles()`.
 * **❌ Brechas Identificadas (20.0%):**
-  - **Falta de CRUD de Usuarios en Backend:** El archivo `backend/src/usuarios/controller/usuarios.controller.ts` es una clase vacía (`export class UsuariosController {}`). La vista frontend `/usuarios` llama a `POST /users` y `PUT /users/:id` que no existen en el backend.
-  - **Menú y Rutas sin Discriminación Visual en Frontend:** En `frontend/src/lib/navegacion.ts` y `frontend/src/App.tsx`, las rutas y el sidebar exponen todos los módulos a `TODOS_LOS_ROLES`. Aunque el backend bloquea con `403 Forbidden`, la interfaz debe ocultar visualmente las páginas no autorizadas para cada rol.
+  - **Falta de CRUD de Usuarios en Backend para Vicerrectorado:** El archivo `backend/src/usuarios/controller/usuarios.controller.ts` es una clase vacía (`export class UsuariosController {}`). La vista frontend `/usuarios` llama a `POST /users` y `PUT /users/:id` que no existen en el backend. Esto impide que el rol **`VICERRECTORADO`** ejerza su función activa institucional de **añadir roles y usuarios al sistema** (como crear al **Jefe de Carrera** y asignarle su carrera académica correspondiente).
+  - **Menú y Rutas sin Discriminación Visual en Frontend:** En `frontend/src/lib/navegacion.ts` y `frontend/src/App.tsx`, las rutas y el sidebar exponen todos los módulos a `TODOS_LOS_ROLES`. Aunque el backend bloquea con `403 Forbidden` (por ejemplo, a Vicerrectorado para iniciar sorteos), la interfaz debe ocultar o deshabilitar visualmente los botones de giro de ruleta a roles no operadores.
 
 ---
 
@@ -114,6 +114,7 @@ pie title Distribución del Estado del Software SGSEG
   - **Sorteo en Vivo / Celular del Estudiante (`/sorteo/en-vivo`):** Pantalla responsive pública con código QR y enlace temporal que permite al estudiante seguir la ruleta en su móvil en tiempo real.
 * **❌ Brecha Menor (2.5%):**
   - La sincronización en vivo opera actualmente mediante polling de alta frecuencia y enlaces temporales. El uso de WebSockets directos optimizaría aún más la latencia.
+  - **Restricción de Operatividad en Frontend:** Si bien el backend bloquea con `403 Forbidden` a `VICERRECTORADO` para iniciar sorteos (`POST /sorteos/area`, `POST /sorteos/caso`), la UI de `Sorteo.tsx` debe presentarse en modo observador puro cuando ingresa este rol.
 
 ---
 
@@ -199,7 +200,7 @@ flowchart LR
      * `PUT /users/:id`: Modificación de datos y roles institucionales.
      * `PATCH /users/:id/deactivate`: Toggle de activación/inactivación.
 2. **Alinear Menú y Rutas Visuales en Frontend:**
-   - Modificar [navegacion.ts](file:///c:/proyecto%20integrador/SGSEG/frontend/src/lib/navegacion.ts) y [App.tsx](file:///c:/proyecto%20integrador/SGSEG/frontend/src/App.tsx) para que la lista de roles por ruta corresponda a la matriz de accesos (ocultar `/casos` a Secretaría, ocultar `/usuarios` a Jefes de Carrera, etc.).
+   - Modificar [navegacion.ts](file:///c:/SGSEG/frontend/src/lib/navegacion.ts) y [App.tsx](file:///c:/SGSEG/frontend/src/App.tsx) para que la lista de roles por ruta corresponda a la matriz de accesos (ocultar `/casos` a Secretaría, ocultar `/usuarios` a Jefes de Carrera, etc.).
 3. **Exponer Endpoint y Visor de Auditoría:**
    - Implementar `GET /auditoria` en el backend y habilitar una vista tabular con filtros de búsqueda en el frontend para el Super Administrador.
 4. **Endpoints de Configuración Dinámica:**

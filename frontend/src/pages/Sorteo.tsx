@@ -3,11 +3,19 @@ import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
 import { RuletaCanvas, type RuletaItem } from '@/components/RuletaCanvas'
 import { estudiantesApi, type Estudiante } from '@/lib/estudiantes.api'
+import { defensasApi, type Defensa } from '@/lib/defensas.api'
 import { casosApi } from '@/lib/casos.api'
 import { sorteosApi } from '@/lib/sorteos.api'
 import QRCode from 'qrcode'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
-import { esJefeCarrera, getJefeCarreraId, getJefeCarreraNombre } from '@/lib/auth-helpers'
+import {
+  esJefeCarrera,
+  getJefeCarreraId,
+  getJefeCarreraNombre,
+  esVicerrectorado,
+  esOperadorSorteo,
+} from '@/lib/auth-helpers'
 import {
   UserCheck,
   UserX,
@@ -31,11 +39,14 @@ import {
   Minimize2,
   Lock,
   X,
+  Users,
 } from 'lucide-react'
 
 // Definiciones de tipos para el flujo del sorteo
 export interface PostulanteSorteo {
   id: string
+  idDefensa?: string
+  idEstudiante?: string
   nombreCompleto: string
   carnetEstudiantil: string
   carnetIdentidad: string
@@ -48,6 +59,7 @@ export interface PostulanteSorteo {
   fechaDefensa: string
   horaDefensa: string
   promedioAcademico?: number
+  estadoDefensa?: string
 }
 
 export interface AreaAcademicaSorteo {
@@ -500,6 +512,8 @@ const CASOS_CATALOGO: CasoEstudioSorteo[] = [
 export default function PaginaSorteo() {
   const { user } = useAuth()
   const isJefe = esJefeCarrera(user)
+  const isVice = esVicerrectorado(user)
+  const puedeOperarSorteo = esOperadorSorteo(user)
   const jefeCarreraId = getJefeCarreraId(user)
   const carreraNombre = getJefeCarreraNombre(user)
 
@@ -597,14 +611,72 @@ export default function PaginaSorteo() {
     },
   ])
 
-  // Cargar estudiantes de la API si están disponibles
+  // Estados de persistencia en Base de Datos PostgreSQL
+  const [guardandoEnDb, setGuardandoEnDb] = useState<boolean>(false)
+  const [guardadoEnDbExitoso, setGuardadoEnDbExitoso] = useState<boolean>(false)
+  const [errorGuardadoDb, setErrorGuardadoDb] = useState<string | null>(null)
+
+  // Cargar defensas y postulantes desde la API (PostgreSQL)
   useEffect(() => {
-    async function loadApiEstudiantes() {
+    async function loadApiDefensas() {
       try {
-        const resp = await estudiantesApi.getEstudiantes({ limit: 10, estado: 'ACTIVO' })
+        const resp = await defensasApi.getDefensas({ limit: 50 })
         if (resp && resp.items && resp.items.length > 0) {
-          const transformed: PostulanteSorteo[] = resp.items.map((est: Estudiante, idx: number) => ({
+          // Priorizar defensas pendientes de sorteo (PROGRAMADA o AREA_SORTEADA)
+          const ordenEstados: Record<string, number> = {
+            PROGRAMADA: 1,
+            AREA_SORTEADA: 2,
+            CASO_ASIGNADO: 3,
+            DEFENDIDO: 4,
+            CALIFICADO: 5,
+          }
+          const ordenadas = [...resp.items].sort(
+            (a, b) => (ordenEstados[a.estadoDefensa] || 99) - (ordenEstados[b.estadoDefensa] || 99),
+          )
+
+          const transformed: PostulanteSorteo[] = ordenadas.map((def: Defensa) => {
+            const est = def.instancia?.proceso?.estudiante
+            const fDef = def.fechaDefensa ? new Date(def.fechaDefensa) : null
+            const fechaStr = fDef && !isNaN(fDef.getTime()) ? fDef.toLocaleDateString('es-BO') : '28/09/2026'
+            const horaStr = fDef && !isNaN(fDef.getTime()) ? fDef.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '09:00 AM'
+
+            return {
+              id: String(def.idDefensa),
+              idDefensa: String(def.idDefensa),
+              idEstudiante: est ? String(est.idEstudiante) : undefined,
+              nombreCompleto: est?.nombreCompleto || `Postulante #${def.idDefensa}`,
+              carnetEstudiantil: est?.carnetEstudiantil || `DEF-${def.idDefensa}`,
+              carnetIdentidad: est?.carnetIdentidad || `${est?.carnetEstudiantil || def.idDefensa} SC`,
+              correo: est?.correo || `${est?.carnetEstudiantil || 'estudiante'}@estudiantes.utepsa.edu.bo`,
+              carrera: est?.planEstudio?.carrera?.nombre || 'Ingeniería de Sistemas',
+              carreraId: est?.planEstudio?.carrera?.idCarrera ? String(est.planEstudio.carrera.idCarrera) : undefined,
+              planEstudio: est?.planEstudio?.nombre || 'Plan Vigente',
+              planEstudioId: est?.planEstudio?.idPlanEstudio ? String(est.planEstudio.idPlanEstudio) : undefined,
+              tipoDefensa: def.tipoDefensa?.nombre === 'EXTERNA' ? 'Externa' : 'Interna',
+              fechaDefensa: fechaStr,
+              horaDefensa: horaStr,
+              promedioAcademico: 88.5,
+              estadoDefensa: def.estadoDefensa,
+            }
+          })
+
+          setPostulantes(transformed)
+          if (transformed.length > 0) {
+            setPostulanteSeleccionado(transformed[0])
+          }
+          return
+        }
+      } catch (err) {
+        console.warn('Fallo al cargar defensas de PostgreSQL, intentando fallback de estudiantes', err)
+      }
+
+      // Fallback a estudiantesApi si defensas no responden
+      try {
+        const respEst = await estudiantesApi.getEstudiantes({ limit: 10, estado: 'ACTIVO' })
+        if (respEst && respEst.items && respEst.items.length > 0) {
+          const transformed: PostulanteSorteo[] = respEst.items.map((est: Estudiante, idx: number) => ({
             id: String(est.idEstudiante || idx),
+            idEstudiante: String(est.idEstudiante || idx),
             nombreCompleto: est.nombreCompleto,
             carnetEstudiantil: est.carnetEstudiantil,
             carnetIdentidad: est.carnetIdentidad || `${est.carnetEstudiantil} SC`,
@@ -627,7 +699,7 @@ export default function PaginaSorteo() {
         // Usa catálogo por defecto en caso de no conexión a base de datos
       }
     }
-    loadApiEstudiantes()
+    loadApiDefensas()
   }, [])
 
   // Filtrado de postulantes según rol y búsqueda
@@ -937,8 +1009,53 @@ export default function PaginaSorteo() {
     }
   }
 
+  // Función para persistir atómicamente el sorteo en PostgreSQL
+  const persistirSorteoEnDb = async (
+    postulante: PostulanteSorteo,
+    area: AreaAcademicaSorteo,
+    caso: CasoEstudioSorteo,
+  ) => {
+    setGuardandoEnDb(true)
+    setErrorGuardadoDb(null)
+    try {
+      const idDefensa = postulante.idDefensa || postulante.id
+      const idArea = String(area.id)
+      const idCaso = String(caso.id)
+
+      // Comprobar si los identificadores son numéricos (registros reales en PostgreSQL)
+      if (/^\d+$/.test(idDefensa) && /^\d+$/.test(idArea) && /^\d+$/.test(idCaso)) {
+        const res = await sorteosApi.finalizarSorteo({
+          idDefensa,
+          idArea,
+          idCaso,
+          estudiantePresente: asistenciaPresente,
+          motivoInasistencia: !asistenciaPresente ? motivoInasistencia : undefined,
+          tokenSesionLive: liveToken || undefined,
+        })
+
+        if (res?.codigoActa) {
+          setCodigoActa(res.codigoActa)
+        }
+        if (res?.tokenActa) {
+          setHashActa(res.tokenActa)
+        }
+        setGuardadoEnDbExitoso(true)
+        caso.usosActuales = (caso.usosActuales || 0) + 1
+        postulante.estadoDefensa = 'CASO_ASIGNADO'
+      } else {
+        console.warn('Modo catálogo mock/offline: Se genera acta en memoria sin ID numérico de BD.')
+      }
+    } catch (err: any) {
+      console.error('Error al persistir sorteo en base de datos:', err)
+      const msg = err.response?.data?.message || err.message || 'Error al guardar el sorteo en la base de datos'
+      setErrorGuardadoDb(msg)
+    } finally {
+      setGuardandoEnDb(false)
+    }
+  }
+
   // Finalización del Sorteo de Caso
-  const handleFinalizarSorteoCaso = (item: RuletaItem) => {
+  const handleFinalizarSorteoCaso = async (item: RuletaItem) => {
     const caso = casosParaArea.find((c) => c.id === item.id)
     if (caso) {
       setCasoGanador(caso)
@@ -954,6 +1071,10 @@ export default function PaginaSorteo() {
           },
           ruletaGiroActivo: false,
         }).catch(() => {})
+      }
+
+      if (postulanteSeleccionado && areaGanadora) {
+        await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, caso)
       }
     }
   }
@@ -1040,7 +1161,15 @@ export default function PaginaSorteo() {
     setSorteoSuspendido(false)
     setCorreoDespachadoExitoso(false)
     setDespachandoCorreo(false)
-    setModoProyector(false)
+    setGuardandoEnDb(false)
+    setGuardadoEnDbExitoso(false)
+    setErrorGuardadoDb(null)
+  }
+
+  // Reintentar persistencia manual si hubo error
+  const reintentarGuardarEnDb = async () => {
+    if (!postulanteSeleccionado || !areaGanadora || !casoGanador) return
+    await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
   }
 
   // Descargar acta oficial
@@ -1050,7 +1179,7 @@ export default function PaginaSorteo() {
       return
     }
     try {
-      const idDefensa = postulanteSeleccionado.id
+      const idDefensa = postulanteSeleccionado.idDefensa || postulanteSeleccionado.id
       const blob = await sorteosApi.descargarActaPdf(idDefensa)
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -1211,6 +1340,37 @@ export default function PaginaSorteo() {
             <span className="hidden sm:inline-block text-[11px] text-neutral-500 font-mono">
               carreraId: {jefeCarreraId}
             </span>
+          </div>
+        )}
+
+        {/* Banner de Supervisión para Vicerrectorado */}
+        {isVice && (
+          <div className="flex items-center justify-between border-l-4 border-l-blue-600 border border-blue-200 bg-blue-50/70 p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center bg-blue-600 text-white rounded-md shadow-xs">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-widest text-blue-900 uppercase">
+                    Rol Vicerrectorado · Supervisión y Auditoría
+                  </span>
+                  <span className="bg-blue-100 text-blue-800 text-[10px] font-semibold px-2 py-0.5 rounded">
+                    Modo Solo Consulta
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-blue-900 mt-0.5">
+                  Conforme a la normativa institucional, el Vicerrectorado supervisa y audita los actos solemnes y actas oficiales, sin potestad operativa para ejecutar sorteos. Su función de gestión activa en el sistema es la <strong>administración y asignación de usuarios y roles (Jefes de Carrera)</strong>.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/usuarios"
+              className="hidden sm:inline-flex items-center gap-1.5 border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-50 transition-colors shadow-2xs"
+            >
+              <Users className="size-3.5" />
+              <span>Gestión de Roles y Usuarios</span>
+            </Link>
           </div>
         )}
 
@@ -1507,32 +1667,39 @@ export default function PaginaSorteo() {
                       </div>
 
                       {/* Botones Switch */}
-                      <div className="inline-flex rounded-lg border border-line bg-neutral-100 p-1">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAsistencia(true)}
-                          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
-                            asistenciaPresente
-                              ? 'bg-emerald-600 text-white shadow-xs'
-                              : 'text-neutral-600 hover:text-gray-900'
-                          }`}
-                        >
-                          <UserCheck className="size-3.5" />
-                          Presente en Sala
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAsistencia(false)}
-                          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
-                            !asistenciaPresente
-                              ? 'bg-red-600 text-white shadow-xs'
-                              : 'text-neutral-600 hover:text-gray-900'
-                          }`}
-                        >
-                          <UserX className="size-3.5" />
-                          Ausente / No Comparece
-                        </button>
-                      </div>
+                      {isVice || !puedeOperarSorteo ? (
+                        <div className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-800">
+                          <ShieldCheck className="size-4 text-blue-600" />
+                          <span>Control de asistencia reservado a Secretaría de Facultad / Coordinación</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex rounded-lg border border-line bg-neutral-100 p-1">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAsistencia(true)}
+                            className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
+                              asistenciaPresente
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'text-neutral-600 hover:text-gray-900'
+                            }`}
+                          >
+                            <UserCheck className="size-3.5" />
+                            Presente en Sala
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleAsistencia(false)}
+                            className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
+                              !asistenciaPresente
+                                ? 'bg-red-600 text-white shadow-xs'
+                                : 'text-neutral-600 hover:text-gray-900'
+                            }`}
+                          >
+                            <UserX className="size-3.5" />
+                            Ausente / No Comparece
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Si está Ausente: Exigir Justificación y Suspender */}
@@ -1609,16 +1776,23 @@ export default function PaginaSorteo() {
                       Paso 1 de 4 · Verificación de identidad y sala
                     </p>
 
-                    <button
-                      type="button"
-                      disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
-                      onClick={handleIniciarSorteoOficial}
-                      className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                    >
-                      <Maximize2 className="size-4" />
-                      <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
-                      <ArrowRight className="size-4" />
-                    </button>
+                    {isVice || !puedeOperarSorteo ? (
+                      <div className="inline-flex items-center gap-2 border border-neutral-200 bg-neutral-100 px-4 py-2.5 text-xs font-semibold text-neutral-600">
+                        <Lock className="size-4 text-neutral-500" />
+                        <span>Inicio de sorteo oficial reservado a Secretaría de Facultad (Solo Consulta)</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
+                        onClick={handleIniciarSorteoOficial}
+                        className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                      >
+                        <Maximize2 className="size-4" />
+                        <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
+                        <ArrowRight className="size-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </section>
@@ -1654,6 +1828,7 @@ export default function PaginaSorteo() {
                     title="Ruleta Oficial de Áreas de Grado"
                     subtitle="Giro aleatorio CSPRNG auditable con desaceleración natural"
                     spinButtonText="Girar Ruleta de Áreas"
+                    readOnly={isVice || !puedeOperarSorteo}
                   />
 
                   {/* Área Ganadora Revelada */}
@@ -1734,6 +1909,7 @@ export default function PaginaSorteo() {
                       title={`Casos de Estudio — ${areaGanadora?.codigo}`}
                       subtitle="Selección estricta de casos activos con límite máximo de 2 usos"
                       spinButtonText="Girar Ruleta de Casos"
+                      readOnly={isVice || !puedeOperarSorteo}
                     />
                   ) : (
                     <div className="p-8 text-center text-xs text-neutral-500">
@@ -1788,7 +1964,12 @@ export default function PaginaSorteo() {
                     <button
                       type="button"
                       disabled={!casoGanador}
-                      onClick={() => setPasoActual(4)}
+                      onClick={async () => {
+                        setPasoActual(4)
+                        if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora && casoGanador) {
+                          await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
+                        }
+                      }}
                       className="flex items-center gap-2 border border-crimson bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
                       Formalizar Acta & Despacho
@@ -1951,8 +2132,51 @@ export default function PaginaSorteo() {
                     </div>
                   </div>
 
+                  {/* ── ESTADO DE PERSISTENCIA EN BASE DE DATOS (POSTGRESQL) ── */}
+                  <div className="mt-8 border-t border-line pt-6 flex flex-col gap-3 print:hidden">
+                    {guardandoEnDb && (
+                      <div className="flex items-center gap-3 rounded border border-blue-200 bg-blue-50 p-4 text-xs text-blue-800 animate-fade-in">
+                        <div className="size-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent shrink-0" />
+                        <span>Guardando y formalizando sorteo en base de datos PostgreSQL...</span>
+                      </div>
+                    )}
+
+                    {guardadoEnDbExitoso && (
+                      <div className="flex items-start gap-3 rounded border border-emerald-300 bg-emerald-50 p-4 text-xs text-emerald-900 animate-fade-in">
+                        <CheckCircle2 className="size-5 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-emerald-950">
+                            ¡Asignación guardada formalmente en la Base de Datos PostgreSQL!
+                          </p>
+                          <p className="text-[11px] text-emerald-800 mt-0.5">
+                            Se registró la asignación atómica en la tabla <code className="bg-emerald-100 px-1 py-0.5 rounded font-mono">asignacion_caso</code>, el estado de la defensa se actualizó a <strong className="font-mono">CASO_ASIGNADO</strong> y se generó el acta oficial <strong className="font-mono">{codigoActa}</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {errorGuardadoDb && (
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded border border-amber-300 bg-amber-50 p-4 text-xs text-amber-900 animate-fade-in">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="size-5 text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-bold">Aviso sobre persistencia en Base de Datos:</p>
+                            <p className="text-[11px] text-amber-800 mt-0.5">{errorGuardadoDb}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => reintentarGuardarEnDb()}
+                          className="px-3.5 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded text-xs font-semibold shrink-0 cursor-pointer transition-colors"
+                        >
+                          Reintentar Guardado
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* ── BOTÓN DE DESPACHO AL CORREO INSTITUCIONAL ── */}
-                  <div className="mt-8 border-t border-line pt-6 flex flex-col gap-4 print:hidden">
+                  <div className="mt-6 border-t border-line pt-6 flex flex-col gap-4 print:hidden">
                     {correoDespachadoExitoso ? (
                       <div className="border border-emerald-300 bg-emerald-50 p-4 text-xs text-emerald-900 animate-fade-in flex items-start gap-3">
                         <CheckCircle2 className="size-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -1976,19 +2200,25 @@ export default function PaginaSorteo() {
                           </p>
                         </div>
 
-                        <button
-                          type="button"
-                          disabled={despachandoCorreo}
-                          onClick={handleDespacharCorreo}
-                          className="w-full sm:w-auto flex items-center justify-center gap-2 border border-crimson bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#821528] active:bg-[#6c1121] disabled:opacity-50 transition-colors cursor-pointer"
-                        >
-                          <Mail className="size-4" />
-                          {despachandoCorreo ? (
-                            'Despachando al correo institucional...'
-                          ) : (
-                            <>Despachar al Correo ({postulanteSeleccionado.correo.split('@')[0]}...)</>
-                          )}
-                        </button>
+                        {isVice || !puedeOperarSorteo ? (
+                          <span className="text-xs font-semibold text-neutral-500 italic">
+                            Despacho formal reservado a Secretaría de Facultad
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={despachandoCorreo}
+                            onClick={handleDespacharCorreo}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 border border-crimson bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#821528] active:bg-[#6c1121] disabled:opacity-50 transition-colors cursor-pointer"
+                          >
+                            <Mail className="size-4" />
+                            {despachandoCorreo ? (
+                              'Despachando al correo institucional...'
+                            ) : (
+                              <>Despachar al Correo ({postulanteSeleccionado.correo.split('@')[0]}...)</>
+                            )}
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -2013,14 +2243,16 @@ export default function PaginaSorteo() {
                         </button>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={handleIniciarNuevoSorteo}
-                        className="flex items-center gap-2 border border-ink bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 shadow-xs cursor-pointer"
-                      >
-                        <RotateCcw className="size-3.5" />
-                        Iniciar Nuevo Sorteo
-                      </button>
+                      {!isVice && puedeOperarSorteo && (
+                        <button
+                          type="button"
+                          onClick={handleIniciarNuevoSorteo}
+                          className="flex items-center gap-2 border border-ink bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 shadow-xs cursor-pointer"
+                        >
+                          <RotateCcw className="size-3.5" />
+                          Iniciar Nuevo Sorteo
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2251,13 +2483,15 @@ export default function PaginaSorteo() {
                   <strong className="text-white">{postulanteSeleccionado?.nombreCompleto}</strong>.
                   Una vez confirmada, se procederá al sorteo aleatorio solemne de Área.
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setPasoActual(2)}
-                  className="mt-4 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white hover:bg-[#821528] transition-colors cursor-pointer"
-                >
-                  Proceder al Sorteo de Área →
-                </button>
+                {!isVice && puedeOperarSorteo && (
+                  <button
+                    type="button"
+                    onClick={() => setPasoActual(2)}
+                    className="mt-4 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white hover:bg-[#821528] transition-colors cursor-pointer"
+                  >
+                    Proceder al Sorteo de Área →
+                  </button>
+                )}
               </div>
             )}
 
@@ -2330,6 +2564,7 @@ export default function PaginaSorteo() {
                   subtitle="Giro aleatorio CSPRNG auditable"
                   spinButtonText="Girar Ruleta de Áreas"
                   accentColor="#9E1B32"
+                  readOnly={isVice || !puedeOperarSorteo}
                 />
 
                 {areaGanadora && (
@@ -2374,6 +2609,7 @@ export default function PaginaSorteo() {
                     subtitle="Selección de casos con límite máximo de 2 usos"
                     spinButtonText="Girar Ruleta de Casos"
                     accentColor="#9E1B32"
+                    readOnly={isVice || !puedeOperarSorteo}
                   />
                 ) : (
                   <div className="p-8 text-neutral-400 text-sm">

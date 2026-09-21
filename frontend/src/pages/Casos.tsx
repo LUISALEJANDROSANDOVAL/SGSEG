@@ -16,6 +16,7 @@ import {
   RefreshCw,
   RotateCcw,
   Search,
+  ShieldCheck,
   X,
 } from 'lucide-react'
 import { DashboardShell } from '@/components/dashboard-shell'
@@ -32,7 +33,7 @@ import type {
 } from '@/lib/casos.api'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Carrera } from '@/lib/estudiantes.api'
-import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
+import { esJefeCarrera, getJefeCarreraId, esVicerrectorado, puedeGestionarCasos } from '@/lib/auth-helpers'
 import { getApiErrorMessage } from '@/lib/utils'
 
 export default function PaginaCasos() {
@@ -40,6 +41,8 @@ export default function PaginaCasos() {
   // Contexto de autenticación
   const { user } = useAuth()
   const isJefe = esJefeCarrera(user)
+  const isVice = esVicerrectorado(user)
+  const puedeEditar = puedeGestionarCasos(user)
   const jefeCarreraId = getJefeCarreraId(user)
 
   // Estados de datos
@@ -380,29 +383,36 @@ export default function PaginaCasos() {
           titulo="Gestión de Casos de Estudio"
           descripcion="Banco de casos de estudio por Área del Conocimiento. Control automatizado del umbral de dos usos por caso y monitoreo preventivo de stock para la defensa de grado."
           accion={
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={() => setModalNuevaArea(true)}
-                className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors"
-              >
-                <Plus className="size-3.5" />
-                Nueva Área
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!formNuevo.idArea && areas.length > 0) {
-                    setFormNuevo((prev) => ({ ...prev, idArea: String(areas[0].idArea) }))
-                  }
-                  setModalNuevoCaso(true)
-                }}
-                className="flex items-center gap-1.5 bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 transition-opacity cursor-pointer"
-              >
-                <Plus className="size-3.5" />
-                Registrar Nuevo Caso
-              </button>
-            </div>
+            puedeEditar ? (
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setModalNuevaArea(true)}
+                  className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
+                >
+                  <Plus className="size-3.5" />
+                  Nueva Área
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!formNuevo.idArea && areas.length > 0) {
+                      setFormNuevo((prev) => ({ ...prev, idArea: String(areas[0].idArea) }))
+                    }
+                    setModalNuevoCaso(true)
+                  }}
+                  className="flex items-center gap-1.5 bg-crimson px-4 py-2 text-xs font-medium text-white hover:opacity-95 transition-opacity cursor-pointer"
+                >
+                  <Plus className="size-3.5" />
+                  Registrar Nuevo Caso
+                </button>
+              </div>
+            ) : isVice ? (
+              <div className="inline-flex items-center gap-1.5 border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-2xs">
+                <ShieldCheck className="size-3.5 text-blue-600" />
+                <span>Modo Auditoría e Inspección (Solo Lectura)</span>
+              </div>
+            ) : null
           }
         />
 
@@ -503,17 +513,19 @@ export default function PaginaCasos() {
                       {alerta.casosDisponibles} de {alerta.umbralRequerido} disp.
                     </span>
 
-                    <button
-                      type="button"
-                      title={`Registrar nuevo caso en ${alerta.nombreArea}`}
-                      onClick={() => {
-                        setFormNuevo((prev) => ({ ...prev, idArea: String(alerta.idArea) }))
-                        setModalNuevoCaso(true)
-                      }}
-                      className="flex size-6.5 items-center justify-center bg-white text-neutral-600 border border-line hover:bg-neutral-50 hover:text-crimson transition-colors cursor-pointer"
-                    >
-                      <Plus className="size-3" />
-                    </button>
+                    {puedeEditar && (
+                      <button
+                        type="button"
+                        title={`Registrar nuevo caso en ${alerta.nombreArea}`}
+                        onClick={() => {
+                          setFormNuevo((prev) => ({ ...prev, idArea: String(alerta.idArea) }))
+                          setModalNuevoCaso(true)
+                        }}
+                        className="flex size-6.5 items-center justify-center bg-white text-neutral-600 border border-line hover:bg-neutral-50 hover:text-crimson transition-colors cursor-pointer"
+                      >
+                        <Plus className="size-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -843,26 +855,30 @@ export default function PaginaCasos() {
                             >
                               <Eye className="size-4" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => abrirModalEditar(caso)}
-                              className="p-1 text-neutral-500 hover:text-neutral-900"
-                              title="Editar planteamiento"
-                            >
-                              <Pencil className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleEstado(caso)}
-                              className={`p-1 ${
-                                caso.estado === 'INACTIVO'
-                                  ? 'text-emerald-600 hover:text-emerald-800'
-                                  : 'text-neutral-400 hover:text-red-600'
-                              }`}
-                              title={caso.estado === 'INACTIVO' ? 'Activar caso' : 'Inactivar caso'}
-                            >
-                              <Power className="size-4" />
-                            </button>
+                            {puedeEditar && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => abrirModalEditar(caso)}
+                                  className="p-1 text-neutral-500 hover:text-neutral-900"
+                                  title="Editar planteamiento"
+                                >
+                                  <Pencil className="size-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleEstado(caso)}
+                                  className={`p-1 ${
+                                    caso.estado === 'INACTIVO'
+                                      ? 'text-emerald-600 hover:text-emerald-800'
+                                      : 'text-neutral-400 hover:text-red-600'
+                                  }`}
+                                  title={caso.estado === 'INACTIVO' ? 'Activar caso' : 'Inactivar caso'}
+                                >
+                                  <Power className="size-4" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1055,17 +1071,19 @@ export default function PaginaCasos() {
                         )}
 
                         {/* Botón rápido Nuevo Caso para esta área */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormNuevo((prev) => ({ ...prev, idArea }))
-                            setModalNuevoCaso(true)
-                          }}
-                          className="flex items-center gap-1.5 border border-crimson bg-crimson px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#821528] transition-colors shadow-2xs cursor-pointer"
-                        >
-                          <Plus className="size-3.5" />
-                          <span>+ Caso</span>
-                        </button>
+                        {puedeEditar && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormNuevo((prev) => ({ ...prev, idArea }))
+                              setModalNuevoCaso(true)
+                            }}
+                            className="flex items-center gap-1.5 border border-crimson bg-crimson px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#821528] transition-colors shadow-2xs cursor-pointer"
+                          >
+                            <Plus className="size-3.5" />
+                            <span>+ Caso</span>
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1121,14 +1139,16 @@ export default function PaginaCasos() {
                                           >
                                             <Eye className="size-3.5" />
                                           </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => abrirModalEditar(caso)}
-                                            className="p-1.5 text-neutral-500 hover:text-neutral-900 border border-transparent hover:border-line transition-colors cursor-pointer"
-                                            title="Editar caso"
-                                          >
-                                            <Pencil className="size-3.5" />
-                                          </button>
+                                          {puedeEditar && (
+                                            <button
+                                              type="button"
+                                              onClick={() => abrirModalEditar(caso)}
+                                              className="p-1.5 text-neutral-500 hover:text-neutral-900 border border-transparent hover:border-line transition-colors cursor-pointer"
+                                              title="Editar caso"
+                                            >
+                                              <Pencil className="size-3.5" />
+                                            </button>
+                                          )}
                                         </div>
                                       </td>
                                     </tr>
@@ -1140,16 +1160,18 @@ export default function PaginaCasos() {
                         ) : (
                           <div className="p-6 text-center text-xs text-neutral-500 bg-neutral-50/30">
                             <p>No hay casos de estudio registrados en esta área aún.</p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setFormNuevo((prev) => ({ ...prev, idArea }))
-                                setModalNuevoCaso(true)
-                              }}
-                              className="mt-2 text-xs text-crimson font-semibold hover:underline cursor-pointer"
-                            >
-                              + Cargar el primer caso para habilitar el sorteo de esta área
-                            </button>
+                            {puedeEditar && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormNuevo((prev) => ({ ...prev, idArea }))
+                                  setModalNuevoCaso(true)
+                                }}
+                                className="mt-2 text-xs text-crimson font-semibold hover:underline cursor-pointer"
+                              >
+                                + Cargar el primer caso para habilitar el sorteo de esta área
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
