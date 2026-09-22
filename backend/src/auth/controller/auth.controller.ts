@@ -72,13 +72,13 @@ export class AuthController {
   }
 
   @Get('users')
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
   async listUsers() {
     return this.authService.listUsers();
   }
 
   @Post('users')
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async createUser(
     @Body() dto: CreateUserDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -87,7 +87,7 @@ export class AuthController {
   }
 
   @Put('users/:id')
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async updateUser(
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,
@@ -115,7 +115,7 @@ export class AuthController {
    * Endpoint para activación/inactivación de cuentas institucionales.
    */
   @Patch('users/:id/estado')
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async updateUserEstado(
     @Param('id') id: string,
     @Body() dto: UpdateUserEstadoDto,
@@ -125,7 +125,7 @@ export class AuthController {
   }
 
   @Patch('users/:id/deactivate')
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async deactivateUser(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,

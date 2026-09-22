@@ -575,58 +575,36 @@ export default function PaginaEstudiantes() {
 
         {/* Barra de Filtros por Carrera, Plan, Estado y Búsqueda */}
         <div className="flex flex-col gap-3 border border-line bg-white p-4">
-          {/* Fila 1: Pestañas de Carrera */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            <span className="flex items-center gap-1 text-xs font-semibold text-neutral-700 uppercase tracking-wider mr-2">
-              <Building2 className="h-3.5 w-3.5" /> Carrera:
-            </span>
-            {esJefeCarrera ? (
-              // Modo Jefe de Carrera: Únicamente su carrera asignada, sin opción de "Todas las Carreras"
-              carreras.map((c) => (
-                <span
-                  key={c.idCarrera}
-                  className="inline-flex items-center gap-1.5 border border-ink bg-ink px-3 py-1.5 text-xs font-semibold text-white shadow-xs"
-                >
-                  <Building2 className="h-3.5 w-3.5 text-neutral-300" />
-                  <span>{c.nombre}</span>
-                </span>
-              ))
-            ) : (
-              // Modo Coordinación / Secretariado: Todas las Carreras y selector global
-              <>
-                <button
-                  type="button"
-                  onClick={() => handleCambioCarrera('ALL')}
-                  className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
-                    carreraSeleccionada === 'ALL'
-                      ? 'border border-ink bg-ink text-white shadow-xs'
-                      : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
-                  }`}
-                >
-                  Todas las Carreras
-                </button>
-                {carreras.map((c) => (
-                  <button
-                    key={c.idCarrera}
-                    type="button"
-                    onClick={() => handleCambioCarrera(c.idCarrera)}
-                    className={`whitespace-nowrap px-3 py-1.5 text-xs font-medium transition-all ${
-                      carreraSeleccionada === c.idCarrera
-                        ? 'border border-ink bg-ink text-white shadow-xs'
-                        : 'border border-line bg-surface text-neutral-600 hover:border-neutral-400 hover:bg-white'
-                    }`}
-                  >
-                    {c.nombre}
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-
-          {/* Fila 2: Filtro por Plan, Estado y Caja de Búsqueda */}
-          <div className="grid grid-cols-1 gap-3 pt-2 border-t border-line sm:grid-cols-12">
-            {/* Selector de Plan */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+            {/* Selector de Carrera (Dropdown unificado) */}
             <div className="sm:col-span-4 flex items-center gap-2">
+              <label htmlFor="select-carrera" className="flex items-center gap-1 text-xs font-semibold text-neutral-700 whitespace-nowrap">
+                <Building2 className="h-3.5 w-3.5 text-neutral-500" /> Carrera:
+              </label>
+              {esJefeCarrera ? (
+                // Modo Jefe de Carrera: Únicamente su carrera asignada en vista estática/bloqueada
+                <div className="w-full border border-line bg-neutral-50 px-2.5 py-1.5 text-xs font-semibold text-neutral-800 truncate">
+                  {carreras[0]?.nombre || 'Mi Carrera'}
+                </div>
+              ) : (
+                <select
+                  id="select-carrera"
+                  value={carreraSeleccionada}
+                  onChange={(e) => handleCambioCarrera(e.target.value)}
+                  className="w-full border border-line bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 focus:border-ink focus:outline-hidden cursor-pointer"
+                >
+                  <option value="ALL">Todas las Carreras</option>
+                  {carreras.map((c) => (
+                    <option key={c.idCarrera} value={c.idCarrera}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Selector de Plan */}
+            <div className="sm:col-span-3 flex items-center gap-2">
               <label htmlFor="select-plan" className="text-xs font-medium text-neutral-600 whitespace-nowrap">
                 Pensum / Plan:
               </label>
@@ -637,7 +615,7 @@ export default function PaginaEstudiantes() {
                   setPlanSeleccionado(e.target.value)
                   setPaginaActual(1)
                 }}
-                className="w-full border border-line bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 focus:border-ink focus:outline-hidden"
+                className="w-full border border-line bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 focus:border-ink focus:outline-hidden cursor-pointer"
               >
                 <option value="ALL">Todos los planes</option>
                 {planesDisponibles.map((p) => (
@@ -649,7 +627,7 @@ export default function PaginaEstudiantes() {
             </div>
 
             {/* Selector de Estado */}
-            <div className="sm:col-span-3 flex items-center gap-2">
+            <div className="sm:col-span-2 flex items-center gap-2">
               <label htmlFor="select-estado" className="text-xs font-medium text-neutral-600 whitespace-nowrap">
                 Estado:
               </label>
@@ -660,30 +638,30 @@ export default function PaginaEstudiantes() {
                   setFiltroEstado(e.target.value)
                   setPaginaActual(1)
                 }}
-                className="w-full border border-line bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 focus:border-ink focus:outline-hidden"
+                className="w-full border border-line bg-white px-2.5 py-1.5 text-xs font-medium text-neutral-700 focus:border-ink focus:outline-hidden cursor-pointer"
               >
                 <option value="ACTIVO">Solo Activos</option>
                 <option value="INACTIVO">Inactivos</option>
-                <option value="ELIMINADO">Eliminados (Soft Delete)</option>
-                <option value="ALL">Todos (incluye históricos)</option>
+                <option value="ELIMINADO">Eliminados</option>
+                <option value="ALL">Todos</option>
               </select>
             </div>
 
             {/* Campo de Búsqueda con debounce */}
-            <div className="sm:col-span-5 relative">
+            <div className="sm:col-span-3 relative">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
               <input
                 type="text"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por carnet, CI, nombre o correo..."
+                placeholder="Buscar estudiante..."
                 className="w-full border border-line bg-surface py-1.5 pl-8 pr-8 text-xs text-neutral-800 placeholder-neutral-400 focus:border-ink focus:bg-white focus:outline-hidden"
               />
               {busqueda && (
                 <button
                   type="button"
                   onClick={() => setBusqueda('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>

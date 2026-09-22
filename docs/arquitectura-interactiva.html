@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SGSEG - Arquitectura de Software Interactiva</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #090d16;
+      --bg-secondary: #0f172a;
+      --bg-card: rgba(17, 24, 39, 0.85);
+      --bg-card-hover: rgba(30, 41, 59, 0.95);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(99, 102, 241, 0.4);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-frontend: #38bdf8;
+      --accent-backend: #e11d48;
+      --accent-db: #10b981;
+      --accent-auth: #f59e0b;
+      --accent-infra: #a855f7;
+      --accent-live: #ec4899;
+      --grid-dot: rgba(255, 255, 255, 0.06);
+      --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #f8fafc;
+      --bg-secondary: #f1f5f9;
+      --bg-card: rgba(255, 255, 255, 0.9);
+      --bg-card-hover: #ffffff;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --border-highlight: rgba(99, 102, 241, 0.5);
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --grid-dot: rgba(0, 0, 0, 0.07);
+      --shadow-card: 0 10px 20px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navbar */
+    header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    /* View Tabs */
+    .nav-tabs {
+      display: flex;
+      background: var(--bg-primary);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      gap: 4px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: #6366f1;
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
+    }
+
+    /* Header Actions */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 6px 12px;
+      gap: 8px;
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      width: 150px;
+    }
+
+    .action-btn {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+
+    .action-btn:hover {
+      border-color: var(--text-secondary);
+      transform: translateY(-1px);
+    }
+
+    /* Main Canvas Layout */
+    .main-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-color: var(--bg-primary);
+      background-image: radial-gradient(var(--grid-dot) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      cursor: grab;
+    }
+
+    .main-container:active {
+      cursor: grabbing;
+    }
+
+    #viewport {
+      transform-origin: 0 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.05s linear;
+    }
+
+    /* Floating Toolbar */
+    .floating-toolbar {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 6px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: var(--shadow-card);
+      z-index: 40;
+      backdrop-filter: blur(8px);
+    }
+
+    .tool-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      transition: all 0.15s;
+    }
+
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    .zoom-text {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      padding: 0 6px;
+      min-width: 45px;
+      text-align: center;
+    }
+
+    /* Legend Pills */
+    .legend-bar {
+      position: absolute;
+      top: 18px;
+      left: 24px;
+      display: flex;
+      gap: 8px;
+      z-index: 40;
+      flex-wrap: wrap;
+    }
+
+    .legend-pill {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* SVG Layer & Connectors */
+    #svg-connections {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3000px;
+      height: 2000px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .conn-path {
+      fill: none;
+      stroke: rgba(148, 163, 184, 0.3);
+      stroke-width: 2;
+      stroke-dasharray: 6 6;
+      animation: flowStroke 20s linear infinite;
+    }
+
+    .conn-path.solid {
+      stroke-dasharray: none;
+      stroke: rgba(99, 102, 241, 0.5);
+      stroke-width: 2.5;
+    }
+
+    .conn-path.animated {
+      stroke: url(#gradient-flow);
+      stroke-width: 2.5;
+      stroke-dasharray: 8 6;
+      animation: flowStroke 8s linear infinite;
+    }
+
+    @keyframes flowStroke {
+      to {
+        stroke-dashoffset: -100;
+      }
+    }
+
+    /* Node Cards (HTML inside Viewport) */
+    .nodes-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3000px;
+      height: 2000px;
+      z-index: 20;
+    }
+
+    .arch-group {
+      position: absolute;
+      border-radius: 16px;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.4);
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      transition: all 0.3s ease;
+    }
+
+    [data-theme="light"] .arch-group {
+      background: rgba(241, 245, 249, 0.6);
+      border-color: rgba(0, 0, 0, 0.12);
+    }
+
+    .group-label {
+      position: absolute;
+      top: -12px;
+      left: 18px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .arch-node {
+      position: absolute;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      width: 260px;
+      box-shadow: var(--shadow-card);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+    }
+
+    .arch-node:hover {
+      transform: translateY(-3px) scale(1.02);
+      border-color: var(--border-highlight);
+      background: var(--bg-card-hover);
+      box-shadow: 0 16px 30px -10px rgba(99, 102, 241, 0.25);
+    }
+
+    .arch-node.selected {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px #6366f1, 0 12px 30px rgba(99, 102, 241, 0.35);
+    }
+
+    .arch-node.highlight-search {
+      animation: pulseHighlight 1.5s infinite alternate;
+    }
+
+    @keyframes pulseHighlight {
+      from { border-color: #ec4899; box-shadow: 0 0 15px rgba(236, 72, 153, 0.5); }
+      to { border-color: #f59e0b; box-shadow: 0 0 25px rgba(245, 158, 11, 0.8); }
+    }
+
+    .node-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .node-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .node-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    .node-tech {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .node-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-top: 6px;
+    }
+
+    .node-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 10px;
+    }
+
+    .tag-badge {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+
+    /* Node Color Types */
+    .type-frontend .node-icon { background: rgba(56, 189, 248, 0.15); color: var(--accent-frontend); border: 1px solid rgba(56, 189, 248, 0.3); }
+    .type-backend .node-icon { background: rgba(225, 29, 72, 0.15); color: var(--accent-backend); border: 1px solid rgba(225, 29, 72, 0.3); }
+    .type-db .node-icon { background: rgba(16, 185, 129, 0.15); color: var(--accent-db); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .type-auth .node-icon { background: rgba(245, 158, 11, 0.15); color: var(--accent-auth); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .type-live .node-icon { background: rgba(236, 72, 153, 0.15); color: var(--accent-live); border: 1px solid rgba(236, 72, 153, 0.3); }
+    .type-infra .node-icon { background: rgba(168, 85, 247, 0.15); color: var(--accent-infra); border: 1px solid rgba(168, 85, 247, 0.3); }
+
+    /* Side Drawer / Inspector */
+    .side-drawer {
+      position: absolute;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      height: 100%;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+      z-index: 60;
+      transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(16px);
+    }
+
+    .side-drawer.open {
+      right: 0;
+    }
+
+    .drawer-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .drawer-title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      border-radius: 6px;
+    }
+
+    .close-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .drawer-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .detail-section {
+      margin-bottom: 18px;
+    }
+
+    .detail-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .code-pill {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      word-break: break-all;
+    }
+
+    .endpoint-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+
+    .method-get { color: #10b981; font-weight: 700; }
+    .method-post { color: #38bdf8; font-weight: 700; }
+    .method-put { color: #f59e0b; font-weight: 700; }
+    .method-delete { color: #ef4444; font-weight: 700; }
+    .method-patch { color: #a855f7; font-weight: 700; }
+
+    /* Modal for Mermaid / Code Export */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      width: 650px;
+      max-width: 90vw;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .modal-body textarea {
+      width: 100%;
+      height: 280px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 12px;
+      outline: none;
+      resize: vertical;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: white;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+      z-index: 120;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <span class="brand-badge">SGSEG v1.0</span>
+      <div>
+        <div class="brand-title">Sistema de Gestión de Sorteo y Evaluación de Grado</div>
+        <div class="brand-sub">Mapa Arquitectónico Interactivo Full-Stack</div>
+      </div>
+    </div>
+
+    <!-- View Switcher Tabs -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchView('overview')">
+        <span>🌐</span> Arquitectura Global
+      </button>
+      <button class="tab-btn" onclick="switchView('sorteo')">
+        <span>🎲</span> Flujo de Sorteo & Live
+      </button>
+      <button class="tab-btn" onclick="switchView('database')">
+        <span>🗄️</span> Modelo de Datos (ER)
+      </button>
+      <button class="tab-btn" onclick="switchView('rbac')">
+        <span>🛡️</span> Seguridad & RBAC
+      </button>
+    </div>
+
+    <!-- Actions -->
+    <div class="header-actions">
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" id="searchInput" placeholder="Buscar componente..." oninput="handleSearch(this.value)" />
+      </div>
+
+      <button class="action-btn" onclick="exportSVG()" title="Descargar como Vectorial SVG">
+        <span>📥</span> SVG
+      </button>
+      <button class="action-btn" onclick="exportPNG()" title="Exportar como Imagen PNG">
+        <span>🖼️</span> PNG
+      </button>
+      <button class="action-btn" onclick="openMermaidModal()" title="Obtener código Mermaid">
+        <span>📋</span> Mermaid
+      </button>
+      <button class="action-btn" onclick="toggleTheme()" id="themeBtn" title="Alternar Modo Claro/Oscuro">
+        <span>🌓</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Interactive Canvas Container -->
+  <div class="main-container" id="canvasContainer">
+
+    <!-- Legend -->
+    <div class="legend-bar" id="legendBar">
+      <div class="legend-pill"><span class="pill-dot" style="background: var(--accent-frontend);"></span> Frontend SPA</div>
+      <div class="legend-pill"><span class="pill-dot" style="background: var(--accent-backend);"></span> Backend NestJS</div>
+      <div class="legend-pill"><span class="pill-dot" style="background: var(--accent-db);"></span> Base de Datos PostgreSQL</div>
+      <div class="legend-pill"><span class="pill-dot" style="background: var(--accent-auth);"></span> Autenticación & JWT</div>
+      <div class="legend-pill"><span class="pill-dot" style="background: var(--accent-live);"></span> Sorteo en Vivo & QR</div>
+      <div class="legend-pill"><span class="pill-dot" style="background: var(--accent-infra);"></span> Docker & Infra</div>
+    </div>
+
+    <!-- Viewport for Zoom & Pan -->
+    <div id="viewport">
+      <svg id="svg-connections" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gradient-flow" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6366f1" />
+            <stop offset="50%" stop-color="#ec4899" />
+            <stop offset="100%" stop-color="#38bdf8" />
+          </linearGradient>
+          <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="rgba(148, 163, 184, 0.7)" />
+          </marker>
+          <marker id="arrow-glow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#6366f1" />
+          </marker>
+        </defs>
+        <g id="connections-group"></g>
+      </svg>
+
+      <div class="nodes-container" id="nodesContainer">
+        <!-- Rendered dynamically depending on selected view -->
+      </div>
+    </div>
+
+    <!-- Floating Canvas Controls -->
+    <div class="floating-toolbar">
+      <button class="tool-btn" onclick="zoomIn()" title="Acercar (+)">＋</button>
+      <div class="zoom-text" id="zoomDisplay">100%</div>
+      <button class="tool-btn" onclick="zoomOut()" title="Alejar (-)">－</button>
+      <button class="tool-btn" onclick="resetZoom()" title="Centrar y Ajustar">⛶</button>
+    </div>
+
+    <!-- Side Drawer Node Inspector -->
+    <div class="side-drawer" id="sideDrawer">
+      <div class="drawer-header">
+        <div class="drawer-title" id="drawerTitle">Detalle del Componente</div>
+        <button class="close-btn" onclick="closeDrawer()">✕</button>
+      </div>
+      <div class="drawer-body" id="drawerContent">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Mermaid Export Modal -->
+  <div class="modal-backdrop" id="mermaidModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size: 16px; font-weight: 700;">Código Mermaid del Diagrama</h3>
+        <button class="close-btn" onclick="closeMermaidModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+          Puedes copiar este código y pegarlo en Notion, GitHub Markdown, o mermaid.live:
+        </p>
+        <textarea id="mermaidCode" readonly></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="action-btn" onclick="copyMermaidCode()">
+          <span>📋</span> Copiar al Portapapeles
+        </button>
+        <button class="action-btn" style="background: #6366f1; color: white;" onclick="closeMermaidModal()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toastMsg">Acción completada con éxito</div>
+
+  <!-- Application Logic & Diagram Engine -->
+  <script>
+    // ==========================================
+    // 1. DATA DEFINITIONS FOR ALL 4 VIEWS
+    // ==========================================
+
+    const VIEWS = {
+      overview: {
+        groups: [
+          { id: 'grp-client', title: 'Capa Cliente (Frontend SPA)', x: 40, y: 70, width: 340, height: 740 },
+          { id: 'grp-gateway', title: 'Capa Proxy / Gateway', x: 430, y: 70, width: 280, height: 740 },
+          { id: 'grp-backend', title: 'Capa de Aplicación (NestJS Backend)', x: 760, y: 70, width: 620, height: 740 },
+          { id: 'grp-db', title: 'Capa de Persistencia & Infra', x: 1430, y: 70, width: 320, height: 740 },
+        ],
+        nodes: [
+          // Client Nodes
+          {
+            id: 'n-fe-core',
+            type: 'type-frontend',
+            icon: '⚛️',
+            title: 'React 19 + Vite SPA',
+            tech: 'TypeScript / Tailwind CSS v4',
+            desc: 'Interfaz de usuario reactiva, enrutamiento con React Router 7 y componentes interactivos.',
+            x: 70, y: 110,
+            file: 'frontend/src/App.tsx',
+            tags: ['React 19', 'Vite 8', 'SPA', 'Router'],
+            endpoints: ['/', '/login', '/sorteo', '/defensas', '/casos', '/estudiantes', '/live/:token']
+          },
+          {
+            id: 'n-fe-auth-ctx',
+            type: 'type-auth',
+            icon: '🔐',
+            title: 'AuthContext & JWT Store',
+            tech: 'LocalStorage + Interceptores Axios',
+            desc: 'Manejo de sesión activa, roles de usuario e inyección automática de Bearer Tokens.',
+            x: 70, y: 280,
+            file: 'frontend/src/context/AuthContext.tsx',
+            tags: ['JWT', 'RBAC', 'Session', 'Axios Interceptor'],
+            endpoints: ['Inyecta Bearer token', 'Maneja evento auth:unauthorized']
+          },
+          {
+            id: 'n-fe-sorteo-ui',
+            type: 'type-live',
+            icon: '🎡',
+            title: 'Módulo de Ruleta & Sorteo',
+            tech: 'RuletaCanvas.tsx / HTML5 Canvas',
+            desc: 'Motor de animación de ruleta física con física balística, audio sintético y cálculo exacto.',
+            x: 70, y: 440,
+            file: 'frontend/src/components/RuletaCanvas.tsx',
+            tags: ['Canvas 2D', 'Sorteo', 'Confetti', 'QR Code'],
+            endpoints: ['POST /api/sorteos/area', 'POST /api/sorteos/caso', 'POST /api/sorteos/live/crear']
+          },
+          {
+            id: 'n-fe-live-view',
+            type: 'type-live',
+            icon: '📱',
+            title: 'Sala Pública SorteoEnVivo',
+            tech: 'Poller / QR Scanner View',
+            desc: 'Vista mobile-first para que los postulantes sigan el sorteo en tiempo real desde su teléfono.',
+            x: 70, y: 620,
+            file: 'frontend/src/pages/SorteoEnVivo.tsx',
+            tags: ['Mobile-First', 'Live View', 'QR Access', 'Realtime'],
+            endpoints: ['GET /api/sorteos/live/:token', 'POST /api/sorteos/live/conectar']
+          },
+
+          // Gateway / Proxy
+          {
+            id: 'n-gw-vite',
+            type: 'type-infra',
+            icon: '⚡',
+            title: 'Vite Reverse Proxy',
+            tech: 'vite.config.ts / localhost:5173',
+            desc: 'Redirección transparente de llamadas /api hacia el servidor backend NestJS (puerto 3000).',
+            x: 450, y: 280,
+            file: 'frontend/vite.config.ts',
+            tags: ['Reverse Proxy', 'CORS Gateway', 'Port 5173 -> 3000'],
+            endpoints: ['Proxy /api/* -> http://localhost:3000']
+          },
+          {
+            id: 'n-gw-cors',
+            type: 'type-auth',
+            icon: '🛡️',
+            title: 'CORS & Global Prefix',
+            tech: 'main.ts / NestJS Middleware',
+            desc: 'Configuración global de orígenes permitidos, serialización de BigInt y filtro de excepciones.',
+            x: 450, y: 480,
+            file: 'backend/src/main.ts',
+            tags: ['CORS', 'BigInt Support', 'Global Prefix /api'],
+            endpoints: ['Global Filter HttpExceptionFilter', 'app.setGlobalPrefix(\'api\')']
+          },
+
+          // Backend Controllers & Modules
+          {
+            id: 'n-be-auth',
+            type: 'type-auth',
+            icon: '🔑',
+            title: 'Auth Module & Guards',
+            tech: 'Passport JWT / Bcrypt',
+            desc: 'Autenticación institucional, hashing de claves y decorador @Roles para protección granular.',
+            x: 790, y: 110,
+            file: 'backend/src/auth/auth.module.ts',
+            tags: ['Passport', 'JWT Strategy', 'RolesGuard', 'Bcrypt'],
+            endpoints: ['POST /api/auth/login', 'GET /api/auth/me', 'PATCH /api/auth/profile', 'POST /api/auth/change-password']
+          },
+          {
+            id: 'n-be-sorteos',
+            type: 'type-backend',
+            icon: '🎲',
+            title: 'Sorteos & Live Service',
+            tech: 'NestJS Service / Cripto Random',
+            desc: 'Lógica matemática de sorteos de áreas y casos de estudio, validando umbrales y exclusión.',
+            x: 790, y: 280,
+            file: 'backend/src/sorteos/sorteos.service.ts',
+            tags: ['Algoritmo Sorteo', 'Live Sessions', 'Balanceo de Carga'],
+            endpoints: ['POST /api/sorteos/area', 'POST /api/sorteos/caso', 'POST /api/sorteos/conjunto', 'POST /api/sorteos/live/crear']
+          },
+          {
+            id: 'n-be-defensas',
+            type: 'type-backend',
+            icon: '⚖️',
+            title: 'Defensas & Plazos Reglamentarios',
+            tech: 'NestJS Service / Validación FCJS/FCT',
+            desc: 'Control de fechas reglamentarias (5 días FCJS / 7 días FCT), estados y actas de grado.',
+            x: 790, y: 450,
+            file: 'backend/src/defensas/defensas.service.ts',
+            tags: ['Reglamentos', 'Embudo de Grado', 'Alertas de Tiempo'],
+            endpoints: ['GET /api/defensas', 'POST /api/defensas/programar', 'PUT /api/defensas/:id/calificar', 'GET /api/defensas/embudo']
+          },
+          {
+            id: 'n-be-casos',
+            type: 'type-backend',
+            icon: '📁',
+            title: 'Casos & Áreas Académicas',
+            tech: 'NestJS Service / Stock Controller',
+            desc: 'Inventario de casos de estudio clasificados por carrera, umbral crítico y bloqueo temporal.',
+            x: 1090, y: 110,
+            file: 'backend/src/casos/casos.service.ts',
+            tags: ['Inventario', 'Umbral Mínimo', 'Reactivación'],
+            endpoints: ['GET /api/casos', 'POST /api/casos', 'GET /api/casos/metricas', 'PATCH /api/casos/:id/reactivar-especial']
+          },
+          {
+            id: 'n-be-estudiantes',
+            type: 'type-backend',
+            icon: '🎓',
+            title: 'Estudiantes & Procesos',
+            tech: 'Excel Bulk Upsert / CRUD',
+            desc: 'Gestión de postulantes, importación masiva desde Excel y vinculación a instancias de grado.',
+            x: 1090, y: 280,
+            file: 'backend/src/estudiantes/estudiantes.service.ts',
+            tags: ['ExcelJS', 'Bulk Upsert', 'Procesos de Grado'],
+            endpoints: ['GET /api/estudiantes', 'POST /api/estudiantes', 'POST /api/estudiantes/bulk-upsert']
+          },
+          {
+            id: 'n-be-audit',
+            type: 'type-backend',
+            icon: '📜',
+            title: 'Auditoría Inmutable',
+            tech: 'NestJS Interceptor / Log DB',
+            desc: 'Bitácora inalterable de todos los eventos críticos de sorteo, cambios de notas y usuarios.',
+            x: 1090, y: 450,
+            file: 'backend/src/auditoria/auditoria.service.ts',
+            tags: ['Auditoría', 'Trazabilidad', 'Logs Forenses'],
+            endpoints: ['GET /api/auditoria', 'RegistroAuditoria Table']
+          },
+
+          // Persistence & DB
+          {
+            id: 'n-db-prisma',
+            type: 'type-db',
+            icon: '🔷',
+            title: 'Prisma ORM 7 + PG Adapter',
+            tech: '@prisma/client / @prisma/adapter-pg',
+            desc: 'Capa de abstracción fuertemente tipada con conexión pooling optimizada.',
+            x: 1460, y: 220,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['Prisma 7', 'TypeSafe ORM', 'Schema Migrations'],
+            endpoints: ['prisma.sorteo.*', 'prisma.defensaExamenGrado.*', 'prisma.estudiante.*']
+          },
+          {
+            id: 'n-db-postgres',
+            type: 'type-db',
+            icon: '🐘',
+            title: 'PostgreSQL 16 Engine',
+            tech: 'Port 5437:5432 / sgseg db',
+            desc: 'Base de datos relacional con claves foráneas, índices de rendimiento y vistas SQL.',
+            x: 1460, y: 420,
+            file: 'docker-compose.yml',
+            tags: ['PostgreSQL 16', 'ACID', 'Port 5437', 'Alpine Container'],
+            endpoints: ['Volumes: sgseg-postgres-data', 'Healthcheck: pg_isready']
+          },
+          {
+            id: 'n-infra-docker',
+            type: 'type-infra',
+            icon: '🐳',
+            title: 'Docker Compose Stack',
+            tech: 'Contenedor sgseg-postgres',
+            desc: 'Orquestación del contenedor PostgreSQL 16 con reinicio automático y verificación de salud.',
+            x: 1460, y: 600,
+            file: 'docker-compose.yml',
+            tags: ['Docker Compose', 'Containerization', 'DevOps'],
+            endpoints: ['docker compose up -d postgres']
+          }
+        ],
+        connections: [
+          { from: 'n-fe-core', to: 'n-gw-vite', animated: true },
+          { from: 'n-fe-auth-ctx', to: 'n-gw-vite', animated: true },
+          { from: 'n-fe-sorteo-ui', to: 'n-gw-vite', animated: true },
+          { from: 'n-fe-live-view', to: 'n-gw-vite', animated: true },
+          { from: 'n-gw-vite', to: 'n-gw-cors', animated: true },
+          { from: 'n-gw-cors', to: 'n-be-auth', animated: true },
+          { from: 'n-gw-cors', to: 'n-be-sorteos', animated: true },
+          { from: 'n-gw-cors', to: 'n-be-defensas', animated: true },
+          { from: 'n-gw-cors', to: 'n-be-casos', animated: true },
+          { from: 'n-gw-cors', to: 'n-be-estudiantes', animated: true },
+          { from: 'n-be-sorteos', to: 'n-be-audit', solid: true },
+          { from: 'n-be-defensas', to: 'n-be-audit', solid: true },
+          { from: 'n-be-auth', to: 'n-db-prisma', animated: true },
+          { from: 'n-be-sorteos', to: 'n-db-prisma', animated: true },
+          { from: 'n-be-defensas', to: 'n-db-prisma', animated: true },
+          { from: 'n-be-casos', to: 'n-db-prisma', animated: true },
+          { from: 'n-be-estudiantes', to: 'n-db-prisma', animated: true },
+          { from: 'n-be-audit', to: 'n-db-prisma', animated: true },
+          { from: 'n-db-prisma', to: 'n-db-postgres', animated: true },
+          { from: 'n-infra-docker', to: 'n-db-postgres', solid: true }
+        ]
+      },
+
+      sorteo: {
+        groups: [
+          { id: 'grp-s1', title: 'Fase 1: Preparación & Sala Live', x: 50, y: 70, width: 340, height: 700 },
+          { id: 'grp-s2', title: 'Fase 2: Ejecución & Ruleta', x: 440, y: 70, width: 380, height: 700 },
+          { id: 'grp-s3', title: 'Fase 3: Asignación de Caso', x: 870, y: 70, width: 360, height: 700 },
+          { id: 'grp-s4', title: 'Fase 4: Persistencia & Acta', x: 1280, y: 70, width: 340, height: 700 },
+        ],
+        nodes: [
+          {
+            id: 's-pre-1',
+            type: 'type-frontend',
+            icon: '📋',
+            title: '1. Selección de Postulante',
+            tech: 'Sorteo.tsx / Selector',
+            desc: 'Se filtra por carrera y tipo de defensa (Interna/Externa). Valida plazos de anticipación.',
+            x: 80, y: 120,
+            file: 'frontend/src/pages/Sorteo.tsx',
+            tags: ['FCT (7 días)', 'FCJS (5 días)', 'Validación'],
+            endpoints: ['GET /api/defensas?estado=PROGRAMADA']
+          },
+          {
+            id: 's-pre-2',
+            type: 'type-live',
+            icon: '📲',
+            title: '2. Creación Sala Live & QR',
+            tech: 'SorteosController / Token UUID',
+            desc: 'Genera un token de sesión pública y código QR proyectable en pantalla o auditorio.',
+            x: 80, y: 320,
+            file: 'backend/src/sorteos/sorteos.controller.ts',
+            tags: ['QR Code', 'Token Live', 'Mobile Scan'],
+            endpoints: ['POST /api/sorteos/live/crear', 'GET /live/:token']
+          },
+          {
+            id: 's-pre-3',
+            type: 'type-live',
+            icon: '🙋',
+            title: '3. Check-in de Presencia',
+            tech: 'SorteoEnVivo.tsx / Handshake',
+            desc: 'El estudiante confirma asistencia desde su teléfono móvil. Se habilita el botón de sorteo.',
+            x: 80, y: 520,
+            file: 'frontend/src/pages/SorteoEnVivo.tsx',
+            tags: ['Check-in', 'Presencia Obligatoria'],
+            endpoints: ['POST /api/sorteos/live/confirmar-listo']
+          },
+          {
+            id: 's-exec-1',
+            type: 'type-live',
+            icon: '🎡',
+            title: '4. Giro de Ruleta de Áreas',
+            tech: 'RuletaCanvas.tsx (60 FPS)',
+            desc: 'Física balística con desaceleración angular, efectos sonoros de tick y segmento ganador.',
+            x: 480, y: 180,
+            file: 'frontend/src/components/RuletaCanvas.tsx',
+            tags: ['Ruleta', 'Canvas 2D', 'Sorteo de Área'],
+            endpoints: ['POST /api/sorteos/area']
+          },
+          {
+            id: 's-exec-2',
+            type: 'type-backend',
+            icon: '⚙️',
+            title: '5. Validación de Umbrales',
+            tech: 'SorteosService / Reglas de Negocio',
+            desc: 'Verifica que el área tenga al menos 2 casos disponibles para evitar agotar el banco.',
+            x: 480, y: 440,
+            file: 'backend/src/sorteos/sorteos.service.ts',
+            tags: ['Umbral Disponibilidad', 'Control de Stock'],
+            endpoints: ['Área con >= 2 casos activos']
+          },
+          {
+            id: 's-caso-1',
+            type: 'type-backend',
+            icon: '🎲',
+            title: '6. Asignación de Caso',
+            tech: 'Sorteo de Caso / Inmediato o Programado',
+            desc: 'En FCT (Sistemas) se sortea en el acto; en FCJS (Derecho) se sortea 48h antes de la defensa.',
+            x: 910, y: 180,
+            file: 'backend/src/sorteos/sorteos.service.ts',
+            tags: ['Modalidad Conjunta', 'Modalidad Diferida'],
+            endpoints: ['POST /api/sorteos/caso', 'POST /api/sorteos/conjunto']
+          },
+          {
+            id: 's-caso-2',
+            type: 'type-backend',
+            icon: '🔒',
+            title: '7. Bloqueo de Caso Asignado',
+            tech: 'Transacción ACID Prisma',
+            desc: 'El caso seleccionado pasa a estado ASIGNADO/USADO para no volver a sortearse.',
+            x: 910, y: 440,
+            file: 'backend/src/casos/casos.service.ts',
+            tags: ['Estado: ASIGNADO', 'Exclusión', 'Atomicidad'],
+            endpoints: ['prisma.casoEstudio.update({ estado: ASIGNADO })']
+          },
+          {
+            id: 's-post-1',
+            type: 'type-db',
+            icon: '💾',
+            title: '8. Registro de Sorteo en BD',
+            tech: 'Tablas Sorteo, SorteoArea, SorteoCaso',
+            desc: 'Almacena fecha exacta, usuario ejecutor, defensa vinculada y área/caso resultante.',
+            x: 1310, y: 180,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['Persistencia', 'Trazabilidad'],
+            endpoints: ['Defensa pasa a AREA_SORTEADA / CASO_SORTEADO']
+          },
+          {
+            id: 's-post-2',
+            type: 'type-auth',
+            icon: '📜',
+            title: '9. Auditoría & Acta Generada',
+            tech: 'RegistroAuditoria / Notificación',
+            desc: 'Se crea un registro forense inmutable y se habilita la descarga del comprobante formal.',
+            x: 1310, y: 440,
+            file: 'backend/src/auditoria/auditoria.service.ts',
+            tags: ['Acta Sorteo', 'RegistroAuditoria', 'Confetti 🎉'],
+            endpoints: ['GET /api/sorteos/:id']
+          }
+        ],
+        connections: [
+          { from: 's-pre-1', to: 's-pre-2', animated: true },
+          { from: 's-pre-2', to: 's-pre-3', animated: true },
+          { from: 's-pre-3', to: 's-exec-1', animated: true },
+          { from: 's-exec-1', to: 's-exec-2', animated: true },
+          { from: 's-exec-2', to: 's-caso-1', animated: true },
+          { from: 's-caso-1', to: 's-caso-2', animated: true },
+          { from: 's-caso-2', to: 's-post-1', animated: true },
+          { from: 's-post-1', to: 's-post-2', animated: true }
+        ]
+      },
+
+      database: {
+        groups: [
+          { id: 'grp-d1', title: 'Estructura Organizacional', x: 50, y: 70, width: 330, height: 700 },
+          { id: 'grp-d2', title: 'Planes, Áreas & Banco de Casos', x: 430, y: 70, width: 350, height: 700 },
+          { id: 'grp-d3', title: 'Estudiantes & Procesos de Grado', x: 830, y: 70, width: 350, height: 700 },
+          { id: 'grp-d4', title: 'Sorteos, Defensas & Auditoría', x: 1230, y: 70, width: 350, height: 700 }
+        ],
+        nodes: [
+          {
+            id: 'd-fac',
+            type: 'type-db',
+            icon: '🏛️',
+            title: 'Facultad & Carrera',
+            tech: 'Tablas: Facultad, Carrera',
+            desc: 'Estructura académica de UTEPSA (FCJS, FCT, FCE) y sus 17 carreras vigentes.',
+            x: 80, y: 120,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['idFacultad', 'idCarrera', '1:N Relation'],
+            endpoints: ['GET /api/estudiantes/carreras']
+          },
+          {
+            id: 'd-usr',
+            type: 'type-auth',
+            icon: '👤',
+            title: 'Usuario, Rol & Carrera',
+            tech: 'Tablas: Usuario, Rol, UsuarioCarrera',
+            desc: 'Usuarios con credenciales hasheadas, rol asignado y carreras bajo su jurisdicción.',
+            x: 80, y: 380,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['passwordHash', 'idRol', 'UsuarioCarrera N:M'],
+            endpoints: ['GET /api/auth/users']
+          },
+          {
+            id: 'd-plan',
+            type: 'type-db',
+            icon: '📑',
+            title: 'PlanEstudio & PlanArea',
+            tech: 'Tablas: PlanEstudio, PlanArea',
+            desc: 'Malla curricular y vinculación de áreas académicas evaluables en examen de grado.',
+            x: 460, y: 120,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['estadoVigencia: VIGENTE', 'idPlanEstudio'],
+            endpoints: ['GET /api/casos/areas']
+          },
+          {
+            id: 'd-area',
+            type: 'type-db',
+            icon: '🎯',
+            title: 'AreaAcademica & Casos',
+            tech: 'Tablas: AreaAcademica, CasoEstudio',
+            desc: 'Áreas troncales y banco de problemas clínicos/técnicos para sortear.',
+            x: 460, y: 380,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['umbralDisponibilidad: 2', 'estado: DISPONIBLE/ASIGNADO'],
+            endpoints: ['GET /api/casos', 'GET /api/casos/metricas']
+          },
+          {
+            id: 'd-est',
+            type: 'type-backend',
+            icon: '🎓',
+            title: 'Estudiante',
+            tech: 'Tabla: Estudiante',
+            desc: 'Datos de matrícula, carnet estudiantil, CI y plan de estudios del postulante.',
+            x: 860, y: 120,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['carnetEstudiantil', 'carnetIdentidad', 'correo'],
+            endpoints: ['GET /api/estudiantes']
+          },
+          {
+            id: 'd-proc',
+            type: 'type-backend',
+            icon: '🔄',
+            title: 'Proceso & Instancias',
+            tech: 'Tablas: ProcesoExamenGrado, Instancia',
+            desc: 'Ciclo de vida del examen de grado (1ra instancia, 2da instancia, habilitaciones).',
+            x: 860, y: 380,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['numeroInstancia', 'estadoProceso: EN_CURSO'],
+            endpoints: ['POST /api/estudiantes/bulk-upsert']
+          },
+          {
+            id: 'd-def',
+            type: 'type-db',
+            icon: '⚖️',
+            title: 'DefensaExamenGrado',
+            tech: 'Tabla: DefensaExamenGrado',
+            desc: 'Fecha programada, tribunal, periodo académico, nota final y estado de defensa.',
+            x: 1260, y: 120,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['PROGRAMADA -> AREA_SORTEADA -> DEFENDIDO'],
+            endpoints: ['GET /api/defensas', 'PUT /api/defensas/:id/calificar']
+          },
+          {
+            id: 'd-sort',
+            type: 'type-live',
+            icon: '🎰',
+            title: 'Sorteo, Área & Caso',
+            tech: 'Tablas: Sorteo, SorteoArea, SorteoCaso',
+            desc: 'Historial de sorteos realizados con ejecutor, contexto y resultado definitivo.',
+            x: 1260, y: 380,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['idSorteo', 'estudiantePresente: Boolean'],
+            endpoints: ['GET /api/sorteos']
+          },
+          {
+            id: 'd-aud',
+            type: 'type-backend',
+            icon: '🛡️',
+            title: 'RegistroAuditoria',
+            tech: 'Tabla: RegistroAuditoria',
+            desc: 'Log inmutable con tablaAfectada, accion, ipOrigen, usuario y fecha exacta.',
+            x: 1260, y: 580,
+            file: 'backend/prisma/schema.prisma',
+            tags: ['Auditoría Forense', 'Immutable Log'],
+            endpoints: ['GET /api/auditoria']
+          }
+        ],
+        connections: [
+          { from: 'd-fac', to: 'd-plan', solid: true },
+          { from: 'd-plan', to: 'd-area', solid: true },
+          { from: 'd-usr', to: 'd-fac', solid: true },
+          { from: 'd-plan', to: 'd-est', solid: true },
+          { from: 'd-est', to: 'd-proc', solid: true },
+          { from: 'd-proc', to: 'd-def', solid: true },
+          { from: 'd-def', to: 'd-sort', animated: true },
+          { from: 'd-area', to: 'd-sort', animated: true },
+          { from: 'd-sort', to: 'd-aud', solid: true }
+        ]
+      },
+
+      rbac: {
+        groups: [
+          { id: 'grp-r1', title: 'Roles Institucionales', x: 50, y: 70, width: 340, height: 700 },
+          { id: 'grp-r2', title: 'Filtros de Seguridad & JWT', x: 440, y: 70, width: 380, height: 700 },
+          { id: 'grp-r3', title: 'Módulos y Permisos Protegidos', x: 870, y: 70, width: 420, height: 700 },
+          { id: 'grp-r4', title: 'Jurisdicción por Carrera', x: 1340, y: 70, width: 320, height: 700 }
+        ],
+        nodes: [
+          {
+            id: 'r-coord',
+            type: 'type-auth',
+            icon: '👑',
+            title: 'COORDINACION / SUPER_ADMIN',
+            tech: 'Acceso Total Institucional',
+            desc: 'Gestión global de carreras, creación de usuarios, configuración reglamentaria y reportes.',
+            x: 80, y: 120,
+            file: 'backend/prisma/seed.ts',
+            tags: ['Full Access', 'Auditoría', 'Configuración'],
+            endpoints: ['Todas las rutas del sistema']
+          },
+          {
+            id: 'r-jefe',
+            type: 'type-auth',
+            icon: '👔',
+            title: 'JEFE_CARRERA',
+            tech: 'Jurisdicción Exclusiva por Carrera',
+            desc: 'Administración de banco de casos, áreas y visualización de defensas de su carrera.',
+            x: 80, y: 280,
+            file: 'backend/src/auth/guards/roles.guard.ts',
+            tags: ['Sistemas (FCT)', 'Derecho (FCJS)', 'Aislamiento'],
+            endpoints: ['GET /api/casos', 'POST /api/casos', 'GET /api/defensas']
+          },
+          {
+            id: 'r-sec',
+            type: 'type-auth',
+            icon: '👩‍💼',
+            title: 'SECRETARIADO',
+            tech: 'Operación de Sorteos & Habilitaciones',
+            desc: 'Ejecución de ruleta en vivo, verificación de asistencia y habilitación de postulantes.',
+            x: 80, y: 440,
+            file: 'backend/src/sorteos/sorteos.controller.ts',
+            tags: ['Operador Sorteo', 'Live Room Host'],
+            endpoints: ['POST /api/sorteos/area', 'POST /api/sorteos/caso', 'POST /api/sorteos/live/crear']
+          },
+          {
+            id: 'r-vice',
+            type: 'type-auth',
+            icon: '🏛️',
+            title: 'VICERRECTORADO',
+            tech: 'Supervisión & Auditoría',
+            desc: 'Acceso de solo lectura a métricas de embudo, bitácoras de auditoría e informes ejecutivos.',
+            x: 80, y: 600,
+            file: 'frontend/src/pages/Auditoria.tsx',
+            tags: ['Solo Lectura', 'Auditoría', 'KPIs'],
+            endpoints: ['GET /api/auditoria', 'GET /api/defensas/embudo', 'GET /api/reportes']
+          },
+          {
+            id: 'r-jwt-flow',
+            type: 'type-auth',
+            icon: '🎫',
+            title: 'Estrategia Passport JWT',
+            tech: 'JwtStrategy / Bearer Token',
+            desc: 'Validación de firma criptográfica HMAC-SHA256 y extracción del payload {sub, rol, email}.',
+            x: 480, y: 220,
+            file: 'backend/src/auth/strategies/jwt.strategy.ts',
+            tags: ['Bearer Auth', 'Stateless', 'HMAC-SHA256'],
+            endpoints: ['Header: Authorization: Bearer <token>']
+          },
+          {
+            id: 'r-roles-guard',
+            type: 'type-auth',
+            icon: '🛡️',
+            title: '@Roles() & RolesGuard',
+            tech: 'Reflector / ExecutionContext',
+            desc: 'Intercepción de cada petición para corroborar que el rol del usuario coincida con la ruta.',
+            x: 480, y: 460,
+            file: 'backend/src/auth/guards/roles.guard.ts',
+            tags: ['RolesGuard', 'Reflector', '403 Forbidden'],
+            endpoints: ['@Roles(Rol.COORDINACION, Rol.JEFE_CARRERA)']
+          },
+          {
+            id: 'r-mod-sorteos',
+            type: 'type-live',
+            icon: '🎰',
+            title: 'Módulo Sorteos & Ruleta',
+            tech: 'Permisos: SECRETARIADO / COORD',
+            desc: 'Protección para evitar ejecuciones de sorteo no autorizadas o sin presencia validada.',
+            x: 910, y: 140,
+            file: 'backend/src/sorteos/sorteos.controller.ts',
+            tags: ['Ruleta', 'Live Room'],
+            endpoints: ['POST /api/sorteos/*']
+          },
+          {
+            id: 'r-mod-casos',
+            type: 'type-backend',
+            icon: '📁',
+            title: 'Módulo Banco de Casos',
+            tech: 'Permisos: JEFE_CARRERA / COORD',
+            desc: 'Cada jefe de carrera solo puede crear, editar o reactivar casos de su propia carrera.',
+            x: 910, y: 340,
+            file: 'backend/src/casos/casos.controller.ts',
+            tags: ['Aislamiento Carrera', 'Stock Casos'],
+            endpoints: ['POST /api/casos', 'PATCH /api/casos/:id']
+          },
+          {
+            id: 'r-mod-aud',
+            type: 'type-backend',
+            icon: '📜',
+            title: 'Módulo Auditoría Forense',
+            tech: 'Permisos: VICERRECTORADO / COORD',
+            desc: 'Inspección de logs de auditoría sin posibilidad de modificación ni eliminación.',
+            x: 910, y: 540,
+            file: 'backend/src/auditoria/auditoria.controller.ts',
+            tags: ['Bitácora', 'Solo Lectura'],
+            endpoints: ['GET /api/auditoria']
+          },
+          {
+            id: 'r-jurisdiccion',
+            type: 'type-backend',
+            icon: '🏢',
+            title: 'Filtro por Carrera',
+            tech: 'UsuarioCarrera Interceptor',
+            desc: 'Inyección automática de WHERE idCarrera IN (userCarreras) en todas las consultas Prisma.',
+            x: 1370, y: 340,
+            file: 'backend/src/common/guards/carrera.guard.ts',
+            tags: ['Multi-Tenant Lógico', 'Row-Level Security'],
+            endpoints: ['WHERE idCarrera = user.idCarrera']
+          }
+        ],
+        connections: [
+          { from: 'r-coord', to: 'r-jwt-flow', animated: true },
+          { from: 'r-jefe', to: 'r-jwt-flow', animated: true },
+          { from: 'r-sec', to: 'r-jwt-flow', animated: true },
+          { from: 'r-vice', to: 'r-jwt-flow', animated: true },
+          { from: 'r-jwt-flow', to: 'r-roles-guard', animated: true },
+          { from: 'r-roles-guard', to: 'r-mod-sorteos', solid: true },
+          { from: 'r-roles-guard', to: 'r-mod-casos', solid: true },
+          { from: 'r-roles-guard', to: 'r-mod-aud', solid: true },
+          { from: 'r-mod-casos', to: 'r-jurisdiccion', solid: true }
+        ]
+      }
+    };
+
+    // ==========================================
+    // 2. CANVAS ENGINE: PAN, ZOOM & RENDER
+    // ==========================================
+
+    let currentView = 'overview';
+    let scale = 0.95;
+    let panX = 40;
+    let panY = 20;
+    let isDragging = false;
+    let startX, startY;
+    let selectedNodeId = null;
+
+    const viewport = document.getElementById('viewport');
+    const container = document.getElementById('canvasContainer');
+    const nodesContainer = document.getElementById('nodesContainer');
+    const connectionsGroup = document.getElementById('connections-group');
+
+    function updateTransform() {
+      viewport.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+      document.getElementById('zoomDisplay').textContent = `${Math.round(scale * 100)}%`;
+    }
+
+    function zoomIn() {
+      scale = Math.min(scale + 0.15, 2.5);
+      updateTransform();
+    }
+
+    function zoomOut() {
+      scale = Math.max(scale - 0.15, 0.4);
+      updateTransform();
+    }
+
+    function resetZoom() {
+      scale = 0.92;
+      panX = 30;
+      panY = 20;
+      updateTransform();
+    }
+
+    // Mouse Pan & Zoom
+    container.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.arch-node') || e.target.closest('.floating-toolbar') || e.target.closest('.side-drawer')) return;
+      isDragging = true;
+      startX = e.clientX - panX;
+      startY = e.clientY - panY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      panX = e.clientX - startX;
+      panY = e.clientY - startY;
+      updateTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = 1.1;
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const prevScale = scale;
+      if (e.deltaY < 0) {
+        scale = Math.min(scale * zoomFactor, 2.5);
+      } else {
+        scale = Math.max(scale / zoomFactor, 0.4);
+      }
+
+      panX = mouseX - (mouseX - panX) * (scale / prevScale);
+      panY = mouseY - (mouseY - panY) * (scale / prevScale);
+      updateTransform();
+    }, { passive: false });
+
+    // ==========================================
+    // 3. RENDER DIAGRAM VIEW
+    // ==========================================
+
+    function renderView(viewKey) {
+      const data = VIEWS[viewKey];
+      if (!data) return;
+
+      nodesContainer.innerHTML = '';
+      connectionsGroup.innerHTML = '';
+
+      // 1. Render Groups
+      data.groups.forEach(g => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'arch-group';
+        groupEl.style.left = `${g.x}px`;
+        groupEl.style.top = `${g.y}px`;
+        groupEl.style.width = `${g.width}px`;
+        groupEl.style.height = `${g.height}px`;
+        groupEl.innerHTML = `<div class="group-label">${g.title}</div>`;
+        nodesContainer.appendChild(groupEl);
+      });
+
+      // 2. Render Nodes
+      data.nodes.forEach(n => {
+        const nodeEl = document.createElement('div');
+        nodeEl.className = `arch-node ${n.type}`;
+        nodeEl.id = n.id;
+        nodeEl.style.left = `${n.x}px`;
+        nodeEl.style.top = `${n.y}px`;
+
+        const tagsHtml = (n.tags || []).map(t => `<span class="tag-badge">${t}</span>`).join('');
+
+        nodeEl.innerHTML = `
+          <div class="node-header">
+            <div class="node-icon">${n.icon}</div>
+            <div>
+              <div class="node-title">${n.title}</div>
+              <div class="node-tech">${n.tech}</div>
+            </div>
+          </div>
+          <div class="node-desc">${n.desc}</div>
+          <div class="node-tags">${tagsHtml}</div>
+        `;
+
+        nodeEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectNode(n);
+        });
+
+        nodesContainer.appendChild(nodeEl);
+      });
+
+      // 3. Render Connections (Curved SVG Paths)
+      setTimeout(() => {
+        renderConnections(data);
+      }, 50);
+
+      updateTransform();
+    }
+
+    function renderConnections(data) {
+      connectionsGroup.innerHTML = '';
+      const nodeMap = {};
+      data.nodes.forEach(n => {
+        nodeMap[n.id] = n;
+      });
+
+      data.connections.forEach((conn, index) => {
+        const fromNode = nodeMap[conn.from];
+        const toNode = nodeMap[conn.to];
+        if (!fromNode || !toNode) return;
+
+        // Calculate card centers or edges
+        const fromW = 260, fromH = 120;
+        const toW = 260, toH = 120;
+
+        let x1, y1, x2, y2;
+
+        if (fromNode.x + fromW < toNode.x) {
+          // Left to right
+          x1 = fromNode.x + fromW;
+          y1 = fromNode.y + (fromH / 2);
+          x2 = toNode.x;
+          y2 = toNode.y + (toH / 2);
+        } else if (fromNode.x > toNode.x + toW) {
+          // Right to left
+          x1 = fromNode.x;
+          y1 = fromNode.y + (fromH / 2);
+          x2 = toNode.x + toW;
+          y2 = toNode.y + (toH / 2);
+        } else {
+          // Top to bottom
+          x1 = fromNode.x + (fromW / 2);
+          y1 = fromNode.y + fromH;
+          x2 = toNode.x + (toW / 2);
+          y2 = toNode.y;
+        }
+
+        const dx = Math.abs(x2 - x1) * 0.5;
+        const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathD);
+        path.setAttribute('class', `conn-path ${conn.solid ? 'solid' : ''} ${conn.animated ? 'animated' : ''}`);
+        path.setAttribute('marker-end', conn.animated ? 'url(#arrow-glow)' : 'url(#arrow)');
+
+        connectionsGroup.appendChild(path);
+      });
+    }
+
+    function switchView(viewKey) {
+      currentView = viewKey;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(viewKey));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      closeDrawer();
+      resetZoom();
+      renderView(viewKey);
+    }
+
+    // ==========================================
+    // 4. NODE SELECTION & SIDE DRAWER
+    // ==========================================
+
+    function selectNode(node) {
+      selectedNodeId = node.id;
+      document.querySelectorAll('.arch-node').forEach(el => el.classList.remove('selected'));
+      const selectedEl = document.getElementById(node.id);
+      if (selectedEl) selectedEl.classList.add('selected');
+
+      const drawer = document.getElementById('sideDrawer');
+      const title = document.getElementById('drawerTitle');
+      const body = document.getElementById('drawerContent');
+
+      title.innerHTML = `<span>${node.icon}</span> ${node.title}`;
+
+      const endpointsHtml = (node.endpoints || []).map(ep => {
+        let methodClass = 'method-get';
+        let methodText = 'GET';
+        if (ep.startsWith('POST')) { methodClass = 'method-post'; methodText = 'POST'; }
+        else if (ep.startsWith('PUT')) { methodClass = 'method-put'; methodText = 'PUT'; }
+        else if (ep.startsWith('DELETE')) { methodClass = 'method-delete'; methodText = 'DELETE'; }
+        else if (ep.startsWith('PATCH')) { methodClass = 'method-patch'; methodText = 'PATCH'; }
+        else { methodClass = ''; methodText = 'ROUTE'; }
+
+        return `<div class="endpoint-item"><span class="${methodClass}">${methodText}</span> <span>${ep.replace(/^(GET|POST|PUT|DELETE|PATCH)\s+/, '')}</span></div>`;
+      }).join('');
+
+      body.innerHTML = `
+        <div class="detail-section">
+          <div class="detail-label">Tecnología & Capa</div>
+          <div class="code-pill">${node.tech}</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-label">Archivo Fuente</div>
+          <div class="code-pill" style="color: #a855f7;">${node.file || 'Repositorio SGSEG'}</div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-label">Descripción & Responsabilidad</div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">${node.desc}</p>
+        </div>
+
+        ${endpointsHtml ? `
+          <div class="detail-section">
+            <div class="detail-label">Endpoints / Rutas Asociadas</div>
+            ${endpointsHtml}
+          </div>
+        ` : ''}
+
+        <div class="detail-section">
+          <div class="detail-label">Etiquetas Clave</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;">
+            ${(node.tags || []).map(t => `<span class="tag-badge" style="font-size: 11px; padding: 4px 8px;">${t}</span>`).join('')}
+          </div>
+        </div>
+      `;
+
+      drawer.classList.add('open');
+    }
+
+    function closeDrawer() {
+      document.getElementById('sideDrawer').classList.remove('open');
+      document.querySelectorAll('.arch-node').forEach(el => el.classList.remove('selected'));
+      selectedNodeId = null;
+    }
+
+    // ==========================================
+    // 5. SEARCH & HIGHLIGHT
+    // ==========================================
+
+    function handleSearch(query) {
+      const q = query.trim().toLowerCase();
+      const nodes = document.querySelectorAll('.arch-node');
+
+      if (!q) {
+        nodes.forEach(n => n.classList.remove('highlight-search'));
+        return;
+      }
+
+      nodes.forEach(n => {
+        const text = n.textContent.toLowerCase();
+        if (text.includes(q)) {
+          n.classList.add('highlight-search');
+        } else {
+          n.classList.remove('highlight-search');
+        }
+      });
+    }
+
+    // ==========================================
+    // 6. THEME SWITCHER
+    // ==========================================
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      showToast(`Cambiado a Modo ${next === 'dark' ? 'Oscuro' : 'Claro'}`);
+    }
+
+    // ==========================================
+    // 7. EXPORT SVG & PNG & MERMAID
+    // ==========================================
+
+    function exportSVG() {
+      showToast('Generando archivo SVG del diagrama...');
+      const svgElement = document.getElementById('svg-connections').cloneNode(true);
+      const nodesData = VIEWS[currentView].nodes;
+
+      // Add HTML text representations into SVG for standalone viewing
+      const svgTextGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      nodesData.forEach(n => {
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', n.x);
+        rect.setAttribute('y', n.y);
+        rect.setAttribute('width', '260');
+        rect.setAttribute('height', '110');
+        rect.setAttribute('rx', '10');
+        rect.setAttribute('fill', '#0f172a');
+        rect.setAttribute('stroke', '#6366f1');
+        rect.setAttribute('stroke-width', '1.5');
+        svgTextGroup.appendChild(rect);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', n.x + 15);
+        text.setAttribute('y', n.y + 35);
+        text.setAttribute('fill', '#ffffff');
+        text.setAttribute('font-family', 'sans-serif');
+        text.setAttribute('font-size', '14');
+        text.setAttribute('font-weight', 'bold');
+        text.textContent = n.title;
+        svgTextGroup.appendChild(text);
+
+        const tech = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tech.setAttribute('x', n.x + 15);
+        tech.setAttribute('y', n.y + 60);
+        tech.setAttribute('fill', '#94a3b8');
+        tech.setAttribute('font-family', 'monospace');
+        tech.setAttribute('font-size', '11');
+        tech.textContent = n.tech;
+        svgTextGroup.appendChild(tech);
+      });
+      svgElement.appendChild(svgTextGroup);
+
+      const serializer = new XMLSerializer();
+      const svgBlob = new Blob([serializer.serializeToString(svgElement)], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sgseg-arquitectura-${currentView}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportPNG() {
+      showToast('Renderizando imagen PNG...');
+      const canvas = document.createElement('canvas');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Header title
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 24px Plus Jakarta Sans, sans-serif';
+      ctx.fillText(`SGSEG - Arquitectura (${currentView.toUpperCase()})`, 50, 50);
+
+      // Render cards
+      const data = VIEWS[currentView];
+      data.nodes.forEach(n => {
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(n.x, n.y, 260, 110, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(n.title, n.x + 15, n.y + 35);
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = '11px monospace';
+        ctx.fillText(n.tech, n.x + 15, n.y + 60);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '10px sans-serif';
+        ctx.fillText(n.desc.substring(0, 35) + '...', n.x + 15, n.y + 85);
+      });
+
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `sgseg-diagrama-${currentView}.png`;
+      a.click();
+    }
+
+    function openMermaidModal() {
+      const modal = document.getElementById('mermaidModal');
+      const textarea = document.getElementById('mermaidCode');
+
+      let mermaidText = 'flowchart LR\n';
+      mermaidText += '  %% Diagrama de Arquitectura SGSEG\n\n';
+
+      const data = VIEWS[currentView];
+      data.groups.forEach(g => {
+        mermaidText += `  subgraph ${g.id}["${g.title}"]\n`;
+        data.nodes.forEach(n => {
+          if (n.x >= g.x && n.x <= g.x + g.width && n.y >= g.y && n.y <= g.y + g.height) {
+            mermaidText += `    ${n.id}["${n.icon} ${n.title}<br/><i>${n.tech}</i>"]\n`;
+          }
+        });
+        mermaidText += '  end\n\n';
+      });
+
+      data.connections.forEach(c => {
+        mermaidText += `  ${c.from} --> ${c.to}\n`;
+      });
+
+      textarea.value = mermaidText;
+      modal.classList.add('active');
+    }
+
+    function closeMermaidModal() {
+      document.getElementById('mermaidModal').classList.remove('active');
+    }
+
+    function copyMermaidCode() {
+      const textarea = document.getElementById('mermaidCode');
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        showToast('¡Código Mermaid copiado al portapapeles!');
+      });
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastMsg');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // Initialize View
+    window.addEventListener('DOMContentLoaded', () => {
+      renderView('overview');
+    });
+  </script>
+</body>
+</html>

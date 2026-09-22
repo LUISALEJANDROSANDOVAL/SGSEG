@@ -20,13 +20,13 @@ export class UsersController {
   constructor(private readonly authService: AuthService) {}
 
   @Get()
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'VICERRECTORADO', 'SUPER_ADMIN')
   async listUsers() {
     return this.authService.listUsers();
   }
 
   @Post()
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async createUser(
     @Body() dto: CreateUserDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -35,7 +35,7 @@ export class UsersController {
   }
 
   @Put(':id')
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async updateUser(
     @Param('id') id: string,
     @Body() dto: UpdateUserDto,
@@ -45,7 +45,7 @@ export class UsersController {
   }
 
   @Patch(':id/estado')
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async updateUserEstado(
     @Param('id') id: string,
     @Body() dto: UpdateUserEstadoDto,
@@ -55,7 +55,7 @@ export class UsersController {
   }
 
   @Patch(':id/deactivate')
-  @Roles('VICERRECTORADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SUPER_ADMIN')
   async deactivateUser(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,

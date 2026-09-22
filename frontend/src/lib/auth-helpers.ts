@@ -130,21 +130,39 @@ export function puedeGestionarDefensas(user: User | null | undefined): boolean {
 }
 
 /**
- * Determina si el usuario puede crear o editar usuarios y asignar roles (especialmente Jefe de Carrera).
- * Estrictamente reservado para Vicerrectorado y Administrador General (Super Admin).
- * Secretaría de Facultad, Jefe de Carrera y Coordinación NO pueden gestionar roles ni usuarios.
+ * Determina si el usuario puede crear o editar usuarios y asignar roles.
+ * Reservado para Coordinación Académica y Administrador General (Super Admin).
+ * Vicerrectorado tiene acceso de supervisión/auditoría (solo lectura).
  */
 export function puedeGestionarUsuarios(user: User | null | undefined): boolean {
   if (!user) return false;
-  if (esVicerrectorado(user)) return true;
+  if (esVicerrectorado(user)) return false; // Vicerrectorado es solo lectura / auditoría
   const rol = String(user.rol || '').trim().toLowerCase();
   const code = String(user.rolCode || '').trim().toUpperCase();
   return (
+    code === 'COORDINACION' ||
     code === 'SUPER_ADMIN' ||
+    rol === 'coordinador general' ||
     rol === 'administrador general' ||
+    rol.includes('coordinad') ||
     rol === 'super admin' ||
     rol === 'admin'
   );
 }
+
+/**
+ * Determina si el usuario autenticado tiene el rol de Coordinación Académica.
+ */
+export function esCoordinacion(user: User | null | undefined): boolean {
+  if (!user) return false;
+  const rol = String(user.rol || '').trim().toLowerCase();
+  const code = String(user.rolCode || '').trim().toUpperCase();
+  return (
+    code === 'COORDINACION' ||
+    rol === 'coordinador general' ||
+    rol.includes('coordinad')
+  );
+}
+
 
 

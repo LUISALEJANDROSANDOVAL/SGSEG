@@ -105,7 +105,7 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         icono: ShieldCheck,
         descripcion:
           'Administración de accesos, perfiles de usuario y activación/desactivación de cuentas.',
-        roles: ['Vicerrectorado', 'Administrador General'],
+        roles: ['Coordinador General', 'Vicerrectorado', 'Administrador General'],
       },
     ],
   },

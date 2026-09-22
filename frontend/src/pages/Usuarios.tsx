@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { EncabezadoPagina } from '@/components/encabezado-pagina';
 import api from '../lib/api';
-import { Edit2, ToggleRight, Plus, AlertCircle, X, Shield, Lock } from 'lucide-react';
+import { Edit2, ToggleRight, Plus, AlertCircle, X, Shield, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { puedeGestionarUsuarios } from '@/lib/auth-helpers';
 
@@ -20,6 +20,7 @@ export default function PaginaUsuarios() {
   const [formNombre, setFormNombre] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPassword, setFormPassword] = useState('');
+  const [showFormPassword, setShowFormPassword] = useState(false);
   const [formRol, setFormRol] = useState('Secretario de Facultad');
   const [formCarreraId, setFormCarreraId] = useState('');
   const [formActivo, setFormActivo] = useState(true);
@@ -146,9 +147,9 @@ export default function PaginaUsuarios() {
           <div className="flex items-start gap-3 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-xs">
             <Lock className="size-5 shrink-0 text-amber-700 mt-0.5" />
             <div>
-              <p className="font-semibold">Acceso de Auditoría y Consulta (Solo Lectura)</p>
+              <p className="font-semibold">Acceso de Supervisión y Auditoría (Solo Lectura)</p>
               <p className="text-xs text-amber-800 mt-0.5">
-                La creación de cuentas y asignación de roles es potestad exclusiva del <strong>Vicerrectorado</strong> y la <strong>Administración General</strong>. Su rol actual no dispone de permisos para crear usuarios ni modificar roles.
+                La creación y administración operativa de usuarios corresponde a la <strong>Coordinación Académica</strong> y la <strong>Administración General</strong>. El Vicerrectorado dispone de acceso de supervisión y auditoría institucional.
               </p>
             </div>
           </div>
@@ -295,14 +296,25 @@ export default function PaginaUsuarios() {
                   <label className="text-xs font-semibold text-neutral-600">
                     Contraseña {editId && <span className="text-neutral-400 font-normal">(Opcional para actualizar)</span>}
                   </label>
-                  <input
-                    type="password"
-                    required={!editId}
-                    placeholder={editId ? 'Dejar vacío para no cambiar' : 'Contraseña inicial'}
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showFormPassword ? 'text' : 'password'}
+                      required={!editId}
+                      placeholder={editId ? 'Dejar vacío para no cambiar' : 'Contraseña inicial'}
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      className="w-full border border-line bg-surface px-3 py-2 pr-10 text-sm outline-none focus:border-ink focus:bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowFormPassword(!showFormPassword)}
+                      className="absolute inset-y-0 right-2.5 flex items-center text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                      title={showFormPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      tabIndex={-1}
+                    >
+                      {showFormPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1">

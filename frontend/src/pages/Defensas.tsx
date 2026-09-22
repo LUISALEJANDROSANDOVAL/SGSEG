@@ -7,6 +7,7 @@ import {
   Eye,
   Filter,
   Plus,
+  Minus,
   Printer,
   RefreshCw,
   Search,
@@ -26,13 +27,14 @@ import {
 import type { Defensa, EmbudoEstados } from '@/lib/defensas.api'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Estudiante } from '@/lib/estudiantes.api'
-import { esJefeCarrera, getJefeCarreraId, esVicerrectorado, puedeGestionarDefensas } from '@/lib/auth-helpers'
+import { esJefeCarrera, getJefeCarreraId, esVicerrectorado, puedeGestionarDefensas, esCoordinacion } from '@/lib/auth-helpers'
 
 export default function PaginaDefensas() {
   // Rol de usuario autenticado
   const { user } = useAuth()
   const isJefe = esJefeCarrera(user)
   const isVice = esVicerrectorado(user)
+  const isCoord = esCoordinacion(user)
   const puedeEditar = puedeGestionarDefensas(user)
   const jefeCarreraId = getJefeCarreraId(user)
   const esSoloLectura = !puedeEditar
@@ -60,7 +62,7 @@ export default function PaginaDefensas() {
   const [modalActa, setModalActa] = useState<Defensa | null>(null)
 
   // Formulario Calificación de Examen de Grado
-  const [notaForm, setNotaForm] = useState<number>(85)
+  const [notaForm, setNotaForm] = useState<number | ''>(85)
   const [resultadoForm, setResultadoForm] = useState<string>('APROBADO_CON_FELICITACION')
   const [presidenteForm, setPresidenteForm] = useState<string>('')
   const [secretarioForm, setSecretarioForm] = useState<string>('')
@@ -181,8 +183,17 @@ export default function PaginaDefensas() {
   }
 
   // Cambio reactivo de nota numérica con ajuste automático de escala
-  const handleNotaChange = (val: number) => {
-    const clamped = Math.max(0, Math.min(100, isNaN(val) ? 0 : val))
+  const handleNotaChange = (val: number | '' | string) => {
+    if (val === '' || (typeof val === 'string' && val.trim() === '')) {
+      setNotaForm('')
+      return
+    }
+    const num = Number(val)
+    if (isNaN(num)) {
+      setNotaForm('')
+      return
+    }
+    const clamped = Math.max(0, Math.min(100, num))
     setNotaForm(clamped)
     const escala = determinarEscalaResultado(clamped)
     setResultadoForm(escala.resultadoDefault)
@@ -193,8 +204,8 @@ export default function PaginaDefensas() {
     e.preventDefault()
     if (!modalCalificar) return
 
-    if (notaForm < 0 || notaForm > 100) {
-      setFeedback({ tipo: 'error', mensaje: 'La nota debe estar comprendida entre 0 y 100 puntos.' })
+    if (notaForm === '' || notaForm < 0 || notaForm > 100) {
+      setFeedback({ tipo: 'error', mensaje: 'Debe ingresar una calificación numérica válida entre 0 y 100 puntos.' })
       return
     }
 
@@ -973,18 +984,18 @@ export default function PaginaDefensas() {
 
       {/* ── MODAL: REGISTRAR / CALIFICAR EXAMEN DE GRADO ── */}
       {modalCalificar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-xl border border-line bg-white shadow-2xl">
-            <header className="flex items-center justify-between border-b border-line px-6 py-4 bg-surface">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-8 items-center justify-center bg-crimson text-white rounded-xs shadow-xs">
-                  <Award className="size-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg max-h-[92vh] flex flex-col border border-line bg-white shadow-2xl rounded-xs overflow-hidden">
+            <header className="flex items-center justify-between border-b border-line px-4 py-2.5 bg-surface shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 items-center justify-center bg-crimson text-white rounded-xs shadow-xs">
+                  <Award className="size-3.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold tracking-tight text-neutral-900">
+                  <h3 className="text-xs sm:text-sm font-bold tracking-tight text-neutral-900 leading-tight">
                     Asentar Calificación y Dictamen de Grado
                   </h3>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-[11px] text-neutral-500 line-clamp-1">
                     {modalCalificar.instancia.proceso.estudiante.nombreCompleto} ·{' '}
                     {modalCalificar.instancia.proceso.estudiante.planEstudio.carrera.nombre}
                   </p>
@@ -993,15 +1004,15 @@ export default function PaginaDefensas() {
               <button
                 type="button"
                 onClick={() => setModalCalificar(null)}
-                className="text-neutral-400 hover:text-neutral-700"
+                className="text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
               >
-                <X className="size-5" />
+                <X className="size-4" />
               </button>
             </header>
 
-            <form onSubmit={handleGuardarCalificacion} className="p-6 flex flex-col gap-4 text-xs">
+            <form onSubmit={handleGuardarCalificacion} className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2.5 text-xs">
               {/* Resumen del Postulante y Defensa */}
-              <div className="grid grid-cols-3 gap-2 bg-neutral-50 p-3 border border-line text-[11px]">
+              <div className="grid grid-cols-3 gap-2 bg-neutral-50 px-3 py-1.5 border border-line text-[10.5px]">
                 <div>
                   <span className="text-neutral-500">Registro:</span>
                   <p className="font-mono font-bold text-neutral-900">
@@ -1019,74 +1030,254 @@ export default function PaginaDefensas() {
                   </p>
                 </div>
                 {modalCalificar.casoUtilizado && (
-                  <div className="col-span-3 pt-2 mt-1 border-t border-line">
-                    <span className="text-neutral-500">Caso Defendido:</span>
-                    <p className="font-semibold text-neutral-800 line-clamp-1">
+                  <div className="col-span-3 pt-1 border-t border-line/60">
+                    <span className="text-neutral-500">Caso: </span>
+                    <span className="font-semibold text-neutral-800">
                       {modalCalificar.casoUtilizado.titulo} ({modalCalificar.casoUtilizado.area?.nombre})
-                    </p>
+                    </span>
                   </div>
                 )}
               </div>
 
               {/* Entrada de Nota y Escala UPTECSA */}
-              <div className="border border-line p-4 bg-white flex flex-col gap-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <label className="text-xs font-bold text-neutral-900">
-                    Calificación Numérica (0 a 100 puntos) *
-                  </label>
-                  {(() => {
-                    const esc = determinarEscalaResultado(notaForm)
-                    return (
-                      <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold border ${esc.badgeBg}`}>
-                        {esc.escala}
+              {isCoord ? (
+                <div className="border border-neutral-300 bg-neutral-50/70 p-2.5 flex flex-col gap-2 rounded-xs shadow-2xs">
+                  {/* Encabezado con Distintivo de Coordinador */}
+                  <div className="flex items-center justify-between border-b border-neutral-200 pb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-[11px] font-black tracking-wide text-neutral-900 uppercase">
+                        Calificación Numérica (0 a 100) *
+                      </label>
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-crimson/10 text-crimson border border-crimson/20">
+                        Coordinación
                       </span>
-                    )
-                  })()}
-                </div>
+                    </div>
+                    {(() => {
+                      const esc = notaForm !== '' ? determinarEscalaResultado(notaForm) : { escala: 'Pendiente', badgeBg: 'bg-neutral-100 text-neutral-600 border-neutral-300' }
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold border shadow-2xs ${esc.badgeBg}`}>
+                          <span className="size-1.5 rounded-full bg-current"></span>
+                          {esc.escala}
+                        </span>
+                      )
+                    })()}
+                  </div>
 
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    required
-                    value={notaForm}
-                    onChange={(e) => handleNotaChange(Number(e.target.value))}
-                    className="w-28 border-2 border-neutral-300 px-3 py-2 text-2xl font-black text-neutral-900 outline-none focus:border-crimson text-center tracking-tight"
-                  />
-                  <div className="flex-1">
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={notaForm}
-                      onChange={(e) => handleNotaChange(Number(e.target.value))}
-                      className="w-full accent-crimson cursor-pointer"
-                    />
-                    <p className="text-[11px] text-neutral-600 mt-1 italic">
-                      Literal oficial: <strong>"{numeroALetras(notaForm)} puntos"</strong>
-                    </p>
+                  {/* Selector Numérico Moderno con Botones de Pasos (+ / -) y Sin Slider Rojo */}
+                  <div className="flex items-center justify-between gap-2 bg-white px-2.5 py-1.5 border border-neutral-200 shadow-2xs">
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) - 5)}
+                        disabled={notaForm !== '' && notaForm <= 0}
+                        className="px-2 py-1 text-[11px] font-bold border border-neutral-300 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
+                        title="Restar 5 puntos"
+                      >
+                        -5
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) - 1)}
+                        disabled={notaForm !== '' && notaForm <= 0}
+                        className="p-1 text-neutral-700 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
+                        title="Restar 1 punto"
+                      >
+                        <Minus className="size-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        required
+                        placeholder="--"
+                        value={notaForm}
+                        onChange={(e) => handleNotaChange(e.target.value === '' ? '' : e.target.value)}
+                        className="w-20 border-2 border-crimson/80 bg-white px-1.5 py-0.5 text-2xl font-black text-neutral-900 outline-none focus:ring-1 focus:ring-crimson text-center tracking-tight shadow-inner [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <span className="text-[11px] font-bold text-neutral-500">/ 100</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) + 1)}
+                        disabled={notaForm !== '' && notaForm >= 100}
+                        className="p-1 text-neutral-700 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
+                        title="Sumar 1 punto"
+                      >
+                        <Plus className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) + 5)}
+                        disabled={notaForm !== '' && notaForm >= 100}
+                        className="px-2 py-1 text-[11px] font-bold border border-neutral-300 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
+                        title="Sumar 5 puntos"
+                      >
+                        +5
+                      </button>
+                    </div>
+
+                    <div className="hidden sm:block text-right border-l border-neutral-200 pl-2 shrink-0">
+                      <p className="text-[9.5px] text-neutral-500 font-medium">Dictamen Oficial:</p>
+                      <p className="text-[10.5px] font-bold text-crimson uppercase tracking-wide truncate max-w-[130px]">
+                        {notaForm !== '' ? `"${numeroALetras(notaForm)} pts"` : 'Pendiente'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Botones de Selección Rápida con Notas Frecuentes */}
+                  <div>
+                    <div className="grid grid-cols-5 gap-1">
+                      {[
+                        { valor: 51, label: '51 • Mínimo', color: 'hover:border-emerald-500' },
+                        { valor: 70, label: '70 • Bueno', color: 'hover:border-emerald-600' },
+                        { valor: 80, label: '80 • Notable', color: 'hover:border-emerald-700' },
+                        { valor: 90, label: '90 • Sobresal.', color: 'hover:border-indigo-600' },
+                        { valor: 100, label: '100 • Mención', color: 'hover:border-amber-600' },
+                      ].map((preset) => {
+                        const activo = notaForm === preset.valor
+                        return (
+                          <button
+                            key={preset.valor}
+                            type="button"
+                            onClick={() => handleNotaChange(preset.valor)}
+                            className={`px-1 py-1 text-[10.5px] font-bold transition-all border cursor-pointer ${
+                              activo
+                                ? 'bg-crimson text-white border-crimson shadow-xs'
+                                : `bg-white text-neutral-700 border-neutral-300 ${preset.color} hover:bg-neutral-50`
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Escalas UPTECSA Clickeables */}
+                  <div className="text-[9.5px] text-neutral-500 grid grid-cols-5 gap-1 text-center pt-1 border-t border-neutral-200">
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange(45)}
+                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                        notaForm !== '' && notaForm < 51
+                          ? 'font-bold bg-red-100 text-red-800 border border-red-300'
+                          : 'hover:bg-neutral-100'
+                      }`}
+                    >
+                      0-50 Reprobado
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange(60)}
+                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                        notaForm !== '' && notaForm >= 51 && notaForm < 70
+                          ? 'font-bold bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'hover:bg-neutral-100'
+                      }`}
+                    >
+                      51-69 Regular
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange(75)}
+                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                        notaForm !== '' && notaForm >= 70 && notaForm < 85
+                          ? 'font-bold bg-emerald-100 text-emerald-900 border border-emerald-400'
+                          : 'hover:bg-neutral-100'
+                      }`}
+                    >
+                      70-84 Bueno
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange(90)}
+                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                        notaForm !== '' && notaForm >= 85 && notaForm < 95
+                          ? 'font-bold bg-indigo-100 text-indigo-900 border border-indigo-300'
+                          : 'hover:bg-neutral-100'
+                      }`}
+                    >
+                      85-94 Sobresal.
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange(100)}
+                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                        notaForm !== '' && notaForm >= 95
+                          ? 'font-bold bg-amber-100 text-amber-900 border border-amber-300'
+                          : 'hover:bg-neutral-100'
+                      }`}
+                    >
+                      95-100 Mención
+                    </button>
                   </div>
                 </div>
+              ) : (
+                <div className="border border-line p-3 bg-white flex flex-col gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <label className="text-xs font-bold text-neutral-900">
+                      Calificación Numérica (0 a 100 puntos) *
+                    </label>
+                    {(() => {
+                      const esc = notaForm !== '' ? determinarEscalaResultado(notaForm) : { escala: 'Pendiente', badgeBg: 'bg-neutral-100 text-neutral-600 border-neutral-300' }
+                      return (
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-bold border ${esc.badgeBg}`}>
+                          {esc.escala}
+                        </span>
+                      )
+                    })()}
+                  </div>
 
-                <div className="text-[10px] text-neutral-500 grid grid-cols-5 gap-1 text-center pt-1 border-t border-line">
-                  <span className={notaForm < 51 ? 'font-bold text-red-700' : ''}>0-50 Reprobado</span>
-                  <span className={notaForm >= 51 && notaForm < 70 ? 'font-bold text-emerald-700' : ''}>51-69 Regular</span>
-                  <span className={notaForm >= 70 && notaForm < 85 ? 'font-bold text-emerald-800' : ''}>70-84 Bueno</span>
-                  <span className={notaForm >= 85 && notaForm < 95 ? 'font-bold text-indigo-800' : ''}>85-94 Sobresaliente</span>
-                  <span className={notaForm >= 95 ? 'font-bold text-amber-800' : ''}>95-100 Mención</span>
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      required
+                      placeholder="--"
+                      value={notaForm}
+                      onChange={(e) => handleNotaChange(e.target.value === '' ? '' : e.target.value)}
+                      className="w-20 border-2 border-neutral-300 px-2 py-1 text-xl font-black text-neutral-900 outline-none focus:border-crimson text-center tracking-tight [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <div className="flex-1">
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={notaForm === '' ? 0 : notaForm}
+                        onChange={(e) => handleNotaChange(Number(e.target.value))}
+                        className="w-full accent-crimson cursor-pointer"
+                      />
+                      <p className="text-[10px] text-neutral-600 mt-0.5 italic">
+                        Literal oficial: <strong>{notaForm !== '' ? `"${numeroALetras(notaForm)} puntos"` : 'Pendiente'}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-[9.5px] text-neutral-500 grid grid-cols-5 gap-1 text-center pt-1 border-t border-line">
+                    <span className={notaForm !== '' && notaForm < 51 ? 'font-bold text-red-700' : ''}>0-50 Reprobado</span>
+                    <span className={notaForm !== '' && notaForm >= 51 && notaForm < 70 ? 'font-bold text-emerald-700' : ''}>51-69 Regular</span>
+                    <span className={notaForm !== '' && notaForm >= 70 && notaForm < 85 ? 'font-bold text-emerald-800' : ''}>70-84 Bueno</span>
+                    <span className={notaForm !== '' && notaForm >= 85 && notaForm < 95 ? 'font-bold text-indigo-800' : ''}>85-94 Sobresal.</span>
+                    <span className={notaForm !== '' && notaForm >= 95 ? 'font-bold text-amber-800' : ''}>95-100 Mención</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Dictamen Oficial */}
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                <label className="block text-[11px] font-medium text-neutral-700 mb-0.5">
                   Dictamen Final del Tribunal *
                 </label>
                 <select
                   value={resultadoForm}
                   onChange={(e) => setResultadoForm(e.target.value)}
-                  className="w-full border border-line bg-surface px-3 py-2 text-xs font-semibold outline-none focus:border-neutral-400"
+                  className="w-full border border-line bg-surface px-2.5 py-1.5 text-xs font-semibold outline-none focus:border-neutral-400"
                 >
                   <option value="APROBADO">APROBADO (Aprobación Regular / Suficiente)</option>
                   <option value="APROBADO_CON_FELICITACION">APROBADO CON FELICITACIÓN (Sobresaliente)</option>
@@ -1096,39 +1287,39 @@ export default function PaginaDefensas() {
               </div>
 
               {/* Miembros del Tribunal Evaluador */}
-              <div className="border border-line p-3 flex flex-col gap-2.5">
-                <span className="text-[11px] font-bold text-neutral-800 uppercase tracking-wider">
+              <div className="border border-line p-2.5 flex flex-col gap-1.5 bg-neutral-50/40">
+                <span className="text-[10px] font-bold text-neutral-800 uppercase tracking-wider">
                   Miembros del Tribunal Evaluador (Opcional / Firmas)
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                   <div>
-                    <label className="block text-[10px] text-neutral-500 mb-0.5">Presidente del Tribunal</label>
+                    <label className="block text-[9.5px] text-neutral-500">Presidente del Tribunal</label>
                     <input
                       type="text"
                       value={presidenteForm}
                       onChange={(e) => setPresidenteForm(e.target.value)}
                       placeholder="Ej. Ing. Juan Pérez"
-                      className="w-full border border-line bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-neutral-400"
+                      className="w-full border border-line bg-white px-2 py-1 text-xs outline-none focus:border-neutral-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-neutral-500 mb-0.5">Secretario del Tribunal</label>
+                    <label className="block text-[9.5px] text-neutral-500">Secretario del Tribunal</label>
                     <input
                       type="text"
                       value={secretarioForm}
                       onChange={(e) => setSecretarioForm(e.target.value)}
                       placeholder="Ej. Lic. María López"
-                      className="w-full border border-line bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-neutral-400"
+                      className="w-full border border-line bg-white px-2 py-1 text-xs outline-none focus:border-neutral-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-neutral-500 mb-0.5">Vocal del Tribunal</label>
+                    <label className="block text-[9.5px] text-neutral-500">Vocal del Tribunal</label>
                     <input
                       type="text"
                       value={vocalForm}
                       onChange={(e) => setVocalForm(e.target.value)}
                       placeholder="Ej. Dr. Carlos Suárez"
-                      className="w-full border border-line bg-surface px-2.5 py-1.5 text-xs outline-none focus:border-neutral-400"
+                      className="w-full border border-line bg-white px-2 py-1 text-xs outline-none focus:border-neutral-400"
                     />
                   </div>
                 </div>
@@ -1136,32 +1327,32 @@ export default function PaginaDefensas() {
 
               {/* Observaciones */}
               <div>
-                <label className="block text-[11px] font-medium text-neutral-700 mb-1">
+                <label className="block text-[10.5px] font-medium text-neutral-700 mb-0.5">
                   Observaciones o Recomendaciones del Tribunal
                 </label>
                 <textarea
-                  rows={2}
+                  rows={1}
                   value={observacionesForm}
                   onChange={(e) => setObservacionesForm(e.target.value)}
-                  placeholder="Detalles sobre el desempeño en la exposición oral, respuestas o deliberación..."
-                  className="w-full border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400"
+                  placeholder="Detalles sobre el desempeño en la exposición oral..."
+                  className="w-full border border-line bg-surface px-2.5 py-1 text-xs outline-none focus:border-neutral-400 resize-y"
                 />
               </div>
 
-              <footer className="mt-2 flex items-center justify-end gap-3 border-t border-line pt-4">
+              <footer className="mt-1 flex items-center justify-end gap-2 border-t border-line pt-2.5">
                 <button
                   type="button"
                   onClick={() => setModalCalificar(null)}
-                  className="border border-line px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                  className="border border-line px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="bg-crimson px-5 py-2 text-xs font-bold text-white hover:opacity-95 disabled:opacity-50 flex items-center gap-1.5 shadow-xs"
+                  className="bg-crimson px-4 py-1.5 text-xs font-bold text-white hover:opacity-95 disabled:opacity-50 flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
-                  <CheckCircle2 className="size-4" />
+                  <CheckCircle2 className="size-3.5" />
                   <span>{actionLoading ? 'Asentando...' : 'Asentar Calificación Oficial'}</span>
                 </button>
               </footer>
