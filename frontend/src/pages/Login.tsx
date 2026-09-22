@@ -287,8 +287,8 @@ export default function Login() {
                 Correo Institucional
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
-                  <Mail className="size-4" />
+                <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
+                  <Mail className="size-4 text-gray-400" />
                 </span>
                 <input
                   id="login-email"
@@ -299,7 +299,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={submitting}
-                  className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/20 disabled:bg-gray-50"
+                  className="w-full rounded-xl border border-gray-300 bg-[#f8f9fa] py-3 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-4 focus:ring-[#c8102e]/10 hover:border-gray-400 disabled:bg-gray-100 shadow-2xs"
                 />
               </div>
             </div>
@@ -319,8 +319,8 @@ export default function Login() {
                 </button>
               </div>
               <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
-                  <Lock className="size-4" />
+                <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
+                  <Lock className="size-4 text-gray-400" />
                 </span>
                 <input
                   id="login-password"
@@ -331,12 +331,12 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={submitting}
-                  className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/20 disabled:bg-gray-50"
+                  className="w-full rounded-xl border border-gray-300 bg-[#f8f9fa] py-3 pl-10 pr-11 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-4 focus:ring-[#c8102e]/10 hover:border-gray-400 disabled:bg-gray-100 shadow-2xs"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-700 cursor-pointer focus:outline-none"
+                  className="absolute inset-y-0 right-3.5 flex items-center text-gray-400 hover:text-gray-700 cursor-pointer focus:outline-none"
                   title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   tabIndex={-1}
                 >

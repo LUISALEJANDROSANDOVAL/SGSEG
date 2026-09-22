@@ -188,4 +188,14 @@
     vertical-align: middle;
     shape-rendering: geometricPrecision;
   }
+
+  /* Sobrescribir el autofill del navegador (Chrome/Edge) para mantener estética institucional limpia */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #f8f9fa inset !important;
+    -webkit-text-fill-color: #111827 !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
