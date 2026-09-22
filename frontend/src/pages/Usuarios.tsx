@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { EncabezadoPagina } from '@/components/encabezado-pagina';
 import api from '../lib/api';
-import { Edit2, ToggleRight, Plus, AlertCircle, X, Shield, Lock, Eye, EyeOff } from 'lucide-react';
+import { Edit2, ToggleRight, ToggleLeft, Plus, AlertCircle, X, Shield, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { puedeGestionarUsuarios } from '@/lib/auth-helpers';
 
@@ -114,13 +114,15 @@ export default function PaginaUsuarios() {
     }
   };
 
-  const desactivarUsuario = async (id: string) => {
-    if (!confirm('¿Está seguro de desactivar esta cuenta?')) return;
+  const toggleEstadoUsuario = async (u: any) => {
+    const nuevoEstado = u.activo ? 'INACTIVO' : 'ACTIVO';
+    const accion = u.activo ? 'desactivar' : 'activar';
+    if (!confirm(`¿Está seguro de ${accion} la cuenta de ${u.nombre}?`)) return;
     try {
-      await api.patch(`/users/${id}/deactivate`);
+      await api.patch(`/users/${u.id}/estado`, { estado: nuevoEstado });
       fetchDatos();
-    } catch (err) {
-      alert('Error al desactivar el usuario.');
+    } catch (err: any) {
+      alert(err.response?.data?.message || `Error al ${accion} el usuario.`);
     }
   };
 
@@ -219,20 +221,22 @@ export default function PaginaUsuarios() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => abrirModalEditar(u)}
-                              className="p-1.5 text-neutral-500 hover:text-ink transition-colors hover:bg-neutral-100 rounded"
+                              className="p-1.5 text-neutral-500 hover:text-ink transition-colors hover:bg-neutral-100 rounded cursor-pointer"
                               title="Editar usuario"
                             >
                               <Edit2 className="size-4" />
                             </button>
-                            {u.activo && (
-                              <button
-                                onClick={() => desactivarUsuario(u.id)}
-                                className="p-1.5 text-neutral-500 hover:text-red-600 transition-colors hover:bg-red-50 rounded"
-                                title="Desactivar cuenta"
-                              >
-                                <ToggleRight className="size-5" />
-                              </button>
-                            )}
+                            <button
+                              onClick={() => toggleEstadoUsuario(u)}
+                              className={`p-1.5 transition-colors rounded cursor-pointer ${
+                                u.activo
+                                  ? 'text-emerald-600 hover:text-red-600 hover:bg-red-50'
+                                  : 'text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50'
+                              }`}
+                              title={u.activo ? 'Desactivar cuenta' : 'Activar cuenta'}
+                            >
+                              {u.activo ? <ToggleRight className="size-5" /> : <ToggleLeft className="size-5" />}
+                            </button>
                           </div>
                         ) : (
                           <span className="text-xs text-neutral-400 italic">Solo lectura</span>

@@ -99,6 +99,12 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    if (user.estado !== 'ACTIVO') {
+      throw new UnauthorizedException(
+        'Usuario Inactivo. Esta cuenta ha sido deshabilitada en el sistema.',
+      );
+    }
+
     const payload = {
       sub: String(user.idUsuario),
       correoInstitucional: user.correoInstitucional,
@@ -391,10 +397,11 @@ export class AuthService {
   ) {
     if (
       currentUser.rol !== 'SUPER_ADMIN' &&
-      currentUser.rol !== 'VICERRECTORADO'
+      currentUser.rol !== 'VICERRECTORADO' &&
+      currentUser.rol !== 'COORDINACION'
     ) {
       throw new ForbiddenException(
-        'Solo Vicerrectorado o SuperAdmin pueden modificar el estado de un usuario',
+        'Solo Coordinación Académica, Vicerrectorado o SuperAdmin pueden modificar el estado de un usuario',
       );
     }
 
@@ -424,10 +431,11 @@ export class AuthService {
   async createUser(dto: CreateUserDto, currentUser: AuthenticatedUser) {
     if (
       currentUser.rol !== 'SUPER_ADMIN' &&
-      currentUser.rol !== 'VICERRECTORADO'
+      currentUser.rol !== 'VICERRECTORADO' &&
+      currentUser.rol !== 'COORDINACION'
     ) {
       throw new ForbiddenException(
-        'Solo Vicerrectorado o SuperAdmin pueden crear usuarios y asignar roles',
+        'Solo Coordinación Académica, Vicerrectorado o SuperAdmin pueden crear usuarios y asignar roles',
       );
     }
 
@@ -483,10 +491,11 @@ export class AuthService {
   async updateUser(idUsuario: string, dto: UpdateUserDto, currentUser: AuthenticatedUser) {
     if (
       currentUser.rol !== 'SUPER_ADMIN' &&
-      currentUser.rol !== 'VICERRECTORADO'
+      currentUser.rol !== 'VICERRECTORADO' &&
+      currentUser.rol !== 'COORDINACION'
     ) {
       throw new ForbiddenException(
-        'Solo Vicerrectorado o SuperAdmin pueden editar usuarios',
+        'Solo Coordinación Académica, Vicerrectorado o SuperAdmin pueden editar usuarios',
       );
     }
 

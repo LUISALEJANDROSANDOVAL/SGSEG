@@ -27,14 +27,13 @@ import {
 import type { Defensa, EmbudoEstados } from '@/lib/defensas.api'
 import { estudiantesApi } from '@/lib/estudiantes.api'
 import type { Estudiante } from '@/lib/estudiantes.api'
-import { esJefeCarrera, getJefeCarreraId, esVicerrectorado, puedeGestionarDefensas, esCoordinacion } from '@/lib/auth-helpers'
+import { esJefeCarrera, getJefeCarreraId, esVicerrectorado, puedeGestionarDefensas } from '@/lib/auth-helpers'
 
 export default function PaginaDefensas() {
   // Rol de usuario autenticado
   const { user } = useAuth()
   const isJefe = esJefeCarrera(user)
   const isVice = esVicerrectorado(user)
-  const isCoord = esCoordinacion(user)
   const puedeEditar = puedeGestionarDefensas(user)
   const jefeCarreraId = getJefeCarreraId(user)
   const esSoloLectura = !puedeEditar
@@ -1040,200 +1039,52 @@ export default function PaginaDefensas() {
               </div>
 
               {/* Entrada de Nota y Escala UPTECSA */}
-              {isCoord ? (
-                <div className="border border-neutral-300 bg-neutral-50/70 p-2.5 flex flex-col gap-2 rounded-xs shadow-2xs">
-                  {/* Encabezado con Distintivo de Coordinador */}
-                  <div className="flex items-center justify-between border-b border-neutral-200 pb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <label className="text-[11px] font-black tracking-wide text-neutral-900 uppercase">
-                        Calificación Numérica (0 a 100) *
-                      </label>
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-crimson/10 text-crimson border border-crimson/20">
-                        Coordinación
-                      </span>
-                    </div>
-                    {(() => {
-                      const esc = notaForm !== '' ? determinarEscalaResultado(notaForm) : { escala: 'Pendiente', badgeBg: 'bg-neutral-100 text-neutral-600 border-neutral-300' }
-                      return (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold border shadow-2xs ${esc.badgeBg}`}>
-                          <span className="size-1.5 rounded-full bg-current"></span>
-                          {esc.escala}
-                        </span>
-                      )
-                    })()}
-                  </div>
-
-                  {/* Selector Numérico Moderno con Botones de Pasos (+ / -) y Sin Slider Rojo */}
-                  <div className="flex items-center justify-between gap-2 bg-white px-2.5 py-1.5 border border-neutral-200 shadow-2xs">
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) - 5)}
-                        disabled={notaForm !== '' && notaForm <= 0}
-                        className="px-2 py-1 text-[11px] font-bold border border-neutral-300 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
-                        title="Restar 5 puntos"
-                      >
-                        -5
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) - 1)}
-                        disabled={notaForm !== '' && notaForm <= 0}
-                        className="p-1 text-neutral-700 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
-                        title="Restar 1 punto"
-                      >
-                        <Minus className="size-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        required
-                        placeholder="--"
-                        value={notaForm}
-                        onChange={(e) => handleNotaChange(e.target.value === '' ? '' : e.target.value)}
-                        className="w-20 border-2 border-crimson/80 bg-white px-1.5 py-0.5 text-2xl font-black text-neutral-900 outline-none focus:ring-1 focus:ring-crimson text-center tracking-tight shadow-inner [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-[11px] font-bold text-neutral-500">/ 100</span>
-                    </div>
-
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) + 1)}
-                        disabled={notaForm !== '' && notaForm >= 100}
-                        className="p-1 text-neutral-700 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
-                        title="Sumar 1 punto"
-                      >
-                        <Plus className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) + 5)}
-                        disabled={notaForm !== '' && notaForm >= 100}
-                        className="px-2 py-1 text-[11px] font-bold border border-neutral-300 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
-                        title="Sumar 5 puntos"
-                      >
-                        +5
-                      </button>
-                    </div>
-
-                    <div className="hidden sm:block text-right border-l border-neutral-200 pl-2 shrink-0">
-                      <p className="text-[9.5px] text-neutral-500 font-medium">Dictamen Oficial:</p>
-                      <p className="text-[10.5px] font-bold text-crimson uppercase tracking-wide truncate max-w-[130px]">
-                        {notaForm !== '' ? `"${numeroALetras(notaForm)} pts"` : 'Pendiente'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Botones de Selección Rápida con Notas Frecuentes */}
-                  <div>
-                    <div className="grid grid-cols-5 gap-1">
-                      {[
-                        { valor: 51, label: '51 • Mínimo', color: 'hover:border-emerald-500' },
-                        { valor: 70, label: '70 • Bueno', color: 'hover:border-emerald-600' },
-                        { valor: 80, label: '80 • Notable', color: 'hover:border-emerald-700' },
-                        { valor: 90, label: '90 • Sobresal.', color: 'hover:border-indigo-600' },
-                        { valor: 100, label: '100 • Mención', color: 'hover:border-amber-600' },
-                      ].map((preset) => {
-                        const activo = notaForm === preset.valor
-                        return (
-                          <button
-                            key={preset.valor}
-                            type="button"
-                            onClick={() => handleNotaChange(preset.valor)}
-                            className={`px-1 py-1 text-[10.5px] font-bold transition-all border cursor-pointer ${
-                              activo
-                                ? 'bg-crimson text-white border-crimson shadow-xs'
-                                : `bg-white text-neutral-700 border-neutral-300 ${preset.color} hover:bg-neutral-50`
-                            }`}
-                          >
-                            {preset.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Escalas UPTECSA Clickeables */}
-                  <div className="text-[9.5px] text-neutral-500 grid grid-cols-5 gap-1 text-center pt-1 border-t border-neutral-200">
-                    <button
-                      type="button"
-                      onClick={() => handleNotaChange(45)}
-                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
-                        notaForm !== '' && notaForm < 51
-                          ? 'font-bold bg-red-100 text-red-800 border border-red-300'
-                          : 'hover:bg-neutral-100'
-                      }`}
-                    >
-                      0-50 Reprobado
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleNotaChange(60)}
-                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
-                        notaForm !== '' && notaForm >= 51 && notaForm < 70
-                          ? 'font-bold bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          : 'hover:bg-neutral-100'
-                      }`}
-                    >
-                      51-69 Regular
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleNotaChange(75)}
-                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
-                        notaForm !== '' && notaForm >= 70 && notaForm < 85
-                          ? 'font-bold bg-emerald-100 text-emerald-900 border border-emerald-400'
-                          : 'hover:bg-neutral-100'
-                      }`}
-                    >
-                      70-84 Bueno
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleNotaChange(90)}
-                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
-                        notaForm !== '' && notaForm >= 85 && notaForm < 95
-                          ? 'font-bold bg-indigo-100 text-indigo-900 border border-indigo-300'
-                          : 'hover:bg-neutral-100'
-                      }`}
-                    >
-                      85-94 Sobresal.
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleNotaChange(100)}
-                      className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
-                        notaForm !== '' && notaForm >= 95
-                          ? 'font-bold bg-amber-100 text-amber-900 border border-amber-300'
-                          : 'hover:bg-neutral-100'
-                      }`}
-                    >
-                      95-100 Mención
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="border border-line p-3 bg-white flex flex-col gap-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <label className="text-xs font-bold text-neutral-900">
-                      Calificación Numérica (0 a 100 puntos) *
+              <div className="border border-neutral-300 bg-neutral-50/70 p-2.5 flex flex-col gap-2 rounded-xs shadow-2xs">
+                {/* Encabezado con Distintivo de Rol */}
+                <div className="flex items-center justify-between border-b border-neutral-200 pb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-[11px] font-black tracking-wide text-neutral-900 uppercase">
+                      Calificación Numérica (0 a 100) *
                     </label>
-                    {(() => {
-                      const esc = notaForm !== '' ? determinarEscalaResultado(notaForm) : { escala: 'Pendiente', badgeBg: 'bg-neutral-100 text-neutral-600 border-neutral-300' }
-                      return (
-                        <span className={`inline-block px-2 py-0.5 text-[10px] font-bold border ${esc.badgeBg}`}>
-                          {esc.escala}
-                        </span>
-                      )
-                    })()}
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-crimson/10 text-crimson border border-crimson/20">
+                      {user?.rol || 'Evaluación'}
+                    </span>
+                  </div>
+                  {(() => {
+                    const esc = notaForm !== '' ? determinarEscalaResultado(notaForm) : { escala: 'Pendiente', badgeBg: 'bg-neutral-100 text-neutral-600 border-neutral-300' }
+                    return (
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold border shadow-2xs ${esc.badgeBg}`}>
+                        <span className="size-1.5 rounded-full bg-current"></span>
+                        {esc.escala}
+                      </span>
+                    )
+                  })()}
+                </div>
+
+                {/* Selector Numérico Moderno con Botones de Pasos (+ / -) y Sin Slider Rojo */}
+                <div className="flex items-center justify-between gap-2 bg-white px-2.5 py-1.5 border border-neutral-200 shadow-2xs">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) - 5)}
+                      disabled={notaForm !== '' && notaForm <= 0}
+                      className="px-2 py-1 text-[11px] font-bold border border-neutral-300 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
+                      title="Restar 5 puntos"
+                    >
+                      -5
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) - 1)}
+                      disabled={notaForm !== '' && notaForm <= 0}
+                      className="p-1 text-neutral-700 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
+                      title="Restar 1 punto"
+                    >
+                      <Minus className="size-3.5" />
+                    </button>
                   </div>
 
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1.5">
                     <input
                       type="number"
                       min={0}
@@ -1242,32 +1093,128 @@ export default function PaginaDefensas() {
                       placeholder="--"
                       value={notaForm}
                       onChange={(e) => handleNotaChange(e.target.value === '' ? '' : e.target.value)}
-                      className="w-20 border-2 border-neutral-300 px-2 py-1 text-xl font-black text-neutral-900 outline-none focus:border-crimson text-center tracking-tight [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-20 border-2 border-crimson/80 bg-white px-1.5 py-0.5 text-2xl font-black text-neutral-900 outline-none focus:ring-1 focus:ring-crimson text-center tracking-tight shadow-inner [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
-                    <div className="flex-1">
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={notaForm === '' ? 0 : notaForm}
-                        onChange={(e) => handleNotaChange(Number(e.target.value))}
-                        className="w-full accent-crimson cursor-pointer"
-                      />
-                      <p className="text-[10px] text-neutral-600 mt-0.5 italic">
-                        Literal oficial: <strong>{notaForm !== '' ? `"${numeroALetras(notaForm)} puntos"` : 'Pendiente'}</strong>
-                      </p>
-                    </div>
+                    <span className="text-[11px] font-bold text-neutral-500">/ 100</span>
                   </div>
 
-                  <div className="text-[9.5px] text-neutral-500 grid grid-cols-5 gap-1 text-center pt-1 border-t border-line">
-                    <span className={notaForm !== '' && notaForm < 51 ? 'font-bold text-red-700' : ''}>0-50 Reprobado</span>
-                    <span className={notaForm !== '' && notaForm >= 51 && notaForm < 70 ? 'font-bold text-emerald-700' : ''}>51-69 Regular</span>
-                    <span className={notaForm !== '' && notaForm >= 70 && notaForm < 85 ? 'font-bold text-emerald-800' : ''}>70-84 Bueno</span>
-                    <span className={notaForm !== '' && notaForm >= 85 && notaForm < 95 ? 'font-bold text-indigo-800' : ''}>85-94 Sobresal.</span>
-                    <span className={notaForm !== '' && notaForm >= 95 ? 'font-bold text-amber-800' : ''}>95-100 Mención</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) + 1)}
+                      disabled={notaForm !== '' && notaForm >= 100}
+                      className="p-1 text-neutral-700 border border-neutral-300 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
+                      title="Sumar 1 punto"
+                    >
+                      <Plus className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNotaChange((typeof notaForm === 'number' ? notaForm : 0) + 5)}
+                      disabled={notaForm !== '' && notaForm >= 100}
+                      className="px-2 py-1 text-[11px] font-bold border border-neutral-300 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 disabled:opacity-40 transition-colors cursor-pointer"
+                      title="Sumar 5 puntos"
+                    >
+                      +5
+                    </button>
+                  </div>
+
+                  <div className="hidden sm:block text-right border-l border-neutral-200 pl-2 shrink-0">
+                    <p className="text-[9.5px] text-neutral-500 font-medium">Dictamen Oficial:</p>
+                    <p className="text-[10.5px] font-bold text-crimson uppercase tracking-wide truncate max-w-[130px]">
+                      {notaForm !== '' ? `"${numeroALetras(notaForm)} pts"` : 'Pendiente'}
+                    </p>
                   </div>
                 </div>
-              )}
+
+                {/* Botones de Selección Rápida con Notas Frecuentes */}
+                <div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {[
+                      { valor: 51, label: '51 • Mínimo', color: 'hover:border-emerald-500' },
+                      { valor: 70, label: '70 • Bueno', color: 'hover:border-emerald-600' },
+                      { valor: 80, label: '80 • Notable', color: 'hover:border-emerald-700' },
+                      { valor: 90, label: '90 • Sobresal.', color: 'hover:border-indigo-600' },
+                      { valor: 100, label: '100 • Mención', color: 'hover:border-amber-600' },
+                    ].map((preset) => {
+                      const activo = notaForm === preset.valor
+                      return (
+                        <button
+                          key={preset.valor}
+                          type="button"
+                          onClick={() => handleNotaChange(preset.valor)}
+                          className={`px-1 py-1 text-[10.5px] font-bold transition-all border cursor-pointer ${
+                            activo
+                              ? 'bg-crimson text-white border-crimson shadow-xs'
+                              : `bg-white text-neutral-700 border-neutral-300 ${preset.color} hover:bg-neutral-50`
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Escalas UPTECSA Clickeables */}
+                <div className="text-[9.5px] text-neutral-500 grid grid-cols-5 gap-1 text-center pt-1 border-t border-neutral-200">
+                  <button
+                    type="button"
+                    onClick={() => handleNotaChange(45)}
+                    className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                      notaForm !== '' && notaForm < 51
+                        ? 'font-bold bg-red-100 text-red-800 border border-red-300'
+                        : 'hover:bg-neutral-100'
+                    }`}
+                  >
+                    0-50 Reprobado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNotaChange(60)}
+                    className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                      notaForm !== '' && notaForm >= 51 && notaForm < 70
+                        ? 'font-bold bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'hover:bg-neutral-100'
+                    }`}
+                  >
+                    51-69 Regular
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNotaChange(75)}
+                    className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                      notaForm !== '' && notaForm >= 70 && notaForm < 85
+                        ? 'font-bold bg-emerald-100 text-emerald-900 border border-emerald-400'
+                        : 'hover:bg-neutral-100'
+                    }`}
+                  >
+                    70-84 Bueno
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNotaChange(90)}
+                    className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                      notaForm !== '' && notaForm >= 85 && notaForm < 95
+                        ? 'font-bold bg-indigo-100 text-indigo-900 border border-indigo-300'
+                        : 'hover:bg-neutral-100'
+                    }`}
+                  >
+                    85-94 Sobresal.
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNotaChange(100)}
+                    className={`py-0.5 rounded-xs transition-colors cursor-pointer ${
+                      notaForm !== '' && notaForm >= 95
+                        ? 'font-bold bg-amber-100 text-amber-900 border border-amber-300'
+                        : 'hover:bg-neutral-100'
+                    }`}
+                  >
+                    95-100 Mención
+                  </button>
+                </div>
+              </div>
 
               {/* Dictamen Oficial */}
               <div>
@@ -1363,53 +1310,53 @@ export default function PaginaDefensas() {
 
       {/* ── MODAL: ACTA OFICIAL DE EVALUACIÓN Y DEFENSA DE GRADO (IMPRIMIBLE) ── */}
       {modalActa && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs overflow-y-auto">
-          <div className="w-full max-w-2xl border border-line bg-white shadow-2xl my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4 backdrop-blur-xs overflow-y-auto">
+          <div className="w-full max-w-lg max-h-[92vh] flex flex-col border border-line bg-white shadow-2xl my-auto rounded-none">
             {/* Barra superior de control */}
-            <header className="flex items-center justify-between border-b border-line px-6 py-3.5 bg-surface print:hidden">
+            <header className="flex items-center justify-between border-b border-line px-4 py-2.5 bg-surface print:hidden shrink-0">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="size-5 text-crimson" />
+                <ShieldCheck className="size-4 text-crimson" />
                 <div>
                   <h3 className="text-xs font-bold tracking-tight text-neutral-900 uppercase">
-                    Acta Oficial de Evaluación y Calificación
+                    Acta Oficial de Calificación
                   </h3>
-                  <p className="text-[10px] text-neutral-500">Documento Académico Certificado · UPTECSA</p>
+                  <p className="text-[10px] text-neutral-500">Documento Académico · UPTECSA</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex items-center gap-1.5 bg-crimson px-3 py-1.5 text-xs font-medium text-white hover:opacity-95 transition-opacity"
+                  className="flex items-center gap-1.5 bg-crimson px-2.5 py-1 text-xs font-medium text-white hover:opacity-95 transition-opacity cursor-pointer"
                 >
-                  <Printer className="size-3.5" />
-                  <span>Imprimir Acta</span>
+                  <Printer className="size-3" />
+                  <span>Imprimir</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setModalActa(null)}
-                  className="p-1 text-neutral-400 hover:text-neutral-700"
+                  className="p-1 text-neutral-400 hover:text-neutral-700 cursor-pointer"
                 >
-                  <X className="size-5" />
+                  <X className="size-4" />
                 </button>
               </div>
             </header>
 
             {/* Hoja Formal del Acta (Optimizada para pantalla e impresión A4) */}
-            <div className="p-8 sm:p-10 flex flex-col gap-6 text-neutral-900 bg-white">
+            <div className="p-5 sm:p-6 flex flex-col gap-4 text-neutral-900 bg-white overflow-y-auto">
               {/* Encabezado Institucional */}
-              <div className="text-center border-b-2 border-neutral-900 pb-4">
-                <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-neutral-600">
+              <div className="text-center border-b border-neutral-900 pb-3">
+                <p className="text-[9px] uppercase font-bold tracking-[0.2em] text-neutral-600">
                   UNIVERSIDAD PRIVADA TECNOLÓGICA DE SANTA CRUZ
                 </p>
-                <p className="text-xs font-bold uppercase tracking-wider text-neutral-800 mt-0.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-800 mt-0.5">
                   {modalActa.instancia.proceso.estudiante.planEstudio.carrera.facultad?.nombre || 'FACULTAD DE CIENCIAS Y TECNOLOGÍA'}
                 </p>
-                <p className="text-xs text-neutral-600">
+                <p className="text-[10px] text-neutral-600">
                   CARRERA DE {modalActa.instancia.proceso.estudiante.planEstudio.carrera.nombre.toUpperCase()}
                 </p>
-                <div className="mt-3 inline-block border-y border-neutral-900 py-1 px-4">
-                  <h4 className="text-sm font-black tracking-wider uppercase text-neutral-900">
+                <div className="mt-2 inline-block border-y border-neutral-900 py-0.5 px-3">
+                  <h4 className="text-xs font-black tracking-wider uppercase text-neutral-900">
                     ACTA DE CALIFICACIÓN DE EXAMEN DE GRADO N° DEF-{modalActa.idDefensa.padStart(6, '0')}
                   </h4>
                 </div>
@@ -1488,65 +1435,65 @@ export default function PaginaDefensas() {
               )}
 
               {/* Espacio para Firmas Formales */}
-              <div className="pt-6">
-                <p className="text-[10px] text-neutral-500 text-center uppercase tracking-wider mb-8">
+              <div className="pt-2">
+                <p className="text-[9px] text-neutral-500 text-center uppercase tracking-wider mb-4">
                   CONFORMIDAD Y FIRMAS DEL TRIBUNAL EXAMINADOR Y PARTES
                 </p>
-                <div className="grid grid-cols-3 gap-6 text-center text-[10px] text-neutral-800">
+                <div className="grid grid-cols-3 gap-4 text-center text-[9px] text-neutral-800">
                   <div className="flex flex-col items-center">
                     <div className="w-full border-t border-neutral-900 pt-1 font-bold">
                       {modalActa.auditorias?.[0]?.valorNuevo?.tribunal?.presidente || 'PRESIDENTE DEL TRIBUNAL'}
                     </div>
-                    <span className="text-[9px] text-neutral-500">Tribunal Examinador</span>
+                    <span className="text-[8px] text-neutral-500">Tribunal Examinador</span>
                   </div>
 
                   <div className="flex flex-col items-center">
                     <div className="w-full border-t border-neutral-900 pt-1 font-bold">
                       {modalActa.auditorias?.[0]?.valorNuevo?.tribunal?.secretario || 'SECRETARIO DEL TRIBUNAL'}
                     </div>
-                    <span className="text-[9px] text-neutral-500">Tribunal Examinador</span>
+                    <span className="text-[8px] text-neutral-500">Tribunal Examinador</span>
                   </div>
 
                   <div className="flex flex-col items-center">
                     <div className="w-full border-t border-neutral-900 pt-1 font-bold">
                       {modalActa.auditorias?.[0]?.valorNuevo?.tribunal?.vocal || 'VOCAL DEL TRIBUNAL'}
                     </div>
-                    <span className="text-[9px] text-neutral-500">Tribunal Examinador</span>
+                    <span className="text-[8px] text-neutral-500">Tribunal Examinador</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-12 text-center text-[10px] text-neutral-800 mt-10 max-w-md mx-auto">
+                <div className="grid grid-cols-2 gap-8 text-center text-[9px] text-neutral-800 mt-6 max-w-sm mx-auto">
                   <div className="flex flex-col items-center">
                     <div className="w-full border-t border-neutral-900 pt-1 font-bold">
                       JEFE DE CARRERA
                     </div>
-                    <span className="text-[9px] text-neutral-500">{modalActa.instancia.proceso.estudiante.planEstudio.carrera.nombre}</span>
+                    <span className="text-[8px] text-neutral-500">{modalActa.instancia.proceso.estudiante.planEstudio.carrera.nombre}</span>
                   </div>
 
                   <div className="flex flex-col items-center">
                     <div className="w-full border-t border-neutral-900 pt-1 font-bold">
                       {modalActa.instancia.proceso.estudiante.nombreCompleto}
                     </div>
-                    <span className="text-[9px] text-neutral-500">Postulante (Estudiante)</span>
+                    <span className="text-[8px] text-neutral-500">Postulante (Estudiante)</span>
                   </div>
                 </div>
               </div>
 
               {/* Sello Criptográfico y Pie */}
-              <div className="pt-4 border-t border-line text-[10px] text-neutral-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <div className="pt-2 border-t border-line text-[9px] text-neutral-500 flex flex-col sm:flex-row items-center justify-between gap-1">
                 <span>Certificación Oficial SGSEG · UPTECSA</span>
-                <span className="font-mono text-[9px]">
+                <span className="font-mono text-[8px]">
                   HASH: SHA256-ACTA-{modalActa.idDefensa}-{modalActa.instancia.proceso.estudiante.carnetEstudiantil}
                 </span>
               </div>
             </div>
 
             {/* Botón inferior de cerrar en pantalla */}
-            <footer className="border-t border-line px-6 py-3 bg-surface flex justify-end print:hidden">
+            <footer className="border-t border-line px-4 py-2 bg-surface flex justify-end print:hidden shrink-0">
               <button
                 type="button"
                 onClick={() => setModalActa(null)}
-                className="border border-line bg-white px-4 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                className="border border-line bg-white px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 cursor-pointer"
               >
                 Cerrar
               </button>

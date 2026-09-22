@@ -220,11 +220,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(authenticatedUser);
       return authenticatedUser;
     } catch (error: any) {
-      const msg =
-        error.response?.data?.message ||
-        (error.response?.status === 401
-          ? 'Credenciales incorrectas. Verifique su correo y contraseña.'
-          : 'No se pudo conectar con el servidor. Intente nuevamente.');
+      let msg = 'No se pudo conectar con el servidor. Intente nuevamente.';
+      const resData = error.response?.data;
+      if (resData) {
+        if (typeof resData.message === 'string') {
+          msg = resData.message;
+        } else if (typeof resData.message === 'object' && resData.message !== null) {
+          msg = resData.message.message || resData.message.error || JSON.stringify(resData.message);
+        } else if (typeof resData === 'string') {
+          msg = resData;
+        }
+      } else if (error.response?.status === 401) {
+        msg = 'Credenciales incorrectas. Verifique su correo y contraseña.';
+      } else if (error.message) {
+        msg = error.message;
+      }
       throw new Error(msg);
     } finally {
       setLoading(false);

@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { PrismaService } from '../../prisma/services/prisma.service';
 
 interface JwtPayload {
   sub: string;
@@ -28,6 +29,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -80,6 +82,17 @@ export class JwtAuthGuard implements CanActivate {
         secret: process.env.JWT_SECRET ?? 'sgseg-dev-secret',
       });
 
+      const userDb = await this.prisma.usuario.findUnique({
+        where: { idUsuario: Number(payload.sub) },
+        select: { estado: true },
+      });
+
+      if (!userDb || userDb.estado !== 'ACTIVO') {
+        throw new UnauthorizedException(
+          'Su cuenta ha sido desactivada o no está habilitada. Comuníquese con la administración.',
+        );
+      }
+
       request.user = {
         idUsuario: payload.sub,
         correoInstitucional: payload.correoInstitucional,
@@ -87,7 +100,10 @@ export class JwtAuthGuard implements CanActivate {
       };
 
       return true;
-    } catch {
+    } catch (err: any) {
+      if (err instanceof UnauthorizedException) {
+        throw err;
+      }
       throw new UnauthorizedException('Token inválido o expirado');
     }
   }

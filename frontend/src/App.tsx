@@ -77,7 +77,7 @@ function App() {
           } />
 
           <Route path="/usuarios" element={
-            <ProtectedRoute allowedRoles={['Vicerrectorado', 'Administrador General']}>
+            <ProtectedRoute allowedRoles={['Coordinador General', 'Vicerrectorado', 'Administrador General']}>
               <Usuarios />
             </ProtectedRoute>
           } />
