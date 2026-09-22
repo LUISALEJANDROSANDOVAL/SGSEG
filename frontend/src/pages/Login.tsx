@@ -162,7 +162,7 @@ export default function Login() {
   };
 
   return (
-    <main className="flex min-h-screen font-sans antialiased bg-[#f8f9fa]">
+    <main className="flex min-h-screen font-sans antialiased bg-[#f8f9fa] [color-scheme:light]">
       {/* ── PANEL IZQUIERDO – Branding Institucional UTEPSA ── */}
       <div className="relative hidden lg:flex lg:w-1/2 flex-col items-center justify-center overflow-hidden bg-[#c8102e]">
         {/* Formas geométricas decorativas de fondo */}
@@ -283,12 +283,12 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* Correo */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="login-email" className="text-xs font-bold text-gray-700">
+              <label htmlFor="login-email" className="text-xs font-semibold text-gray-700">
                 Correo Institucional
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
-                  <Mail className="size-4 text-gray-400" />
+              <div className="relative group">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#c8102e] transition-colors">
+                  <Mail className="size-4" />
                 </span>
                 <input
                   id="login-email"
@@ -299,7 +299,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={submitting}
-                  className="w-full rounded-xl border border-gray-300 bg-[#f8f9fa] py-3 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-4 focus:ring-[#c8102e]/10 hover:border-gray-400 disabled:bg-gray-100 shadow-2xs"
+                  className="w-full h-11 rounded-lg border border-gray-300 bg-white pl-10 pr-4 text-sm font-medium text-gray-900 placeholder:text-gray-400 shadow-2xs outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/15 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -307,20 +307,20 @@ export default function Login() {
             {/* Contraseña */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="login-password" className="text-xs font-bold text-gray-700">
+                <label htmlFor="login-password" className="text-xs font-semibold text-gray-700">
                   Contraseña
                 </label>
                 <button
                   type="button"
                   onClick={abrirModalRecuperacion}
-                  className="text-xs font-semibold text-[#c8102e] hover:underline focus:outline-none transition-colors"
+                  className="text-xs font-semibold text-[#c8102e] hover:text-[#a50d26] hover:underline focus:outline-none transition-colors"
                 >
                   ¿Olvidaste tu contraseña?
                 </button>
               </div>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-3.5 flex items-center text-gray-400">
-                  <Lock className="size-4 text-gray-400" />
+              <div className="relative group">
+                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#c8102e] transition-colors">
+                  <Lock className="size-4" />
                 </span>
                 <input
                   id="login-password"
@@ -331,12 +331,12 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={submitting}
-                  className="w-full rounded-xl border border-gray-300 bg-[#f8f9fa] py-3 pl-10 pr-11 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-4 focus:ring-[#c8102e]/10 hover:border-gray-400 disabled:bg-gray-100 shadow-2xs"
+                  className="w-full h-11 rounded-lg border border-gray-300 bg-white pl-10 pr-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 shadow-2xs outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/15 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3.5 flex items-center text-gray-400 hover:text-gray-700 cursor-pointer focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-700 cursor-pointer focus:outline-none transition-colors"
                   title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   tabIndex={-1}
                 >
@@ -350,7 +350,7 @@ export default function Login() {
               id="btn-login-submit"
               type="submit"
               disabled={submitting}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-bold text-white shadow-md shadow-red-200 transition-all hover:bg-[#a50d26] hover:shadow-lg active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#c8102e] focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-bold text-white shadow-md shadow-red-200 transition-all hover:bg-[#a50d26] hover:shadow-lg active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#c8102e] focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -427,8 +427,8 @@ export default function Login() {
                     <label className="text-xs font-semibold text-gray-700">
                       Correo Institucional *
                     </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#c8102e] transition-colors">
                         <Mail className="size-4" />
                       </span>
                       <input
@@ -437,7 +437,7 @@ export default function Login() {
                         placeholder="usuario@utepsa.edu.bo"
                         value={correoRecuperacion}
                         onChange={(e) => setCorreoRecuperacion(e.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                        className="w-full h-11 rounded-lg border border-gray-300 bg-white pl-10 pr-4 text-sm font-medium text-gray-900 placeholder:text-gray-400 shadow-2xs outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/15"
                       />
                     </div>
                   </div>
@@ -498,8 +498,8 @@ export default function Login() {
                     <label className="text-xs font-semibold text-gray-700">
                       Nueva Contraseña *
                     </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#c8102e] transition-colors">
                         <Lock className="size-4" />
                       </span>
                       <input
@@ -509,12 +509,12 @@ export default function Login() {
                         placeholder="Mínimo 6 caracteres"
                         value={nuevaPassword}
                         onChange={(e) => setNuevaPassword(e.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                        className="w-full h-11 rounded-lg border border-gray-300 bg-white pl-10 pr-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 shadow-2xs outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/15"
                       />
                       <button
                         type="button"
                         onClick={() => setMostrarNuevaPassword(!mostrarNuevaPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600"
                       >
                         {mostrarNuevaPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
@@ -525,8 +525,8 @@ export default function Login() {
                     <label className="text-xs font-semibold text-gray-700">
                       Confirmar Contraseña *
                     </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                    <div className="relative group">
+                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#c8102e] transition-colors">
                         <Lock className="size-4" />
                       </span>
                       <input
@@ -536,12 +536,12 @@ export default function Login() {
                         placeholder="Repite la contraseña"
                         value={confirmarPassword}
                         onChange={(e) => setConfirmarPassword(e.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                        className="w-full h-11 rounded-lg border border-gray-300 bg-white pl-10 pr-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 shadow-2xs outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/15"
                       />
                       <button
                         type="button"
                         onClick={() => setMostrarConfirmarPassword(!mostrarConfirmarPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600"
                       >
                         {mostrarConfirmarPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
