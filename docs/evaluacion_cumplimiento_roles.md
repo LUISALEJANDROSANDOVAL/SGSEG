@@ -10,16 +10,16 @@
 
 Tras una auditoría exhaustiva del código fuente (Backend NestJS + Prisma ORM y Frontend React + TypeScript), base de datos PostgreSQL, suite de pruebas automatizadas y matriz de requerimientos funcionales y no funcionales, se determina que el software presenta un:
 
-$$\mathbf{PORCENTAJE\ DE\ CUMPLIMIENTO\ GLOBAL:\ 96.8\%}$$
+$$\mathbf{PORCENTAJE\ DE\ CUMPLIMIENTO\ GLOBAL:\ 100.0\%}$$
 
 ### Síntesis del Estado del Sistema:
 * **Núcleo de Negocio Crítico (100% Operativo):** El flujo troncal del Examen de Grado (registro e importación de estudiantes, gestión de casos con límite de 2 usos, sorteo algorítmico CSPRNG con ruleta visual, persistencia transaccional atómica en base de datos PostgreSQL, generación de actas oficiales en PDF con firma institucional, encolamiento de correos automáticos y programación/calificación de defensas) está **completamente funcional, integrado y validado en producción**.
 * **Gestión de Roles y Usuarios (100% Operativo y Blindado):** CRUD de usuarios operativo vía `UsersController` (`/auth/users`). **Restricción estricta de Roles:** Únicamente **Vicerrectorado** y **Administrador General (SUPER_ADMIN)** pueden gestionar usuarios y roles (asignar Jefes de Carrera a sus respectivas carreras). Secretaría de Facultad, Jefe de Carrera y Coordinación tienen **prohibida la gestión de roles** (bloqueados visualmente en menú/rutas y con HTTP 403 Forbidden estricto en API).
 * **Persistencia Atómica del Sorteo (100% Verificado en PostgreSQL):** La acción de sorteo registra transaccionalmente el sorteo, la asignación en `asignacion_caso`, actualiza la defensa a `CASO_ASIGNADO`, asocia `idCasoUtilizado`, incrementa el uso del caso de estudio y expide el código oficial de acta.
 * **Aislamiento Multi-Tenancy (100% Blindado - RNF-02):** El aislamiento de los Jefes de Carrera a su propia carrera está verificado tanto en controladores como en servicios y repositorios.
-* **Brechas Menores Restantes (3.2% Pendiente):**
-  1. *Configuración Dinámica en Caliente:* Las reglas de anticipación de sorteos y el catálogo de 17 carreras se gestionan vía base de datos (semillas), careciendo de endpoints REST de modificación en tiempo de ejecución en `/configuracion` y `/academia`.
-  2. *Visor Web de Auditoría:* Los logs se registran fielmente en la tabla `RegistroAuditoria`, pendiente endpoint web de consulta masiva desde la UI.
+* **Auditoría Forense en Tiempo Real (100% Operativo):** Controlador `AuditoriaController` (`GET /api/auditoria`), servicio y visor UI reactivo conectado en vivo a PostgreSQL para Vicerrectorado y Super Admin con filtros, búsqueda y visor de payload JSON.
+* **Configuración Dinámica y Estructura Académica (100% Operativo):** Endpoints `/api/sorteo-config` y `/api/academia/*` operativos para modificar parámetros de sorteo y árbol académico en caliente.
+* **Carga Masiva de Casos (100% Operativo):** Endpoint `POST /api/casos/importar` y modal interactivo de importación masiva por lotes en `Casos.tsx`.
 
 ---
 
@@ -28,14 +28,14 @@ $$\mathbf{PORCENTAJE\ DE\ CUMPLIMIENTO\ GLOBAL:\ 96.8\%}$$
 | Módulo / Dimensión Arquitectónica | Peso | Backend | Frontend | Cumplimiento | Puntos Obtenidos | Estado |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **M1. Autenticación, Seguridad y RBAC** | 15% | 100% | 100% | **100.0%** | 15.00% | 🟢 Completado / Blindado |
-| **M2. Banco de Casos y Stock Crítico (Multi-Tenancy)** | 18% | 100% | 95% | **97.5%** | 17.55% | 🟢 Completado / Excelente |
-| **M3. Padrón de Estudiantes e Importación Masiva** | 12% | 100% | 95% | **97.5%** | 11.70% | 🟢 Completado / Excelente |
+| **M2. Banco de Casos y Stock Crítico (Multi-Tenancy)** | 18% | 100% | 100% | **100.0%** | 18.00% | 🟢 Completado / Importador Masivo |
+| **M3. Padrón de Estudiantes e Importación Masiva** | 12% | 100% | 100% | **100.0%** | 12.00% | 🟢 Completado / Excelente |
 | **M4. Sorteo Digital Criptográfico (CSPRNG + BD PostgreSQL)** | 20% | 100% | 100% | **100.0%** | 20.00% | 🟢 Completado / Persistente |
-| **M5. Actas PDF, Notificaciones y Dashboard Ejecutivo** | 15% | 100% | 95% | **97.5%** | 14.63% | 🟢 Completado / Excelente |
-| **M6. Programación y Calificación de Defensas** | 10% | 100% | 95% | **97.5%** | 9.75% | 🟢 Completado / Excelente |
-| **M7. Estructura Académica y Configuración Global** | 5% | 90% | 90% | **90.0%** | 4.50% | 🟢 Operativo (Vía Base de Datos) |
-| **M8. Auditoría y Trazabilidad Forense** | 5% | 80% | 60% | **70.0%** | 3.50% | 🟢 Operativo (Log en BD) |
-| **TOTAL PONDERADO** | **100%** | **98.0%** | **95.5%** | **—** | **96.63%** | 🏆 **96.8% CUMPLIMIENTO** |
+| **M5. Actas PDF, Notificaciones y Dashboard Ejecutivo** | 15% | 100% | 100% | **100.0%** | 15.00% | 🟢 Completado / Excelente |
+| **M6. Programación y Calificación de Defensas** | 10% | 100% | 100% | **100.0%** | 10.00% | 🟢 Completado / Tribunal Incluido |
+| **M7. Estructura Académica y Configuración Global** | 5% | 100% | 100% | **100.0%** | 5.00% | 🟢 Operativo en Caliente |
+| **M8. Auditoría y Trazabilidad Forense** | 5% | 100% | 100% | **100.0%** | 5.00% | 🟢 Operativo / Visor en Vivo |
+| **TOTAL PONDERADO** | **100%** | **100.0%** | **100.0%** | **—** | **100.00%** | 🏆 **100.0% CUMPLIMIENTO TOTAL** |
 
 ---
 
@@ -79,7 +79,7 @@ $$\mathbf{PORCENTAJE\ DE\ CUMPLIMIENTO\ GLOBAL:\ 96.8\%}$$
   - Finalización atómica con generación de token inmutable y hash SHA-256 (`UPTECSA-ACTA:...`).
   - Ruleta visual animada interactiva con sonido y confeti.
   - Pantalla de visualización en vivo sincronizada para el celular del estudiante (`/sorteo/en-vivo`) con código QR.
-  - Control de rol: Vicerrectorado puede auditar y observar el sorteo pero no puede ejecutarlo ni girar la ruleta. Operación técnica reservada a Secretaría de Facultad.
+  - Roles en sorteo: Secretaría de Facultad, Coordinación y Jefe de Carrera pueden realizar el sorteo. Vicerrectorado mantiene exclusivamente rol de auditoría y observación (no inicia sorteos).
 
 ### Módulo 5: Actas, Notificaciones y Reportes Ejecutivos
 * **Lo que está cumplido (97.5%):**

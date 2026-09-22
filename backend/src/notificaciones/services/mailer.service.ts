@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as nodemailer from 'nodemailer';
 import {
   NotificacionDefensaPayload,
   ResultadoEnvioCorreo,
@@ -10,6 +11,7 @@ export class MailerService {
 
   /**
    * Envía la notificación formal de sorteo y asignación al postulante.
+   * Soporta adjunto de Acta PDF y despacho dual a correo institucional y personal.
    * Si no hay SMTP configurado, opera en modo simulación estructurada (dev/test).
    */
   async enviarNotificacionSorteo(
@@ -25,43 +27,70 @@ export class MailerService {
     const htmlBody = this.construirPlantillaHtml(payload);
     const textBody = this.construirTextoPlano(payload);
 
-    // Si existen credenciales SMTP, intentar envío real vía nodemailer si estuviese instalado
+    // Preparar lista de destinatarios (correo principal + copia a personal si es distinto)
+    const destinatarios: string[] = [];
+    if (payload.correoDestino && payload.correoDestino.includes('@')) {
+      destinatarios.push(payload.correoDestino.trim().toLowerCase());
+    }
+    if (
+      payload.correoPersonal &&
+      payload.correoPersonal.includes('@') &&
+      !destinatarios.includes(payload.correoPersonal.trim().toLowerCase())
+    ) {
+      destinatarios.push(payload.correoPersonal.trim().toLowerCase());
+    }
+
+    const destinatarioPrincipal = destinatarios[0] || payload.correoDestino;
+
+    // Preparar adjuntos (Acta PDF oficial)
+    const attachments: Array<{ filename: string; content: Buffer; contentType: string }> = [];
+    if (payload.pdfBuffer && Buffer.isBuffer(payload.pdfBuffer)) {
+      attachments.push({
+        filename: `Acta_Sorteo_${payload.codigoActa}.pdf`,
+        content: payload.pdfBuffer,
+        contentType: 'application/pdf',
+      });
+    }
+
+    // Si existen credenciales SMTP, intentar envío real vía nodemailer
     if (smtpHost && smtpUser && smtpPass) {
       try {
-        // Intento dinámico de cargar nodemailer si está disponible
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const nodemailer = require('nodemailer');
         const transporter = nodemailer.createTransport({
           host: smtpHost,
           port: smtpPort,
-          secure: smtpPort === 465,
+          secure: smtpPort === 465 || process.env.SMTP_SECURE === 'true',
           auth: { user: smtpUser, pass: smtpPass },
         });
 
         const info = await transporter.sendMail({
           from: smtpFrom,
-          to: payload.correoDestino,
+          to: destinatarios.join(', '),
           subject: `[UTEPSA] Notificación Oficial de Sorteo de Grado - ${payload.codigoActa}`,
           text: textBody,
           html: htmlBody,
+          attachments,
         });
 
-        this.logger.log(`Correo despachado vía SMTP a ${payload.correoDestino} (MessageId: ${info.messageId})`);
+        this.logger.log(
+          `Correo despachado vía SMTP a [${destinatarios.join(', ')}] con ${attachments.length} adjuntos (MessageId: ${info.messageId})`,
+        );
         return {
           exito: true,
           idMensaje: info.messageId,
           fechaEnvio: ahora,
-          destinatario: payload.correoDestino,
+          destinatario: destinatarioPrincipal,
         };
       } catch (err: any) {
-        this.logger.warn(`Fallo en envío SMTP real: ${err.message}. Emulando despacho para continuidad operativa.`);
+        this.logger.warn(
+          `Fallo en envío SMTP real: ${err.message}. Emulando despacho para continuidad operativa.`,
+        );
       }
     }
 
     // Modo simulación estructurada para desarrollo, staging y pruebas
     const fakeMessageId = `SIM-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
     this.logger.log(
-      `[SIMULADOR DE CORREO] Despacho formal a ${payload.nombreEstudiante} <${payload.correoDestino}> | Acta: ${payload.codigoActa} | Hash: ${payload.tokenActa}`,
+      `[SIMULADOR DE CORREO] Despacho formal a ${payload.nombreEstudiante} <${destinatarios.join(', ')}> | Adjuntos: ${attachments.length > 0 ? attachments[0].filename : 'Ninguno'} | Acta: ${payload.codigoActa} | Hash: ${payload.tokenActa}`,
     );
 
     return {

@@ -11,6 +11,14 @@ export class UpdateUserDto {
 
   @IsString()
   @IsOptional()
+  correoInstitucional?: string;
+
+  @IsString()
+  @IsOptional()
+  correo?: string;
+
+  @IsString()
+  @IsOptional()
   password?: string;
 
   @IsString()

@@ -28,7 +28,9 @@ export interface Estudiante {
   carnetEstudiantil: string;
   carnetIdentidad: string;
   nombreCompleto: string;
-  correo: string;
+  correoInstitucional?: string;
+  correoPersonal?: string;
+  correo?: string;
   estado: string;
   fechaRegistro: string;
   planEstudio?: PlanEstudio & {
@@ -65,6 +67,8 @@ export interface RawEstudianteInput {
   nombres?: string;
   primerApellido?: string;
   segundoApellido?: string;
+  correoInstitucional?: string;
+  correoPersonal?: string;
   correo?: string;
   idCarrera?: string;
   nombreCarrera?: string;
@@ -145,12 +149,41 @@ export const estudiantesApi = {
   },
 
   /**
+   * Importa masivamente estudiantes mediante un archivo Excel (.xlsx) o CSV.
+   */
+  async importarArchivo(
+    file: File,
+    opciones?: {
+      idCarreraPorDefecto?: string;
+      crearPlanesFaltantes?: boolean;
+    },
+  ): Promise<BulkUpsertResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (opciones?.idCarreraPorDefecto && opciones.idCarreraPorDefecto !== 'ALL') {
+      formData.append('idCarreraPorDefecto', opciones.idCarreraPorDefecto);
+    }
+    if (opciones?.crearPlanesFaltantes !== undefined) {
+      formData.append('crearPlanesFaltantes', String(opciones.crearPlanesFaltantes));
+    }
+
+    const { data } = await apiClient.post<BulkUpsertResult>('/estudiantes/importar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
+  /**
    * Crea o inscribe individualmente a un nuevo estudiante postulante.
    */
   async createEstudiante(payload: {
     carnetEstudiantil: string;
     carnetIdentidad: string;
     nombreCompleto: string;
+    correoInstitucional?: string;
+    correoPersonal?: string;
     correo?: string;
     idCarrera?: string;
     idPlanEstudio?: string;

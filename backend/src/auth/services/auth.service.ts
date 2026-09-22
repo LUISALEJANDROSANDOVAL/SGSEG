@@ -81,7 +81,11 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto) {
-    const correoInstitucional = dto.correoInstitucional.trim().toLowerCase();
+    const rawEmail = dto.correoInstitucional || dto.email || dto.correo;
+    if (!rawEmail || !rawEmail.trim()) {
+      throw new UnauthorizedException('Credenciales inválidas (correo no proporcionado)');
+    }
+    const correoInstitucional = rawEmail.trim().toLowerCase();
 
     const user =
       await this.authRepository.findByCorreoInstitucional(correoInstitucional);
@@ -439,7 +443,11 @@ export class AuthService {
       );
     }
 
-    const email = dto.email.trim().toLowerCase();
+    const emailRaw = dto.email || dto.correoInstitucional || dto.correo;
+    if (!emailRaw || !emailRaw.trim()) {
+      throw new BadRequestException('El correo institucional o email es requerido');
+    }
+    const email = emailRaw.trim().toLowerCase();
     const existing = await this.authRepository.findByCorreoInstitucional(email);
     if (existing) {
       throw new BadRequestException(`Ya existe un usuario registrado con el correo ${email}`);
@@ -513,8 +521,9 @@ export class AuthService {
       updateData.primerApellido = primerApellido;
       updateData.segundoApellido = segundoApellido;
     }
-    if (dto.email) {
-      updateData.correoInstitucional = dto.email.trim().toLowerCase();
+    const emailUpdate = dto.email || dto.correoInstitucional || dto.correo;
+    if (emailUpdate) {
+      updateData.correoInstitucional = emailUpdate.trim().toLowerCase();
     }
     if (dto.password) {
       updateData.passwordHash = await bcrypt.hash(dto.password, 10);

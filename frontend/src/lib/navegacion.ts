@@ -8,6 +8,7 @@ import {
   Users,
   GraduationCap,
   ShieldCheck,
+  History,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -127,6 +128,14 @@ export const navegacion: { grupo: string; items: ItemNavegacion[] }[] = [
         descripcion:
           'Parámetros del sorteo, límite de usos, permisos por rol y calendario del semestre.',
         roles: TODOS_LOS_ROLES,
+      },
+      {
+        nombre: 'Auditoría y Bitácora',
+        ruta: '/auditoria',
+        icono: History,
+        descripcion:
+          'Trazabilidad de operaciones, auditoría de eventos y bitácora del sistema.',
+        roles: ['Vicerrectorado', 'Administrador General'],
       },
     ],
   },

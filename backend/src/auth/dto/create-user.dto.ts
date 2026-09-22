@@ -6,8 +6,16 @@ export class CreateUserDto {
   nombre!: string;
 
   @IsString()
-  @IsNotEmpty()
-  email!: string;
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  correoInstitucional?: string;
+
+  @IsString()
+  @IsOptional()
+  correo?: string;
 
   @IsString()
   @IsNotEmpty()

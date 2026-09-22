@@ -12,6 +12,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SorteosModule } from './sorteos/sorteos.module';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { ReportesModule } from './reportes/reportes.module';
+import { AuditoriaModule } from './auditoria/auditoria.module';
+import { ConfiguracionModule } from './configuracion/configuracion.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { ReportesModule } from './reportes/reportes.module';
     SorteosModule,
     NotificacionesModule,
     ReportesModule,
+    AuditoriaModule,
+    ConfiguracionModule,
   ],
   controllers: [AppController],
   providers: [

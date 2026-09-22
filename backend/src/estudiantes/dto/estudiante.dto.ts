@@ -177,9 +177,13 @@ export class CreateEstudianteDto {
   @IsString()
   nombreCompleto: string;
 
-  @IsNotEmpty({ message: 'El correo institucional es requerido' })
+  @IsOptional()
+  @IsEmail({}, { message: 'Formato de correo institucional inválido' })
+  correoInstitucional?: string;
+
+  @IsOptional()
   @IsEmail({}, { message: 'Formato de correo inválido' })
-  correoInstitucional: string;
+  correo?: string;
 
   @IsOptional()
   @IsEmail({}, { message: 'Formato de correo personal inválido' })

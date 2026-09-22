@@ -30,6 +30,9 @@ import {
   User,
   UserPlus,
   ShieldCheck,
+  Download,
+  FileText,
+  Check,
 } from 'lucide-react'
 import { TableSkeleton } from '@/components/table-skeleton'
 import { EmptyState } from '@/components/empty-state'
@@ -85,7 +88,8 @@ export default function PaginaEstudiantes() {
   const [nuevoCarnetEstudiantil, setNuevoCarnetEstudiantil] = useState('')
   const [nuevoCarnetIdentidad, setNuevoCarnetIdentidad] = useState('')
   const [nuevoNombreCompleto, setNuevoNombreCompleto] = useState('')
-  const [nuevoCorreo, setNuevoCorreo] = useState('')
+  const [nuevoCorreoPersonal, setNuevoCorreoPersonal] = useState('')
+  const [nuevoCorreoInstitucional, setNuevoCorreoInstitucional] = useState('')
   const [nuevaCarreraId, setNuevaCarreraId] = useState<string>('')
   const [nuevoPlanId, setNuevoPlanId] = useState<string>('')
   const [programarDefensaInmediata, setProgramarDefensaInmediata] = useState(false)
@@ -101,6 +105,10 @@ export default function PaginaEstudiantes() {
   const [crearPlanesFaltantes, setCrearPlanesFaltantes] = useState(true)
   const [resultadoImportacion, setResultadoImportacion] = useState<BulkUpsertResult | null>(null)
   const [isImporting, setIsImporting] = useState(false)
+  const [tabImportacion, setTabImportacion] = useState<'EXCEL' | 'JSON'>('EXCEL')
+  const [archivoExcel, setArchivoExcel] = useState<File | null>(null)
+  const [isDraggingExcel, setIsDraggingExcel] = useState(false)
+  const [errorArchivoImportacion, setErrorArchivoImportacion] = useState<string | null>(null)
 
   // Debounce para el input de búsqueda
   useEffect(() => {
@@ -282,7 +290,27 @@ export default function PaginaEstudiantes() {
     } else {
       setNuevoPlanId('')
     }
+    setNuevoCorreoPersonal('')
+    setNuevoCorreoInstitucional('')
     setMostrarModalNuevoEstudiante(true)
+  }
+
+  // Función utilitaria segura para extraer mensaje de error y prevenir caídas de React
+  const extraerMensajeError = (err: unknown): string => {
+    if (!err) return 'Error desconocido'
+    const anyErr = err as any
+    const data = anyErr.response?.data
+    if (data) {
+      const rawMsg = data.message || data.error
+      if (typeof rawMsg === 'string') return rawMsg
+      if (Array.isArray(rawMsg)) return rawMsg.join(', ')
+      if (typeof rawMsg === 'object' && rawMsg !== null) {
+        if (Array.isArray(rawMsg.message)) return rawMsg.message.join(', ')
+        if (typeof rawMsg.message === 'string') return String(rawMsg.message)
+        return JSON.stringify(rawMsg)
+      }
+    }
+    return anyErr.message || 'Error al procesar la solicitud'
   }
 
   // Ejecutar inscripción individual
@@ -305,7 +333,9 @@ export default function PaginaEstudiantes() {
         carnetEstudiantil: nuevoCarnetEstudiantil.trim(),
         carnetIdentidad: nuevoCarnetIdentidad.trim(),
         nombreCompleto: nuevoNombreCompleto.trim(),
-        correo: nuevoCorreo.trim() || undefined,
+        correoPersonal: nuevoCorreoPersonal.trim() || undefined,
+        correoInstitucional: nuevoCorreoInstitucional.trim() || undefined,
+        correo: nuevoCorreoPersonal.trim() || nuevoCorreoInstitucional.trim() || undefined,
         idCarrera: nuevaCarreraId || undefined,
         idPlanEstudio: nuevoPlanId || undefined,
       })
@@ -313,20 +343,26 @@ export default function PaginaEstudiantes() {
       let mensajeExito = `¡Estudiante ${resp.estudiante?.nombreCompleto || nuevoNombreCompleto} inscrito exitosamente en el padrón!`
 
       if (programarDefensaInmediata && fechaDefensaNuevo && resp.estudiante?.idEstudiante) {
-        await defensasApi.programarDefensa({
-          idEstudiante: resp.estudiante.idEstudiante,
-          tipoDefensa: tipoDefensaNuevo,
-          fechaDefensa: fechaDefensaNuevo,
-          periodoAcademico: periodoDefensaNuevo,
-        })
-        mensajeExito += ' Además se ha programado su defensa de grado con éxito.'
+        try {
+          await defensasApi.programarDefensa({
+            idEstudiante: resp.estudiante.idEstudiante,
+            tipoDefensa: tipoDefensaNuevo,
+            fechaDefensa: fechaDefensaNuevo,
+            periodoAcademico: periodoDefensaNuevo,
+          })
+          mensajeExito += ' Además se ha programado su defensa de grado con éxito.'
+        } catch (defErr: unknown) {
+          const defMsg = extraerMensajeError(defErr)
+          mensajeExito += ` (Nota: No se pudo programar la fecha de defensa automáticamente: ${defMsg}. Puedes programarla usando el botón "Programar" en la lista).`
+        }
       }
 
       setNuevoEstudianteFeedback({ tipo: 'exito', mensaje: mensajeExito })
       setNuevoCarnetEstudiantil('')
       setNuevoCarnetIdentidad('')
       setNuevoNombreCompleto('')
-      setNuevoCorreo('')
+      setNuevoCorreoPersonal('')
+      setNuevoCorreoInstitucional('')
       setProgramarDefensaInmediata(false)
       setFechaDefensaNuevo('')
       cargarEstudiantes()
@@ -334,50 +370,110 @@ export default function PaginaEstudiantes() {
       setTimeout(() => {
         setMostrarModalNuevoEstudiante(false)
         setNuevoEstudianteFeedback(null)
-      }, 1600)
-    } catch (err: any) {
-      const responseMessage = err?.response?.data?.message
-      const msg = Array.isArray(responseMessage)
-        ? responseMessage.join(', ')
-        : (responseMessage || err?.message || 'Error al inscribir al estudiante')
+      }, 2500)
+    } catch (err: unknown) {
+      const msg = extraerMensajeError(err)
       setNuevoEstudianteFeedback({ tipo: 'error', mensaje: msg })
     } finally {
       setIsInscribiendo(false)
     }
   }
 
-  // Cargar plantilla de ejemplo para importación
+  // Descargar plantilla de ejemplo oficial para secretaría y coordinación
+  const descargarPlantillaExcel = () => {
+    const encabezados = [
+      'REGISTRO',
+      'CARNET DE IDENTIDAD',
+      'APELLIDOS Y NOMBRES',
+      'CARRERA',
+      'PLAN DE ESTUDIO',
+      'CORREO INSTITUCIONAL',
+    ]
+
+    const filasEjemplo = [
+      ['ADM-2026101', '8923411 SC', 'Suárez Choque Gabriel Leonardo', 'Administración General', 'Plan 2026', 'gabriel.suarez@estudiante.edu.bo'],
+      ['ICO-2026102', '7482910 LP', 'Morales Ríos María Fernanda', 'Ingeniería Comercial', 'Plan 2026', 'maria.morales@estudiante.edu.bo'],
+      ['CPA-2026103', '6391024 CB', 'Vaca Gutiérrez Jorge Andrés', 'Contaduría Pública', 'Plan 2026', 'jorge.vaca@estudiante.edu.bo'],
+      ['IFI-2026104', '9182736 SC', 'Paz Méndez Valeria Nicole', 'Ingeniería Financiera', 'Plan 2026', 'valeria.paz@estudiante.edu.bo'],
+      ['SIS-2026105', '5281940 SC', 'Rojas Villarroel Carlos Eduardo', 'Sistemas', 'Plan 2026', 'carlos.rojas@estudiante.edu.bo'],
+    ]
+
+    const contenidoCsv = [
+      encabezados.join(','),
+      ...filasEjemplo.map((fila) => fila.map((campo) => `"${campo.replace(/"/g, '""')}"`).join(',')),
+    ].join('\r\n')
+
+    const blob = new Blob(['\uFEFF' + contenidoCsv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'plantilla_oficial_postulantes_sgseg.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  // Cargar plantilla de ejemplo para importación JSON
   const cargarPlantillaEjemplo = () => {
     const ejemplo = [
       {
-        carnetEstudiantil: 'SIS-2024001',
-        carnetIdentidad: '8392011 LP',
+        carnetEstudiantil: 'ADM-2026001',
+        carnetIdentidad: '8392011 SC',
         nombreCompleto: 'Gabriel Leonardo Suarez Choque',
         correo: 'gabriel.suarez@estudiante.edu.bo',
-        nombreCarrera: 'Ingeniería de Sistemas',
-        nombrePlanEstudio: 'Plan 2024',
+        nombreCarrera: 'Administración General',
+        nombrePlanEstudio: 'Plan 2026',
       },
       {
-        carnetEstudiantil: 'INF-2024002',
-        carnetIdentidad: '7482910 CB',
+        carnetEstudiantil: 'ICO-2026002',
+        carnetIdentidad: '7482910 LP',
         nombreCompleto: 'Maria Fernanda Morales Rios',
         correo: 'maria.morales@estudiante.edu.bo',
-        nombreCarrera: 'Ingeniería Informática',
-        nombrePlanEstudio: 'Plan 2023',
+        nombreCarrera: 'Ingeniería Comercial',
+        nombrePlanEstudio: 'Plan 2026',
       },
       {
-        carnetEstudiantil: 'IND-2024003',
-        carnetIdentidad: '6391024 SC',
+        carnetEstudiantil: 'CPA-2026003',
+        carnetIdentidad: '6391024 CB',
         nombres: 'Jorge Andrés',
         primerApellido: 'Vaca',
         segundoApellido: 'Gutiérrez',
-        nombreCarrera: 'Ingeniería Industrial',
+        nombreCarrera: 'Contaduría Pública',
       },
     ]
     setImportJsonText(JSON.stringify(ejemplo, null, 2))
   }
 
-  // Ejecutar importación masiva transaccional
+  // Ejecutar importación desde archivo Excel / CSV
+  const handleEjecutarImportacionArchivo = async () => {
+    if (!archivoExcel) {
+      setErrorArchivoImportacion('Selecciona o arrastra un archivo Excel (.xlsx) o CSV.')
+      return
+    }
+
+    setIsImporting(true)
+    setErrorArchivoImportacion(null)
+    setResultadoImportacion(null)
+
+    try {
+      const result = await estudiantesApi.importarArchivo(archivoExcel, {
+        idCarreraPorDefecto: carreraImportDefecto || undefined,
+        crearPlanesFaltantes,
+      })
+
+      setResultadoImportacion(result)
+      cargarCarreras()
+      cargarEstudiantes()
+    } catch (err: unknown) {
+      const msg = extraerMensajeError(err)
+      setErrorArchivoImportacion(msg)
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  // Ejecutar importación masiva transaccional desde JSON
   const handleEjecutarImportacion = async () => {
     if (!importJsonText.trim()) {
       alert('Por favor pegue los datos en formato JSON')
@@ -405,7 +501,7 @@ export default function PaginaEstudiantes() {
       cargarCarreras()
       cargarEstudiantes()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error de formato JSON o conexión'
+      const msg = extraerMensajeError(err)
       alert(`Error al procesar importación: ${msg}`)
     } finally {
       setIsImporting(false)
@@ -790,8 +886,16 @@ export default function PaginaEstudiantes() {
                         <td className="px-5 py-3.5 text-xs text-neutral-600">
                           <div className="flex items-center gap-1.5">
                             <Mail className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
-                            <span className="truncate max-w-[180px]">{est.correo}</span>
+                            <span className="truncate max-w-[180px] font-mono text-[11px]">{est.correoInstitucional || est.correo || '—'}</span>
                           </div>
+                          {est.correoPersonal && (
+                            <div className="flex items-center gap-1.5 mt-0.5 pl-5 text-[11px] text-neutral-500">
+                              <span className="text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 px-1 py-0.2 border border-blue-200">
+                                Personal
+                              </span>
+                              <span className="truncate max-w-[150px]">{est.correoPersonal}</span>
+                            </div>
+                          )}
                         </td>
 
                         {/* Carrera */}
@@ -940,34 +1044,218 @@ export default function PaginaEstudiantes() {
         {/* MODAL DE IMPORTACIÓN MASIVA */}
         {mostrarModalImportacion && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-            <div className="flex max-h-[90vh] w-full max-w-2xl flex-col border border-line bg-white shadow-2xl">
+            <div className="flex max-h-[92vh] w-full max-w-2xl flex-col border border-line bg-white shadow-2xl overflow-hidden">
               {/* Header Modal */}
-              <div className="flex items-center justify-between border-b border-line px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-neutral-800" />
-                  <h3 className="text-base font-semibold text-neutral-900">
-                    Importación Masiva Transaccional (Upsert)
-                  </h3>
+              <div className="flex items-center justify-between border-b border-line bg-surface px-6 py-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 border border-line bg-white">
+                    <FileSpreadsheet className="h-5 w-5 text-ink" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold tracking-tight text-neutral-900">
+                      Importación Masiva de Postulantes al Padrón
+                    </h3>
+                    <p className="text-xs text-neutral-500">
+                      Formato oficial para Secretaría, Coordinación y Facultades (Ciencias Empresariales, etc.)
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setMostrarModalImportacion(false)}
+                  onClick={() => {
+                    setMostrarModalImportacion(false)
+                    setArchivoExcel(null)
+                    setErrorArchivoImportacion(null)
+                    setResultadoImportacion(null)
+                  }}
                   className="text-neutral-400 hover:text-neutral-700"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
+              {/* Selector de Pestañas: Excel vs JSON */}
+              <div className="flex border-b border-line bg-neutral-100/70 px-6 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTabImportacion('EXCEL')
+                    setErrorArchivoImportacion(null)
+                  }}
+                  className={`flex items-center gap-2 border-b-2 px-4 py-2 text-xs font-semibold transition-colors ${
+                    tabImportacion === 'EXCEL'
+                      ? 'border-ink text-ink bg-white shadow-xs'
+                      : 'border-transparent text-neutral-500 hover:text-neutral-800'
+                  }`}
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  <span>Subir Archivo Excel / CSV (Recomendado)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTabImportacion('JSON')
+                    setErrorArchivoImportacion(null)
+                  }}
+                  className={`flex items-center gap-2 border-b-2 px-4 py-2 text-xs font-semibold transition-colors ${
+                    tabImportacion === 'JSON'
+                      ? 'border-ink text-ink bg-white shadow-xs'
+                      : 'border-transparent text-neutral-500 hover:text-neutral-800'
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Pegar JSON (Avanzado)</span>
+                </button>
+              </div>
+
               {/* Contenido Modal */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
-                <p className="text-neutral-600">
-                  Pega un arreglo JSON con los registros de estudiantes. El servicio normalizará
-                  automáticamente los nombres y carnets, asociará o creará los planes de estudio
-                  faltantes y actualizará (upsert) registros existentes con el mismo carnet.
-                </p>
+                {tabImportacion === 'EXCEL' ? (
+                  <>
+                    {/* Banner de ayuda y descarga de plantilla */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-blue-200 bg-blue-50/70 p-3.5 text-blue-900">
+                      <div>
+                        <div className="font-semibold text-xs text-blue-950">
+                          Formato de Planilla Excel para Carreras y Secretaría:
+                        </div>
+                        <p className="text-[11px] text-blue-800 mt-0.5">
+                          Columnas reconocidas: <strong>REGISTRO</strong>, <strong>C.I.</strong>, <strong>APELLIDOS Y NOMBRES</strong>, <strong>CARRERA</strong> (ej. Administración General, Comercial), <strong>PLAN</strong> y <strong>CORREO</strong>.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={descargarPlantillaExcel}
+                        className="inline-flex shrink-0 items-center gap-1.5 border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-900 shadow-2xs hover:bg-blue-50 cursor-pointer"
+                        title="Descargar archivo modelo con ejemplos de Ciencias Empresariales"
+                      >
+                        <Download className="h-3.5 w-3.5 text-blue-700" />
+                        <span>Descargar Plantilla (.csv / Excel)</span>
+                      </button>
+                    </div>
 
-                {/* Configuración de importación */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 bg-surface p-3 border border-line">
+                    {/* Zona de Carga de Archivo (Drag & Drop) */}
+                    <div>
+                      <label className="block font-semibold text-neutral-800 mb-1.5">
+                        Selecciona el archivo de estudiantes:
+                      </label>
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          setIsDraggingExcel(true)
+                        }}
+                        onDragLeave={() => setIsDraggingExcel(false)}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          setIsDraggingExcel(false)
+                          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                            const file = e.dataTransfer.files[0]
+                            setArchivoExcel(file)
+                            setErrorArchivoImportacion(null)
+                            setResultadoImportacion(null)
+                          }
+                        }}
+                        className={`relative flex flex-col items-center justify-center border-2 border-dashed p-6 text-center transition-colors ${
+                          isDraggingExcel
+                            ? 'border-ink bg-neutral-100'
+                            : archivoExcel
+                            ? 'border-emerald-400 bg-emerald-50/30'
+                            : 'border-line bg-surface hover:bg-neutral-50'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          id="input-archivo-excel"
+                          accept=".xlsx,.xls,.csv"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                              setArchivoExcel(e.target.files[0])
+                              setErrorArchivoImportacion(null)
+                              setResultadoImportacion(null)
+                            }
+                          }}
+                          className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                        />
+
+                        {archivoExcel ? (
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                              <Check className="h-5 w-5" />
+                            </div>
+                            <div className="text-center">
+                              <span className="font-semibold text-neutral-900 text-xs block">
+                                {archivoExcel.name}
+                              </span>
+                              <span className="text-[11px] text-neutral-500">
+                                {(archivoExcel.size / 1024).toFixed(1)} KB — Listo para procesar
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setArchivoExcel(null)
+                              }}
+                              className="mt-1 text-[11px] font-semibold text-red-600 hover:underline z-10"
+                            >
+                              Cambiar o quitar archivo
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1.5 pointer-events-none">
+                            <Upload className="h-7 w-7 text-neutral-400 mb-1" />
+                            <span className="font-semibold text-neutral-800 text-xs">
+                              Arrastra y suelta tu archivo Excel o CSV aquí
+                            </span>
+                            <span className="text-[11px] text-neutral-500">
+                              O haz clic para examinar en tu computadora (.xlsx, .xls, .csv)
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Mensaje de Error en Archivo */}
+                    {errorArchivoImportacion && (
+                      <div className="flex items-center gap-2 border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+                        <AlertCircle className="h-4 w-4 shrink-0 text-red-600" />
+                        <span>{errorArchivoImportacion}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-neutral-600">
+                      Pega un arreglo JSON con los registros de estudiantes. El servicio normalizará
+                      automáticamente los nombres y carnets, asociará o creará los planes de estudio
+                      faltantes y actualizará (upsert) registros existentes con el mismo carnet.
+                    </p>
+
+                    {/* Botón de Plantilla JSON */}
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-neutral-700">JSON de Estudiantes:</span>
+                      <button
+                        type="button"
+                        onClick={cargarPlantillaEjemplo}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-crimson hover:underline cursor-pointer"
+                      >
+                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        <span>Cargar ejemplo de prueba</span>
+                      </button>
+                    </div>
+
+                    {/* Editor de JSON */}
+                    <textarea
+                      value={importJsonText}
+                      onChange={(e) => setImportJsonText(e.target.value)}
+                      placeholder="[&#10;  {&#10;    &quot;carnetEstudiantil&quot;: &quot;ADM-2026001&quot;,&#10;    &quot;carnetIdentidad&quot;: &quot;8392011 SC&quot;,&#10;    &quot;nombreCompleto&quot;: &quot;Carlos Perez&quot;,&#10;    &quot;nombreCarrera&quot;: &quot;Administración General&quot;&#10;  }&#10;]"
+                      rows={7}
+                      className="w-full border border-line bg-neutral-900 p-3 font-mono text-xs text-neutral-100 placeholder-neutral-500 focus:border-ink focus:outline-hidden"
+                    />
+                  </>
+                )}
+
+                {/* Configuración de importación común */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 bg-surface p-3.5 border border-line">
                   <div>
                     <label className="block font-medium text-neutral-700 mb-1">
                       Carrera por defecto (si se omite en la fila):
@@ -983,6 +1271,7 @@ export default function PaginaEstudiantes() {
                         onChange={(e) => setCarreraImportDefecto(e.target.value)}
                         className="w-full border border-line bg-white px-2.5 py-1.5 text-xs text-neutral-800 focus:border-ink focus:outline-hidden"
                       >
+                        <option value="">-- Detectar según columna del archivo --</option>
                         {carreras.map((c) => (
                           <option key={c.idCarrera} value={c.idCarrera}>
                             {c.nombre}
@@ -1006,31 +1295,9 @@ export default function PaginaEstudiantes() {
                   </div>
                 </div>
 
-                {/* Botón de Plantilla */}
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-neutral-700">JSON de Estudiantes:</span>
-                  <button
-                    type="button"
-                    onClick={cargarPlantillaEjemplo}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-crimson hover:underline"
-                  >
-                    <FileSpreadsheet className="h-3.5 w-3.5" />
-                    <span>Cargar ejemplo de prueba</span>
-                  </button>
-                </div>
-
-                {/* Editor de JSON */}
-                <textarea
-                  value={importJsonText}
-                  onChange={(e) => setImportJsonText(e.target.value)}
-                  placeholder="[&#10;  {&#10;    &quot;carnetEstudiantil&quot;: &quot;SIS-2024001&quot;,&#10;    &quot;carnetIdentidad&quot;: &quot;8392011 LP&quot;,&#10;    &quot;nombreCompleto&quot;: &quot;Carlos Perez&quot;,&#10;    &quot;nombreCarrera&quot;: &quot;Ingeniería de Sistemas&quot;&#10;  }&#10;]"
-                  rows={8}
-                  className="w-full border border-line bg-neutral-900 p-3 font-mono text-xs text-neutral-100 placeholder-neutral-500 focus:border-ink focus:outline-hidden"
-                />
-
                 {/* Resumen de Resultados tras ejecución */}
                 {resultadoImportacion && (
-                  <div className="border border-emerald-200 bg-emerald-50/80 p-4 space-y-2">
+                  <div className="border border-emerald-200 bg-emerald-50/80 p-4 space-y-2.5">
                     <div className="flex items-center gap-1.5 font-semibold text-emerald-800">
                       <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                       <span>Carga Masiva Transaccional Completada Exitosamente</span>
@@ -1038,13 +1305,13 @@ export default function PaginaEstudiantes() {
 
                     <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4 pt-1">
                       <div className="bg-white p-2 border border-emerald-200 text-center">
-                        <span className="text-[10px] text-neutral-500 uppercase">Total</span>
+                        <span className="text-[10px] text-neutral-500 uppercase">Total Filas</span>
                         <div className="font-bold text-neutral-900">
                           {resultadoImportacion.total}
                         </div>
                       </div>
                       <div className="bg-white p-2 border border-emerald-200 text-center">
-                        <span className="text-[10px] text-emerald-600 uppercase">Nuevos</span>
+                        <span className="text-[10px] text-emerald-600 uppercase">Nuevos Postulantes</span>
                         <div className="font-bold text-emerald-700">
                           {resultadoImportacion.creados}
                         </div>
@@ -1072,8 +1339,8 @@ export default function PaginaEstudiantes() {
 
                     {resultadoImportacion.errores.length > 0 && (
                       <div className="mt-2 border-t border-emerald-200 pt-2 text-red-700 text-[11px]">
-                        <strong>Advertencias / Errores:</strong>
-                        <ul className="list-disc pl-4 space-y-0.5">
+                        <strong>Advertencias / Errores en filas:</strong>
+                        <ul className="list-disc pl-4 space-y-0.5 max-h-32 overflow-y-auto">
                           {resultadoImportacion.errores.map((err, idx) => (
                             <li key={idx}>
                               Fila {err.indice}: {err.mensaje}
@@ -1087,32 +1354,67 @@ export default function PaginaEstudiantes() {
               </div>
 
               {/* Footer Modal */}
-              <div className="flex items-center justify-end gap-2 border-t border-line bg-surface px-6 py-3">
-                <button
-                  type="button"
-                  onClick={() => setMostrarModalImportacion(false)}
-                  className="border border-line bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:border-neutral-400"
-                >
-                  Cerrar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleEjecutarImportacion}
-                  disabled={isImporting || !importJsonText.trim()}
-                  className="flex items-center gap-1.5 border border-ink bg-ink px-4 py-2 text-xs font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-                >
-                  {isImporting ? (
-                    <>
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      <span>Procesando Transacción...</span>
-                    </>
+              <div className="flex items-center justify-between border-t border-line bg-surface px-6 py-3">
+                <span className="text-[11px] text-neutral-500">
+                  {tabImportacion === 'EXCEL'
+                    ? 'Procesamiento directo de planilla Excel / CSV'
+                    : 'Modo técnico JSON'}
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMostrarModalImportacion(false)
+                      setArchivoExcel(null)
+                      setErrorArchivoImportacion(null)
+                      setResultadoImportacion(null)
+                    }}
+                    className="border border-line bg-white px-4 py-2 text-xs font-medium text-neutral-700 hover:border-neutral-400 cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+
+                  {tabImportacion === 'EXCEL' ? (
+                    <button
+                      type="button"
+                      onClick={handleEjecutarImportacionArchivo}
+                      disabled={isImporting || !archivoExcel}
+                      className="flex items-center gap-1.5 border border-ink bg-ink px-4 py-2 text-xs font-medium text-white hover:bg-neutral-800 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isImporting ? (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          <span>Importando Planilla Excel...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-3.5 w-3.5" />
+                          <span>Subir y Procesar Archivo Excel</span>
+                        </>
+                      )}
+                    </button>
                   ) : (
-                    <>
-                      <Upload className="h-3.5 w-3.5" />
-                      <span>Ejecutar Carga Masiva</span>
-                    </>
+                    <button
+                      type="button"
+                      onClick={handleEjecutarImportacion}
+                      disabled={isImporting || !importJsonText.trim()}
+                      className="flex items-center gap-1.5 border border-ink bg-ink px-4 py-2 text-xs font-medium text-white hover:bg-neutral-800 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isImporting ? (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          <span>Procesando Transacción...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-3.5 w-3.5" />
+                          <span>Ejecutar Carga Masiva JSON</span>
+                        </>
+                      )}
+                    </button>
                   )}
-                </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1312,17 +1614,38 @@ export default function PaginaEstudiantes() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">
-                    Correo Institucional o de Contacto
-                  </label>
-                  <input
-                    type="email"
-                    value={nuevoCorreo}
-                    onChange={(e) => setNuevoCorreo(e.target.value)}
-                    placeholder="ej. gabriel.suarez@estudiante.edu.bo"
-                    className="w-full border border-line bg-surface px-3 py-2 text-xs outline-hidden focus:border-ink focus:bg-white"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                      Correo Personal / Contacto (Gmail, etc.)
+                    </label>
+                    <input
+                      type="email"
+                      value={nuevoCorreoPersonal}
+                      onChange={(e) => setNuevoCorreoPersonal(e.target.value)}
+                      placeholder="ej. alejandro190902@gmail.com"
+                      className="w-full border border-line bg-surface px-3 py-2 text-xs outline-hidden focus:border-ink focus:bg-white"
+                    />
+                    <p className="mt-1 text-[10px] text-neutral-500">
+                      Recibirá el Acta Oficial en PDF adjunta al finalizar el sorteo.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700 mb-1">
+                      Correo Institucional (Opcional)
+                    </label>
+                    <input
+                      type="email"
+                      value={nuevoCorreoInstitucional}
+                      onChange={(e) => setNuevoCorreoInstitucional(e.target.value)}
+                      placeholder="ej. sis-2024099@estudiante.edu.bo"
+                      className="w-full border border-line bg-surface px-3 py-2 text-xs outline-hidden focus:border-ink focus:bg-white"
+                    />
+                    <p className="mt-1 text-[10px] text-neutral-500">
+                      Si se omite, se generará con su código estudiantil.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Carrera y Plan */}

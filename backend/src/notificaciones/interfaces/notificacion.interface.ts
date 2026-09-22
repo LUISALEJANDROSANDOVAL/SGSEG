@@ -19,6 +19,9 @@ export interface NotificacionDefensaPayload {
   tipoDefensa: string;
   codigoActa: string;
   tokenActa: string;
+  correoPersonal?: string;
+  correoInstitucional?: string;
+  pdfBuffer?: Buffer;
 }
 
 export interface ResultadoEnvioCorreo {

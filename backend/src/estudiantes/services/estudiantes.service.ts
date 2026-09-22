@@ -5,6 +5,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { Readable } from 'stream';
 import * as ExcelJS from 'exceljs';
 import {
   BulkEstudiantesInputDto,
@@ -148,6 +149,7 @@ export class EstudiantesService {
       carnetIdentidad: string;
       nombreCompleto: string;
       correoInstitucional: string;
+      correoPersonal?: string;
       estado: string;
       idPlanEstudio: bigint;
     }> = [];
@@ -275,6 +277,7 @@ export class EstudiantesService {
           carnetIdentidad: norm.carnetIdentidad,
           nombreCompleto: norm.nombreCompleto,
           correoInstitucional: norm.correoInstitucional,
+          correoPersonal: norm.correoPersonal,
           estado: norm.estado,
           idPlanEstudio: finalPlanId,
         });
@@ -304,6 +307,7 @@ export class EstudiantesService {
               carnetIdentidad: student.carnetIdentidad,
               nombreCompleto: student.nombreCompleto,
               correoInstitucional: student.correoInstitucional,
+              correoPersonal: student.correoPersonal,
               estado: student.estado,
             });
 
@@ -361,11 +365,14 @@ export class EstudiantesService {
       }
     }
 
+    const correoFinal = dto.correoInstitucional || (dto.correoPersonal ? undefined : dto.correo);
+
     const norm = this.normalizer.normalizeRecord({
       carnetEstudiantil: dto.carnetEstudiantil,
       carnetIdentidad: dto.carnetIdentidad,
       nombreCompleto: dto.nombreCompleto,
-      correoInstitucional: dto.correoInstitucional,
+      correoInstitucional: correoFinal,
+      correoPersonal: dto.correoPersonal,
       idCarrera: dto.idCarrera,
       idPlanEstudio: dto.idPlanEstudio,
       nombrePlanEstudio: dto.nombrePlanEstudio,
@@ -374,10 +381,24 @@ export class EstudiantesService {
 
     let planId: bigint | undefined = norm.idPlanEstudio;
 
+    if (planId) {
+      const planExiste = await this.repository.findPlanById(planId);
+      if (!planExiste) {
+        planId = undefined; // El ID provisto no existe en BD, resolver por carrera
+      }
+    }
+
     if (!planId) {
       if (!norm.idCarrera) {
         throw new BadRequestException(
           'Debe especificar un idPlanEstudio o un idCarrera válido.',
+        );
+      }
+
+      const carreraExiste = await this.repository.findCarreraById(norm.idCarrera);
+      if (!carreraExiste) {
+        throw new BadRequestException(
+          'La carrera académica seleccionada no existe en el sistema.',
         );
       }
 
@@ -405,6 +426,7 @@ export class EstudiantesService {
         carnetIdentidad: norm.carnetIdentidad,
         nombreCompleto: norm.nombreCompleto,
         correoInstitucional: norm.correoInstitucional,
+        correoPersonal: norm.correoPersonal ?? dto.correoPersonal ?? null,
         estado: norm.estado,
       }),
     );
@@ -696,72 +718,269 @@ export class EstudiantesService {
   }
 
   /**
-   * Importa estudiantes desde un archivo Excel (Módulo 3).
+   * Importa estudiantes desde un archivo Excel o CSV (Módulo 3).
+   * Compatible con los formatos oficiales de la Facultad de Ciencias Empresariales, Coordinación y Secretaría.
    */
-  async importarEstudiantesDesdeArchivo(file: any): Promise<BulkEstudiantesResultDto> {
-    if (!file) {
-      throw new BadRequestException('No se ha proporcionado ningún archivo.');
+  async importarEstudiantesDesdeArchivo(
+    file: any,
+    opciones?: {
+      idCarreraPorDefecto?: string;
+      crearPlanesFaltantes?: boolean | string;
+    },
+    user?: AuthenticatedUser,
+  ): Promise<BulkEstudiantesResultDto> {
+    if (!file || !file.buffer) {
+      throw new BadRequestException('No se ha proporcionado ningún archivo para importar.');
     }
 
     const workbook = new ExcelJS.Workbook();
+    let loaded = false;
+
+    // 1. Intentar cargar como Excel (.xlsx)
     try {
       await workbook.xlsx.load(file.buffer);
-    } catch (error) {
-      throw new BadRequestException('El archivo no es un Excel válido (.xlsx).');
+      loaded = true;
+    } catch {
+      // Si falla, probar como CSV
+    }
+
+    // 2. Si no cargó como xlsx, intentar como CSV
+    if (!loaded) {
+      try {
+        const stream = Readable.from(file.buffer);
+        await workbook.csv.read(stream);
+        loaded = true;
+      } catch (err: unknown) {
+        throw new BadRequestException(
+          'El archivo no tiene un formato válido (.xlsx o .csv). Verifique el archivo.',
+        );
+      }
     }
 
     const worksheet = workbook.worksheets[0];
-    if (!worksheet) {
-      throw new BadRequestException('El archivo Excel está vacío.');
+    if (!worksheet || worksheet.rowCount === 0) {
+      throw new BadRequestException('El archivo no contiene filas o está vacío.');
     }
 
-    const estudiantes: RawEstudianteInputDto[] = [];
-    let headers: { [key: string]: number } = {};
+    // Función auxiliar para normalizar nombres de encabezados (sin acentos, minúsculas, sin espacios)
+    const norm = (str: string) =>
+      str
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
 
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) {
-        row.eachCell((cell, colNumber) => {
-          if (cell.value) {
-            headers[cell.value.toString().trim().toLowerCase()] = colNumber;
-          }
-        });
-        return;
+    // Palabras clave para detectar la fila de encabezados
+    const headerKeywords = [
+      'carnet',
+      'registro',
+      'ru',
+      'codigo',
+      'ci',
+      'cedula',
+      'identidad',
+      'nombre',
+      'estudiante',
+      'postulante',
+      'carrera',
+      'plan',
+    ];
+
+    let headerRowNumber = 1;
+    let foundHeaders = false;
+    const maxSearchRows = Math.min(10, worksheet.rowCount);
+
+    for (let r = 1; r <= maxSearchRows; r++) {
+      const row = worksheet.getRow(r);
+      let matchCount = 0;
+      row.eachCell((cell) => {
+        const val = cell.value ? norm(cell.value.toString()) : '';
+        if (val && headerKeywords.some((kw) => val.includes(kw))) {
+          matchCount++;
+        }
+      });
+
+      if (matchCount >= 2) {
+        headerRowNumber = r;
+        foundHeaders = true;
+        break;
       }
+    }
 
-      // Read values based on header names (flexible mapping)
-      const getValue = (headerName: string) => {
-        const col = headers[headerName.toLowerCase()];
-        return col ? row.getCell(col).text?.trim() : undefined;
-      };
+    // Mapeo de columnas a tipos de campos
+    const columnMap: {
+      carnet?: number;
+      ci?: number;
+      nombreCompleto?: number;
+      paterno?: number;
+      materno?: number;
+      nombres?: number;
+      carrera?: number;
+      plan?: number;
+      idPlan?: number;
+      correo?: number;
+      correoPersonal?: number;
+    } = {};
 
-      const carnetEstudiantil = getValue('carnet') || getValue('carnet estudiantil') || getValue('registro');
-      const carnetIdentidad = getValue('ci') || getValue('carnet de identidad') || getValue('documento');
-      const nombreCompleto = getValue('nombre') || getValue('nombre completo');
-      const correoInstitucional = getValue('correo institucional') || getValue('correo');
-      const correoPersonal = getValue('correo personal');
-      const idPlanEstudioRaw = getValue('id plan de estudio') || getValue('id plan') || getValue('idplan');
+    const headerRow = worksheet.getRow(headerRowNumber);
+    headerRow.eachCell((cell, colNumber) => {
+      const text = cell.value ? norm(cell.value.toString()) : '';
+      if (!text) return;
 
-      let idPlanEstudio: number | undefined;
-      if (idPlanEstudioRaw && !isNaN(Number(idPlanEstudioRaw))) {
-        idPlanEstudio = Number(idPlanEstudioRaw);
+      // 1. Correo electrónico (debe evaluarse antes de CI para no colisionar con 'institu-ci-onal')
+      if (text.includes('correo') || text.includes('email') || text.includes('mail')) {
+        if (text.includes('personal') || text.includes('otro')) {
+          if (!columnMap.correoPersonal) columnMap.correoPersonal = colNumber;
+        } else {
+          if (!columnMap.correo) columnMap.correo = colNumber;
+        }
       }
-
-      if (carnetEstudiantil && carnetIdentidad) {
-        estudiantes.push({
-          carnetEstudiantil,
-          carnetIdentidad,
-          nombreCompleto,
-          correoInstitucional,
-          correoPersonal,
-          idPlanEstudio,
-        });
+      // 2. Carnet de Identidad (CI / Cédula / Documento / DNI)
+      else if (
+        text.includes('identidad') ||
+        text.includes('cedula') ||
+        text.includes('documento') ||
+        text.includes('dni') ||
+        text === 'ci' ||
+        text.startsWith('ci')
+      ) {
+        if (!columnMap.ci) columnMap.ci = colNumber;
+      }
+      // 3. Carnet Estudiantil (Registro / RU / Código / Matrícula)
+      else if (
+        text.includes('estudiantil') ||
+        text.includes('registro') ||
+        text === 'ru' ||
+        text.includes('codestudiante') ||
+        text.includes('matricula') ||
+        text === 'codigo' ||
+        text === 'cod' ||
+        text === 'carnet'
+      ) {
+        if (!columnMap.carnet) columnMap.carnet = colNumber;
+      }
+      // 4. Nombre Completo o partes
+      else if (
+        text.includes('nombrecompleto') ||
+        text.includes('apellidosynombres') ||
+        text.includes('nombresyapellidos') ||
+        text.includes('estudiante') ||
+        text.includes('postulante') ||
+        text.includes('alumno')
+      ) {
+        if (!columnMap.nombreCompleto) columnMap.nombreCompleto = colNumber;
+      } else if (
+        text.includes('paterno') ||
+        text.includes('primerapellido') ||
+        text === 'apellido1'
+      ) {
+        columnMap.paterno = colNumber;
+      } else if (
+        text.includes('materno') ||
+        text.includes('segundoapellido') ||
+        text === 'apellido2'
+      ) {
+        columnMap.materno = colNumber;
+      } else if (text === 'nombres' || text.includes('nombredel') || text === 'nombre') {
+        columnMap.nombres = colNumber;
+      }
+      // 5. Carrera / Programa / Facultad
+      else if (
+        text.includes('carrera') ||
+        text.includes('programa') ||
+        text.includes('facultad')
+      ) {
+        if (!columnMap.carrera) columnMap.carrera = colNumber;
+      }
+      // 6. Plan de Estudio / Pensum / Malla
+      else if (text.includes('idplan')) {
+        columnMap.idPlan = colNumber;
+      } else if (
+        text.includes('plan') ||
+        text.includes('pensum') ||
+        text.includes('version') ||
+        text.includes('malla')
+      ) {
+        if (!columnMap.plan) columnMap.plan = colNumber;
       }
     });
 
+    const getCellValue = (row: ExcelJS.Row, col?: number): string | undefined => {
+      if (!col) return undefined;
+      const cell = row.getCell(col);
+      if (!cell || cell.value === null || cell.value === undefined) return undefined;
+      // Extraer valor de hipervínculos o fórmulas si existen
+      if (typeof cell.value === 'object' && 'text' in (cell.value as any)) {
+        return (cell.value as any).text?.toString().trim();
+      }
+      return cell.value.toString().trim();
+    };
+
+    const estudiantes: RawEstudianteInputDto[] = [];
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber <= headerRowNumber) return;
+
+      const carnetEstudiantil = getCellValue(row, columnMap.carnet);
+      const carnetIdentidad = getCellValue(row, columnMap.ci);
+
+      // Si la fila no tiene carnet ni CI, es probablemente una fila vacía o de pie de página
+      if (!carnetEstudiantil && !carnetIdentidad) return;
+
+      const nombreCompletoDirecto = getCellValue(row, columnMap.nombreCompleto);
+      const paterno = getCellValue(row, columnMap.paterno);
+      const materno = getCellValue(row, columnMap.materno);
+      const nombres = getCellValue(row, columnMap.nombres);
+
+      const nombreCarrera = getCellValue(row, columnMap.carrera);
+      const nombrePlanEstudio = getCellValue(row, columnMap.plan);
+      const correoInstitucional = getCellValue(row, columnMap.correo);
+      const correoPersonal = getCellValue(row, columnMap.correoPersonal);
+
+      const idPlanRaw = getCellValue(row, columnMap.idPlan);
+      let idPlanEstudio: number | undefined;
+      if (idPlanRaw && !isNaN(Number(idPlanRaw))) {
+        idPlanEstudio = Number(idPlanRaw);
+      }
+
+      estudiantes.push({
+        carnetEstudiantil: carnetEstudiantil ?? '',
+        carnetIdentidad: carnetIdentidad ?? '',
+        nombreCompleto: nombreCompletoDirecto,
+        primerApellido: paterno,
+        segundoApellido: materno,
+        nombres,
+        nombreCarrera,
+        nombrePlanEstudio,
+        idPlanEstudio,
+        correoInstitucional,
+        correoPersonal,
+      });
+    });
+
+    if (estudiantes.length === 0) {
+      throw new BadRequestException(
+        'No se encontraron filas con datos de estudiantes en el archivo. Revise que incluya columnas como Carnet, CI y Nombre.',
+      );
+    }
+
     const dto = new BulkEstudiantesInputDto();
     dto.estudiantes = estudiantes;
+
+    if (opciones?.idCarreraPorDefecto && opciones.idCarreraPorDefecto !== 'ALL') {
+      dto.idCarreraPorDefecto = opciones.idCarreraPorDefecto;
+    }
+
+    if (opciones?.crearPlanesFaltantes !== undefined) {
+      dto.crearPlanesFaltantes =
+        opciones.crearPlanesFaltantes === true ||
+        opciones.crearPlanesFaltantes === 'true';
+    } else {
+      dto.crearPlanesFaltantes = true;
+    }
+
     dto.batchSize = 50;
 
-    return this.bulkUpsertEstudiantes(dto);
+    return this.bulkUpsertEstudiantes(dto, user);
   }
 }

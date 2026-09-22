@@ -10,6 +10,7 @@ import SorteoEnVivo from '@/pages/SorteoEnVivo'
 import Usuarios from '@/pages/Usuarios'
 import Academia from '@/pages/Academia'
 import Defensas from '@/pages/Defensas'
+import Auditoria from '@/pages/Auditoria'
 import Login from '@/pages/Login'
 import ResetPassword from '@/pages/ResetPassword'
 import '@/index.css'
@@ -85,6 +86,12 @@ function App() {
           <Route path="/academia" element={
             <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
               <Academia />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/auditoria" element={
+            <ProtectedRoute allowedRoles={['Vicerrectorado', 'Administrador General']}>
+              <Auditoria />
             </ProtectedRoute>
           } />
         </Routes>

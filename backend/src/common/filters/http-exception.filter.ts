@@ -24,7 +24,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Error interno del servidor';
 
-    let message = 'Error interno del servidor';
+    let message: any = 'Error interno del servidor';
+    let error: string | undefined = undefined;
+
     if (typeof exceptionResponse === 'string') {
       message = exceptionResponse;
     } else if (
@@ -39,6 +41,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       } else {
         message = respObj.error || JSON.stringify(exceptionResponse);
       }
+      error = respObj.error;
     }
 
     response.status(status).json({
@@ -46,6 +49,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       message,
+      ...(error ? { error } : {}),
     });
   }
 }

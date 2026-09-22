@@ -6,6 +6,7 @@ export interface NormalizedEstudiante {
   carnetIdentidad: string;
   nombreCompleto: string;
   correoInstitucional: string;
+  correoPersonal?: string;
   idCarrera?: bigint;
   nombreCarrera?: string;
   idPlanEstudio?: bigint;
@@ -132,6 +133,15 @@ export class EstudiantesNormalizerService {
     );
     const correo = this.normalizeCorreo(raw.correoInstitucional, carnetEstudiantil);
 
+    let correoPersonal: string | undefined;
+    if (raw.correoPersonal && raw.correoPersonal.trim().length > 0) {
+      const cleanPersonal = raw.correoPersonal.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(cleanPersonal)) {
+        correoPersonal = cleanPersonal;
+      }
+    }
+
     let idCarrera: bigint | undefined;
     if (
       raw.idCarrera !== undefined &&
@@ -166,6 +176,7 @@ export class EstudiantesNormalizerService {
       carnetIdentidad,
       nombreCompleto,
       correoInstitucional: correo,
+      correoPersonal,
       idCarrera,
       nombreCarrera,
       idPlanEstudio,

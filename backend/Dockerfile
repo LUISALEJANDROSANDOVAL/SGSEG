@@ -19,4 +19,4 @@ RUN npm run build
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node prisma/apply-views.ts && npx ts-node prisma/seed.ts && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node prisma/apply-views.ts && node dist/main.js"]

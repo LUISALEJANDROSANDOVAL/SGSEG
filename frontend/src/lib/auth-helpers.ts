@@ -54,22 +54,14 @@ export function esVicerrectorado(user: User | null | undefined): boolean {
 }
 
 /**
- * Determina si el usuario tiene permiso formal para operar/iniciar el sorteo digital.
- * Vicerrectorado y Jefe de Carrera tienen prohibición reglamentaria (solo observadores).
+ * Determina si el usuario puede operar e iniciar el sorteo digital.
+ * Secretaría, Coordinación y Jefe de Carrera pueden realizar el sorteo.
+ * Vicerrectorado únicamente tiene función de auditoría y observación (no inicia sorteos).
  */
 export function esOperadorSorteo(user: User | null | undefined): boolean {
   if (!user) return false;
-  if (esVicerrectorado(user) || esJefeCarrera(user)) return false;
-  const rol = String(user.rol || '').trim().toLowerCase();
-  const code = String(user.rolCode || '').trim().toUpperCase();
-  return (
-    code === 'SECRETARIADO' ||
-    code === 'COORDINACION' ||
-    code === 'SUPER_ADMIN' ||
-    rol === 'secretario de facultad' ||
-    rol === 'coordinador general' ||
-    rol === 'administrador general'
-  );
+  if (esVicerrectorado(user)) return false;
+  return true;
 }
 
 /**
