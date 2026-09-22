@@ -90,7 +90,7 @@ export default function Login() {
       } else {
         setExitoRecuperacion(
           response.data?.message ||
-            `Se han enviado las instrucciones de restablecimiento al correo institucional ${correoRecuperacion}.`
+          `Se han enviado las instrucciones de restablecimiento al correo institucional ${correoRecuperacion}.`
         );
         setPasoRecuperacion(3);
       }
@@ -200,7 +200,7 @@ export default function Login() {
               Sistema de Gestión Integral de Exámenes de Grado, Sorteo Algorítmico y Defensas
             </h1>
             <p className="mt-3 text-sm font-bold text-white tracking-wider uppercase drop-shadow-sm">
-              SGSEG · UTEPSA
+              UTEPSA
             </p>
             <div className="mt-4 mx-auto h-1 w-24 rounded-full bg-white shadow-sm" />
           </div>
@@ -240,7 +240,7 @@ export default function Login() {
           </div>
 
           <div className="text-[11px] text-white/60 pt-1 font-medium">
-            SGSEG · UTEPSA · © {new Date().getFullYear()}
+            UTEPSA · © {new Date().getFullYear()}
           </div>
         </div>
       </div>
