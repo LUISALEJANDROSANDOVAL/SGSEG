@@ -77,26 +77,26 @@ export default function ResetPassword() {
 
   return (
     <main className="flex min-h-screen font-sans antialiased bg-[#f8f9fa] items-center justify-center p-4 sm:p-6">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl border border-gray-100">
+      <div className="w-full max-w-md bg-white p-8 shadow-xl border border-gray-200">
         {/* Encabezado */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="flex items-center justify-center size-14 rounded-2xl bg-red-50 ring-4 ring-red-100/60 text-[#c8102e] mb-3 shadow-inner">
+          <div className="flex items-center justify-center size-14 bg-red-50 border border-red-200 text-[#c8102e] mb-3">
             <KeyRound className="size-7" />
           </div>
-          <span className="inline-block px-3 py-1 mb-2 text-[11px] font-semibold uppercase tracking-widest text-[#c8102e] bg-red-50 rounded-full border border-red-100">
+          <span className="inline-block px-3 py-1 mb-2 text-[11px] font-semibold uppercase tracking-widest text-[#c8102e] bg-red-50 border border-red-200">
             Seguridad Institucional UTEPSA
           </span>
           <h1 className="text-2xl font-black text-gray-900 tracking-tight">
             Restablecer Contraseña
           </h1>
           <p className="mt-1 text-xs text-gray-500 max-w-xs">
-            Ingresa tu nueva contraseña para recuperar el acceso a tu cuenta en SGSEG.
+            Ingresa tu nueva contraseña para recuperar el acceso a tu cuenta en UTEPSA.
           </p>
         </div>
 
         {/* Mensaje de Error */}
         {error && (
-          <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/80 p-3.5 text-xs text-red-700 animate-in fade-in">
+          <div className="mb-5 flex items-start gap-3 border border-red-200 bg-red-50/80 p-3.5 text-xs text-red-700 animate-in fade-in">
             <AlertCircle className="size-4 shrink-0 mt-0.5 text-red-500" />
             <span className="leading-relaxed">{error}</span>
           </div>
@@ -105,7 +105,7 @@ export default function ResetPassword() {
         {/* Estado Exitoso */}
         {success ? (
           <div className="flex flex-col items-center text-center py-3">
-            <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-3 animate-in zoom-in-50 duration-300">
+            <div className="flex size-14 items-center justify-center bg-emerald-100 text-emerald-600 mb-3 border border-emerald-200 animate-in zoom-in-50 duration-300">
               <CheckCircle2 className="size-8" />
             </div>
             <h3 className="text-lg font-bold text-gray-900 mb-1">
@@ -117,7 +117,7 @@ export default function ResetPassword() {
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] py-3 text-sm font-bold text-white shadow-md hover:bg-[#a50d26] transition-all"
+              className="flex w-full items-center justify-center gap-2 bg-[#c8102e] py-3 text-sm font-bold text-white shadow-xs hover:bg-[#a50d26] transition-all cursor-pointer"
             >
               <ArrowLeft className="size-4" />
               Ir a Iniciar Sesión
@@ -137,7 +137,7 @@ export default function ResetPassword() {
                   placeholder="Pega el token recibido"
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 px-3.5 text-xs font-mono text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                  className="w-full border border-gray-300 bg-gray-50 py-2.5 px-3.5 text-xs font-mono text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]"
                 />
               </div>
             )}
@@ -158,12 +158,12 @@ export default function ResetPassword() {
                   placeholder="Mínimo 6 caracteres"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                  className="w-full border border-gray-300 bg-gray-50 py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
@@ -186,19 +186,19 @@ export default function ResetPassword() {
                   placeholder="Repite la contraseña"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                  className="w-full border border-gray-300 bg-gray-50 py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
                 >
                   {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>
 
-            <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-[11px] text-gray-500 flex items-start gap-2">
+            <div className="bg-gray-50 border border-gray-200 p-3 text-[11px] text-gray-500 flex items-start gap-2">
               <ShieldCheck className="size-4 text-emerald-600 shrink-0 mt-0.5" />
               <span>
                 Tu nueva contraseña será encriptada con algoritmo seguro de grado institucional.
@@ -209,7 +209,7 @@ export default function ResetPassword() {
             <button
               type="submit"
               disabled={loading || !newPassword || !confirmPassword}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] py-3 text-sm font-bold text-white shadow-md shadow-red-900/10 transition-all hover:bg-[#a50d26] disabled:opacity-60"
+              className="mt-2 flex w-full items-center justify-center gap-2 bg-[#c8102e] py-3 text-sm font-bold text-white shadow-xs transition-all hover:bg-[#a50d26] disabled:opacity-60 cursor-pointer"
             >
               {loading && <Loader2 className="size-4 animate-spin" />}
               {loading ? 'Guardando nueva clave...' : 'Guardar Nueva Contraseña'}
@@ -219,7 +219,7 @@ export default function ResetPassword() {
             <div className="mt-3 text-center">
               <Link
                 to="/login"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#c8102e] transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#c8102e] transition-colors cursor-pointer"
               >
                 <ArrowLeft className="size-3.5" />
                 Volver a Iniciar Sesión
