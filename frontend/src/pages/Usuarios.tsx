@@ -143,14 +143,9 @@ export default function PaginaUsuarios() {
         />
 
         {!puedeAdministrar && (
-          <div className="flex items-start gap-3 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-xs">
-            <Lock className="size-5 shrink-0 text-amber-700 mt-0.5" />
-            <div>
-              <p className="font-semibold">Acceso de Auditoría y Consulta (Solo Lectura)</p>
-              <p className="text-xs text-amber-800 mt-0.5">
-                La creación de cuentas y asignación de roles es potestad exclusiva del <strong>Vicerrectorado</strong> y la <strong>Administración General</strong>. Su rol actual no dispone de permisos para crear usuarios ni modificar roles.
-              </p>
-            </div>
+          <div className="flex items-center gap-2 text-xs text-neutral-500 italic">
+            <Lock className="size-3.5 text-neutral-400" />
+            <span>Modo de solo lectura</span>
           </div>
         )}
 

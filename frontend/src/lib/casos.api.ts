@@ -165,6 +165,16 @@ export const casosApi = {
   },
 
   /**
+   * Importación masiva de casos de estudio por lotes (Excel/CSV).
+   */
+  async bulkImportCasos(
+    casos: CreateCasoPayload[],
+  ): Promise<{ total: number; importados: number; fallidos: number; errores: string[] }> {
+    const { data } = await api.post('/casos/importar', { casos });
+    return data;
+  },
+
+  /**
    * Actualiza el planteamiento o título de un caso existente.
    */
   async updateCaso(

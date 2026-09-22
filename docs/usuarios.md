@@ -10,10 +10,10 @@ $$\mathbf{ESTADO\ GENERAL\ DEL\ SISTEMA:\ 96.8\%\ TERMINADO\ (OPERATIVO)}$$
 El sistema cuenta con un control de acceso basado en roles (RBAC) para proteger las diferentes áreas de la aplicación. 
 
 Los roles oficiales y su descripción son:
-- **COORDINACION:** Coordinación académica (Acceso total a gestión general, padrón y calendario de defensas).
-- **SECRETARIADO:** Secretariado académico (Operación técnica del sorteo digital en ruleta, generación de actas y registro de notas).
-- **JEFE_CARRERA:** Jefe de carrera (Acceso limitado estrictamente a la gestión de casos y áreas de su propia carrera).
-- **VICERRECTORADO:** Vicerrectorado (Auditoría, supervisión ejecutiva y métricas institucionales. **NO puede iniciar sorteos**. Su **única función activa** en el sistema es **añadir roles y usuarios**, principalmente dar de alta al **Jefe de Carrera** vinculándolo a su carrera).
+- **COORDINACION:** Coordinación académica (Gestión general, padrón, programación de defensas y realización de sorteos).
+- **SECRETARIADO:** Secretariado académico (Operación del sorteo digital en ruleta, generación de actas y registro de notas).
+- **JEFE_CARRERA:** Jefe de carrera (Gestión de casos y áreas de su carrera, y realización de sorteos).
+- **VICERRECTORADO:** Vicerrectorado (Auditoría, supervisión y métricas institucionales. **NO puede iniciar sorteos**. Su función activa exclusiva es **añadir roles y usuarios**, principalmente dar de alta a los **Jefes de Carrera**).
 - **SUPER_ADMIN:** Administrador técnico (Infraestructura, configuración y contingencia).
 - **REGISTRO:** Registro académico (Gestión de documentos oficiales y kardex).
 - **DEFENSA:** Defensa de grado (Gestión exclusiva de tribunales y actas de defensa).

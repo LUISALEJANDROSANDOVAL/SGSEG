@@ -51,6 +51,8 @@ export interface PostulanteSorteo {
   carnetEstudiantil: string
   carnetIdentidad: string
   correo: string
+  correoPersonal?: string
+  correoInstitucional?: string
   carrera: string
   carreraId?: string
   planEstudio: string
@@ -60,6 +62,8 @@ export interface PostulanteSorteo {
   horaDefensa: string
   promedioAcademico?: number
   estadoDefensa?: string
+  casoAsignadoTitulo?: string
+  areaAsignadaNombre?: string
 }
 
 export interface AreaAcademicaSorteo {
@@ -615,99 +619,148 @@ export default function PaginaSorteo() {
   const [guardandoEnDb, setGuardandoEnDb] = useState<boolean>(false)
   const [guardadoEnDbExitoso, setGuardadoEnDbExitoso] = useState<boolean>(false)
   const [errorGuardadoDb, setErrorGuardadoDb] = useState<string | null>(null)
+  const [filtroEstadoPostulante, setFiltroEstadoPostulante] = useState<'PENDIENTES' | 'EN_DEFENSA'>('PENDIENTES')
 
   // Cargar defensas y postulantes desde la API (PostgreSQL)
-  useEffect(() => {
-    async function loadApiDefensas() {
-      try {
-        const resp = await defensasApi.getDefensas({ limit: 50 })
-        if (resp && resp.items && resp.items.length > 0) {
-          // Priorizar defensas pendientes de sorteo (PROGRAMADA o AREA_SORTEADA)
-          const ordenEstados: Record<string, number> = {
-            PROGRAMADA: 1,
-            AREA_SORTEADA: 2,
-            CASO_ASIGNADO: 3,
-            DEFENDIDO: 4,
-            CALIFICADO: 5,
-          }
-          const ordenadas = [...resp.items].sort(
-            (a, b) => (ordenEstados[a.estadoDefensa] || 99) - (ordenEstados[b.estadoDefensa] || 99),
-          )
-
-          const transformed: PostulanteSorteo[] = ordenadas.map((def: Defensa) => {
-            const est = def.instancia?.proceso?.estudiante
-            const fDef = def.fechaDefensa ? new Date(def.fechaDefensa) : null
-            const fechaStr = fDef && !isNaN(fDef.getTime()) ? fDef.toLocaleDateString('es-BO') : '28/09/2026'
-            const horaStr = fDef && !isNaN(fDef.getTime()) ? fDef.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '09:00 AM'
-
-            return {
-              id: String(def.idDefensa),
-              idDefensa: String(def.idDefensa),
-              idEstudiante: est ? String(est.idEstudiante) : undefined,
-              nombreCompleto: est?.nombreCompleto || `Postulante #${def.idDefensa}`,
-              carnetEstudiantil: est?.carnetEstudiantil || `DEF-${def.idDefensa}`,
-              carnetIdentidad: est?.carnetIdentidad || `${est?.carnetEstudiantil || def.idDefensa} SC`,
-              correo: est?.correo || `${est?.carnetEstudiantil || 'estudiante'}@estudiantes.utepsa.edu.bo`,
-              carrera: est?.planEstudio?.carrera?.nombre || 'Ingeniería de Sistemas',
-              carreraId: est?.planEstudio?.carrera?.idCarrera ? String(est.planEstudio.carrera.idCarrera) : undefined,
-              planEstudio: est?.planEstudio?.nombre || 'Plan Vigente',
-              planEstudioId: est?.planEstudio?.idPlanEstudio ? String(est.planEstudio.idPlanEstudio) : undefined,
-              tipoDefensa: def.tipoDefensa?.nombre === 'EXTERNA' ? 'Externa' : 'Interna',
-              fechaDefensa: fechaStr,
-              horaDefensa: horaStr,
-              promedioAcademico: 88.5,
-              estadoDefensa: def.estadoDefensa,
-            }
-          })
-
-          setPostulantes(transformed)
-          if (transformed.length > 0) {
-            setPostulanteSeleccionado(transformed[0])
-          }
-          return
+  const loadApiDefensas = useCallback(async () => {
+    try {
+      const resp = await defensasApi.getDefensas({ limit: 50 })
+      if (resp && resp.items && resp.items.length > 0) {
+        const ordenEstados: Record<string, number> = {
+          PROGRAMADA: 1,
+          AREA_SORTEADA: 2,
+          CASO_ASIGNADO: 3,
+          DEFENDIDO: 4,
+          CALIFICADO: 5,
         }
-      } catch (err) {
-        console.warn('Fallo al cargar defensas de PostgreSQL, intentando fallback de estudiantes', err)
-      }
+        const ordenadas = [...resp.items].sort(
+          (a, b) => (ordenEstados[a.estadoDefensa] || 99) - (ordenEstados[b.estadoDefensa] || 99),
+        )
 
-      // Fallback a estudiantesApi si defensas no responden
-      try {
-        const respEst = await estudiantesApi.getEstudiantes({ limit: 10, estado: 'ACTIVO' })
-        if (respEst && respEst.items && respEst.items.length > 0) {
-          const transformed: PostulanteSorteo[] = respEst.items.map((est: Estudiante, idx: number) => ({
-            id: String(est.idEstudiante || idx),
-            idEstudiante: String(est.idEstudiante || idx),
-            nombreCompleto: est.nombreCompleto,
-            carnetEstudiantil: est.carnetEstudiantil,
-            carnetIdentidad: est.carnetIdentidad || `${est.carnetEstudiantil} SC`,
-            correo: est.correo || `${est.carnetEstudiantil}@estudiantes.utepsa.edu.bo`,
-            carrera: est.planEstudio?.carrera?.nombre || 'Derecho',
-            carreraId: String(est.planEstudio?.carrera?.idCarrera || ''),
-            planEstudio: est.planEstudio?.nombre || 'Plan Vigente',
-            planEstudioId: String(est.planEstudio?.idPlanEstudio || ''),
-            tipoDefensa: idx % 2 === 0 ? 'Externa' : 'Interna',
-            fechaDefensa: '04/09/2026',
-            horaDefensa: `${9 + idx}:00 AM`,
-            promedioAcademico: 85 + (idx % 12),
-          }))
-          setPostulantes(transformed)
-          if (transformed.length > 0) {
-            setPostulanteSeleccionado(transformed[0])
+        const transformed: PostulanteSorteo[] = ordenadas.map((def: Defensa) => {
+          const est = def.instancia?.proceso?.estudiante
+          const fDef = def.fechaDefensa ? new Date(def.fechaDefensa) : null
+          const fechaStr = fDef && !isNaN(fDef.getTime()) ? fDef.toLocaleDateString('es-BO') : '28/09/2026'
+          const horaStr = fDef && !isNaN(fDef.getTime()) ? fDef.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '09:00 AM'
+
+          return {
+            id: String(def.idDefensa),
+            idDefensa: String(def.idDefensa),
+            idEstudiante: est ? String(est.idEstudiante) : undefined,
+            nombreCompleto: est?.nombreCompleto || `Postulante #${def.idDefensa}`,
+            carnetEstudiantil: est?.carnetEstudiantil || `DEF-${def.idDefensa}`,
+            carnetIdentidad: est?.carnetIdentidad || `${est?.carnetEstudiantil || def.idDefensa} SC`,
+            correo:
+              (est as any)?.correoInstitucional ||
+              (est as any)?.correoPersonal ||
+              est?.correo ||
+              `${est?.carnetEstudiantil || 'estudiante'}@estudiantes.utepsa.edu.bo`,
+            correoInstitucional: (est as any)?.correoInstitucional || est?.correo,
+            correoPersonal: (est as any)?.correoPersonal,
+            carrera: est?.planEstudio?.carrera?.nombre || 'Ingeniería de Sistemas',
+            carreraId: est?.planEstudio?.carrera?.idCarrera ? String(est.planEstudio.carrera.idCarrera) : undefined,
+            planEstudio: est?.planEstudio?.nombre || 'Plan Vigente',
+            planEstudioId: est?.planEstudio?.idPlanEstudio ? String(est.planEstudio.idPlanEstudio) : undefined,
+            tipoDefensa: def.tipoDefensa?.nombre === 'EXTERNA' ? 'Externa' : 'Interna',
+            fechaDefensa: fechaStr,
+            horaDefensa: horaStr,
+            promedioAcademico: 88.5,
+            estadoDefensa: def.estadoDefensa,
+            casoAsignadoTitulo: def.casoUtilizado?.titulo,
+            areaAsignadaNombre: def.casoUtilizado?.area?.nombre,
           }
-        }
-      } catch {
-        // Usa catálogo por defecto en caso de no conexión a base de datos
+        })
+
+        setPostulantes(transformed)
+        return transformed
       }
+    } catch (err) {
+      console.warn('Fallo al cargar defensas de PostgreSQL, intentando fallback de estudiantes', err)
     }
-    loadApiDefensas()
+
+    // Fallback a estudiantesApi si defensas no responden
+    try {
+      const respEst = await estudiantesApi.getEstudiantes({ limit: 10, estado: 'ACTIVO' })
+      if (respEst && respEst.items && respEst.items.length > 0) {
+        const transformed: PostulanteSorteo[] = respEst.items.map((est: Estudiante, idx: number) => ({
+          id: String(est.idEstudiante || idx),
+          idEstudiante: String(est.idEstudiante || idx),
+          nombreCompleto: est.nombreCompleto,
+          carnetEstudiantil: est.carnetEstudiantil,
+          carnetIdentidad: est.carnetIdentidad || `${est.carnetEstudiantil} SC`,
+          correo: (est as any).correoInstitucional || est.correo || `${est.carnetEstudiantil}@estudiantes.utepsa.edu.bo`,
+          carrera: est.planEstudio?.carrera?.nombre || 'Derecho',
+          carreraId: String(est.planEstudio?.carrera?.idCarrera || ''),
+          planEstudio: est.planEstudio?.nombre || 'Plan Vigente',
+          planEstudioId: String(est.planEstudio?.idPlanEstudio || ''),
+          tipoDefensa: idx % 2 === 0 ? 'Externa' : 'Interna',
+          fechaDefensa: '04/09/2026',
+          horaDefensa: `${9 + idx}:00 AM`,
+          promedioAcademico: 85 + (idx % 12),
+          estadoDefensa: 'PROGRAMADA',
+        }))
+        setPostulantes(transformed)
+        return transformed
+      }
+    } catch {
+      // Usa catálogo por defecto en caso de no conexión a base de datos
+    }
+    return []
   }, [])
 
-  // Filtrado de postulantes según rol y búsqueda
+  useEffect(() => {
+    loadApiDefensas().then((list) => {
+      if (list && list.length > 0) {
+        let candidatos = list
+        if (isJefe && jefeCarreraId) {
+          candidatos = list.filter((p) => String(p.carreraId) === String(jefeCarreraId))
+        }
+        const primerPendiente = candidatos.find(
+          (p) => p.estadoDefensa === 'PROGRAMADA' || p.estadoDefensa === 'AREA_SORTEADA',
+        )
+        setPostulanteSeleccionado(primerPendiente || null)
+      }
+    })
+  }, [loadApiDefensas, isJefe, jefeCarreraId])
+
+  // Contadores según estado para la carrera
+  const cantPendientes = useMemo(() => {
+    let list = postulantes
+    if (isJefe && jefeCarreraId) {
+      list = list.filter((p) => String(p.carreraId) === String(jefeCarreraId))
+    }
+    return list.filter(
+      (p) => p.estadoDefensa === 'PROGRAMADA' || p.estadoDefensa === 'AREA_SORTEADA',
+    ).length
+  }, [postulantes, isJefe, jefeCarreraId])
+
+  const cantEnDefensa = useMemo(() => {
+    let list = postulantes
+    if (isJefe && jefeCarreraId) {
+      list = list.filter((p) => String(p.carreraId) === String(jefeCarreraId))
+    }
+    return list.filter(
+      (p) => p.estadoDefensa === 'CASO_ASIGNADO' || p.estadoDefensa === 'DEFENDIDO' || p.estadoDefensa === 'CALIFICADO',
+    ).length
+  }, [postulantes, isJefe, jefeCarreraId])
+
+  // Filtrado de postulantes según rol, pestaña de estado y búsqueda
   const postulantesFiltrados = useMemo(() => {
     let list = postulantes
     if (isJefe && jefeCarreraId) {
       list = list.filter((p) => String(p.carreraId) === String(jefeCarreraId))
     }
+
+    if (filtroEstadoPostulante === 'PENDIENTES') {
+      list = list.filter(
+        (p) => p.estadoDefensa === 'PROGRAMADA' || p.estadoDefensa === 'AREA_SORTEADA',
+      )
+    } else {
+      list = list.filter(
+        (p) => p.estadoDefensa === 'CASO_ASIGNADO' || p.estadoDefensa === 'DEFENDIDO' || p.estadoDefensa === 'CALIFICADO',
+      )
+    }
+
     if (!busquedaPostulante.trim()) return list
     const query = busquedaPostulante.toLowerCase()
     return list.filter(
@@ -717,14 +770,16 @@ export default function PaginaSorteo() {
         p.carnetIdentidad.toLowerCase().includes(query) ||
         p.carrera.toLowerCase().includes(query),
     )
-  }, [postulantes, busquedaPostulante, isJefe, jefeCarreraId])
+  }, [postulantes, busquedaPostulante, isJefe, jefeCarreraId, filtroEstadoPostulante])
 
-  // Sincronizar postulante seleccionado cuando se filtra la lista por rol
+  // Sincronizar postulante seleccionado cuando se filtra la lista
   useEffect(() => {
     if (postulantesFiltrados.length > 0) {
-      if (!postulantesFiltrados.some((p) => p.id === postulanteSeleccionado?.id)) {
+      if (!postulanteSeleccionado || !postulantesFiltrados.some((p) => p.id === postulanteSeleccionado?.id)) {
         setPostulanteSeleccionado(postulantesFiltrados[0])
       }
+    } else {
+      setPostulanteSeleccionado(null)
     }
   }, [postulantesFiltrados, postulanteSeleccionado])
 
@@ -1018,9 +1073,13 @@ export default function PaginaSorteo() {
     setGuardandoEnDb(true)
     setErrorGuardadoDb(null)
     try {
-      const idDefensa = postulante.idDefensa || postulante.id
-      const idArea = String(area.id)
-      const idCaso = String(caso.id)
+      const rawDefensa = postulante.idDefensa || postulante.id
+      const rawArea = String(area.id)
+      const rawCaso = String(caso.id)
+
+      const idDefensa = rawDefensa.replace(/\D/g, '') || rawDefensa
+      const idArea = rawArea.replace(/\D/g, '') || rawArea
+      const idCaso = rawCaso.replace(/\D/g, '') || rawCaso
 
       // Comprobar si los identificadores son numéricos (registros reales en PostgreSQL)
       if (/^\d+$/.test(idDefensa) && /^\d+$/.test(idArea) && /^\d+$/.test(idCaso)) {
@@ -1042,8 +1101,42 @@ export default function PaginaSorteo() {
         setGuardadoEnDbExitoso(true)
         caso.usosActuales = (caso.usosActuales || 0) + 1
         postulante.estadoDefensa = 'CASO_ASIGNADO'
+        postulante.casoAsignadoTitulo = caso.titulo
+        postulante.areaAsignadaNombre = area.nombre
+
+        // Actualizar el estado en la lista para que pase inmediatamente de Pendientes a En Defensa
+        setPostulantes((prev) =>
+          prev.map((p) =>
+            p.id === postulante.id || p.idDefensa === postulante.idDefensa
+              ? {
+                  ...p,
+                  estadoDefensa: 'CASO_ASIGNADO',
+                  casoAsignadoTitulo: caso.titulo,
+                  areaAsignadaNombre: area.nombre,
+                }
+              : p,
+          ),
+        )
+        await loadApiDefensas()
       } else {
-        console.warn('Modo catálogo mock/offline: Se genera acta en memoria sin ID numérico de BD.')
+        // En entorno mock o pruebas locales
+        setGuardadoEnDbExitoso(true)
+        caso.usosActuales = (caso.usosActuales || 0) + 1
+        postulante.estadoDefensa = 'CASO_ASIGNADO'
+        postulante.casoAsignadoTitulo = caso.titulo
+        postulante.areaAsignadaNombre = area.nombre
+        setPostulantes((prev) =>
+          prev.map((p) =>
+            p.id === postulante.id
+              ? {
+                  ...p,
+                  estadoDefensa: 'CASO_ASIGNADO',
+                  casoAsignadoTitulo: caso.titulo,
+                  areaAsignadaNombre: area.nombre,
+                }
+              : p,
+          ),
+        )
       }
     } catch (err: any) {
       console.error('Error al persistir sorteo en base de datos:', err)
@@ -1139,7 +1232,7 @@ export default function PaginaSorteo() {
   }
 
   // Reiniciar flujo para siguiente postulante
-  const handleIniciarNuevoSorteo = () => {
+  const handleIniciarNuevoSorteo = async () => {
     // Si había sesión en vivo previa, finalizarla formalmente
     if (liveToken) {
       sorteosApi.expirarSesionLive(liveToken).catch(() => {})
@@ -1164,6 +1257,22 @@ export default function PaginaSorteo() {
     setGuardandoEnDb(false)
     setGuardadoEnDbExitoso(false)
     setErrorGuardadoDb(null)
+    setFiltroEstadoPostulante('PENDIENTES')
+
+    // Recargar defensas desde base de datos y seleccionar el siguiente pendiente
+    const fresh = await loadApiDefensas()
+    if (fresh && fresh.length > 0) {
+      let candidatos = fresh
+      if (isJefe && jefeCarreraId) {
+        candidatos = fresh.filter((p) => String(p.carreraId) === String(jefeCarreraId))
+      }
+      const siguientePendiente = candidatos.find(
+        (p) => p.estadoDefensa === 'PROGRAMADA' || p.estadoDefensa === 'AREA_SORTEADA',
+      )
+      setPostulanteSeleccionado(siguientePendiente || null)
+    } else {
+      setPostulanteSeleccionado(null)
+    }
   }
 
   // Reintentar persistencia manual si hubo error
@@ -1322,18 +1431,15 @@ export default function PaginaSorteo() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold tracking-widest text-crimson uppercase">
-                    Aislamiento Estricto por Carrera (RNF-02)
+                    Aislamiento Institucional por Carrera
                   </span>
-                  <span className="bg-amber-100 text-amber-900 text-[10px] font-semibold px-2 py-0.5">
-                    Modo Consulta / Supervisión
+                  <span className="bg-neutral-100 text-neutral-800 text-[10px] font-semibold px-2 py-0.5">
+                    Carrera Asignada
                   </span>
                 </div>
                 <p className="text-xs font-semibold text-neutral-900 mt-0.5">
-                  Visualizando únicamente postulantes de:{' '}
+                  Gestionando postulantes de:{' '}
                   <span className="text-crimson font-bold">{carreraNombre || 'Tu Carrera'}</span>
-                  <span className="text-neutral-500 font-normal ml-2">
-                    (Nota: El acto solemne de sorteo es operado por la Secretaría de Facultad o Defensas de Grado).
-                  </span>
                 </p>
               </div>
             </div>
@@ -1538,11 +1644,38 @@ export default function PaginaSorteo() {
                 </header>
 
                 <div className="p-6 flex flex-col gap-6">
-                  {/* Selector rápido de postulantes */}
+                  {/* Selector rápido de postulantes con pestañas Pendientes / En Defensa */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-neutral-600 mb-2">
-                      Seleccionar Postulante Programado
-                    </label>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-neutral-600">
+                        Seleccionar Postulante Programado
+                      </label>
+                      <div className="flex items-center gap-1 border border-line bg-surface p-0.5 rounded text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => setFiltroEstadoPostulante('PENDIENTES')}
+                          className={`px-2.5 py-1 rounded font-medium transition-colors cursor-pointer ${
+                            filtroEstadoPostulante === 'PENDIENTES'
+                              ? 'bg-white text-crimson shadow-2xs font-bold border border-line'
+                              : 'text-neutral-500 hover:text-neutral-900'
+                          }`}
+                        >
+                          Pendientes de Sorteo ({cantPendientes})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFiltroEstadoPostulante('EN_DEFENSA')}
+                          className={`px-2.5 py-1 rounded font-medium transition-colors cursor-pointer ${
+                            filtroEstadoPostulante === 'EN_DEFENSA'
+                              ? 'bg-white text-emerald-800 shadow-2xs font-bold border border-line'
+                              : 'text-neutral-500 hover:text-neutral-900'
+                          }`}
+                        >
+                          En Defensa / Concluidos ({cantEnDefensa})
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-neutral-400" />
                       <input
@@ -1554,48 +1687,76 @@ export default function PaginaSorteo() {
                       />
                     </div>
 
-                    <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-line divide-y divide-line">
-                      {postulantesFiltrados.map((postulante) => {
-                        const seleccionado = postulanteSeleccionado?.id === postulante.id
-                        return (
-                          <button
-                            key={postulante.id}
-                            type="button"
-                            onClick={() => {
-                              setPostulanteSeleccionado(postulante)
-                              setAreaGanadora(null)
-                              setCasoGanador(null)
-                              setSorteoSuspendido(false)
-                              setAsistenciaPresente(true)
-                            }}
-                            className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-xs transition-colors ${
-                              seleccionado
-                                ? 'bg-red-50/80 font-semibold text-crimson'
-                                : 'hover:bg-neutral-50 text-gray-700'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span
-                                className={`size-2 rounded-full ${
-                                  seleccionado ? 'bg-crimson' : 'bg-neutral-300'
-                                }`}
-                              />
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {postulante.nombreCompleto}
-                                </p>
-                                <p className="text-[11px] text-neutral-500">
-                                  {postulante.carrera} · Carnet {postulante.carnetEstudiantil}
-                                </p>
+                    {postulantesFiltrados.length === 0 ? (
+                      <div className="mt-2 p-5 text-center text-xs text-neutral-500 rounded-lg border border-line bg-surface">
+                        <CheckCircle2 className="size-5 text-emerald-600 mx-auto mb-1.5" />
+                        <p className="font-semibold text-neutral-800">
+                          {filtroEstadoPostulante === 'PENDIENTES'
+                            ? 'No hay postulantes pendientes de sorteo'
+                            : 'No hay defensas en curso registradas'}
+                        </p>
+                        <p className="text-[11px] text-neutral-500 mt-0.5">
+                          {filtroEstadoPostulante === 'PENDIENTES'
+                            ? 'Todos los estudiantes programados ya cuentan con caso asignado y están en etapa de defensa.'
+                            : 'Los estudiantes que concluyan el sorteo oficial se listarán aquí.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-line divide-y divide-line">
+                        {postulantesFiltrados.map((postulante) => {
+                          const seleccionado = postulanteSeleccionado?.id === postulante.id
+                          return (
+                            <button
+                              key={postulante.id}
+                              type="button"
+                              onClick={() => {
+                                setPostulanteSeleccionado(postulante)
+                                setAreaGanadora(null)
+                                setCasoGanador(null)
+                                setSorteoSuspendido(false)
+                                setAsistenciaPresente(true)
+                              }}
+                              className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-xs transition-colors cursor-pointer ${
+                                seleccionado
+                                  ? 'bg-red-50/80 font-semibold text-crimson'
+                                  : 'hover:bg-neutral-50 text-gray-700'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className={`size-2 rounded-full ${
+                                    seleccionado ? 'bg-crimson' : 'bg-neutral-300'
+                                  }`}
+                                />
+                                <div>
+                                  <p className="font-medium text-gray-900">
+                                    {postulante.nombreCompleto}
+                                  </p>
+                                  <p className="text-[11px] text-neutral-500">
+                                    {postulante.carrera} · Carnet {postulante.carnetEstudiantil}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                            <span className="rounded bg-white px-2 py-0.5 text-[10px] font-medium border border-line">
-                              {postulante.tipoDefensa}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="rounded bg-white px-2 py-0.5 text-[10px] font-medium border border-line">
+                                  {postulante.tipoDefensa}
+                                </span>
+                                {postulante.estadoDefensa === 'CASO_ASIGNADO' && (
+                                  <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+                                    En Defensa
+                                  </span>
+                                )}
+                                {postulante.estadoDefensa === 'AREA_SORTEADA' && (
+                                  <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-800 border border-blue-200">
+                                    Área Sorteada
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Tarjeta de Ficha Académica del Postulante */}
@@ -1653,147 +1814,206 @@ export default function PaginaSorteo() {
                     </div>
                   )}
 
-                  {/* ── SWITCH INTERACTIVO DE ASISTENCIA ── */}
-                  <div className="rounded-xl border border-gray-200 bg-white p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2">
-                          <ShieldCheck className="size-4 text-crimson" />
-                          Control de Asistencia del Postulante
-                        </h4>
-                        <p className="mt-0.5 text-xs text-neutral-500">
-                          Debe certificar si el estudiante se encuentra presente en la sala de sorteo.
-                        </p>
-                      </div>
-
-                      {/* Botones Switch */}
-                      {isVice || !puedeOperarSorteo ? (
-                        <div className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-semibold text-blue-800">
-                          <ShieldCheck className="size-4 text-blue-600" />
-                          <span>Control de asistencia reservado a Secretaría de Facultad / Coordinación</span>
+                  {/* Si el postulante seleccionado ya concluyó su sorteo (CASO_ASIGNADO / DEFENDIDO / CALIFICADO) */}
+                  {postulanteSeleccionado &&
+                  (postulanteSeleccionado.estadoDefensa === 'CASO_ASIGNADO' ||
+                    postulanteSeleccionado.estadoDefensa === 'DEFENDIDO' ||
+                    postulanteSeleccionado.estadoDefensa === 'CALIFICADO') ? (
+                    <div className="rounded-xl border border-emerald-300 bg-emerald-50/80 p-5 shadow-xs">
+                      <div className="flex items-start gap-4">
+                        <div className="flex size-10 items-center justify-center rounded-full bg-emerald-600 text-white shrink-0">
+                          <CheckCircle2 className="size-6" />
                         </div>
-                      ) : (
-                        <div className="inline-flex rounded-lg border border-line bg-neutral-100 p-1">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleAsistencia(true)}
-                            className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
-                              asistenciaPresente
-                                ? 'bg-emerald-600 text-white shadow-xs'
-                                : 'text-neutral-600 hover:text-gray-900'
-                            }`}
-                          >
-                            <UserCheck className="size-3.5" />
-                            Presente en Sala
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleAsistencia(false)}
-                            className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
-                              !asistenciaPresente
-                                ? 'bg-red-600 text-white shadow-xs'
-                                : 'text-neutral-600 hover:text-gray-900'
-                            }`}
-                          >
-                            <UserX className="size-3.5" />
-                            Ausente / No Comparece
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-sm font-bold text-emerald-950 uppercase tracking-wide">
+                              Sorteo Oficial Concluido — Postulante en Fase de Defensa
+                            </h4>
+                            <span className="rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-black text-white uppercase tracking-wider">
+                              Caso Asignado
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-emerald-800 leading-relaxed">
+                            El postulante <strong>{postulanteSeleccionado.nombreCompleto}</strong> ya completó el acto oficial de sorteo de área y caso de estudio reglamentario. No puede ser convocado a un nuevo sorteo ya que su caso se encuentra adjudicado y en preparación para tribunal.
+                          </p>
 
-                    {/* Si está Ausente: Exigir Justificación y Suspender */}
-                    {!asistenciaPresente && (
-                      <div className="mt-5 rounded-lg border border-red-200 bg-red-50/80 p-4 animate-fade-in">
-                        <div className="flex items-start gap-3">
-                          <AlertTriangle className="size-5 shrink-0 text-red-600 mt-0.5" />
-                          <div className="flex-1">
-                            <h5 className="text-xs font-bold text-red-900 uppercase">
-                              Postulante Ausente — Suspensión Obligatoria del Sorteo
-                            </h5>
-                            <p className="mt-1 text-xs text-red-700">
-                              De acuerdo con el Reglamento General de Grado, ante la inasistencia del postulante no es posible ejecutar el sorteo de áreas ni casos. Ingrese el motivo formal para registrar el acta de suspensión.
-                            </p>
-
-                            <div className="mt-3 flex flex-col gap-3">
-                              <div>
-                                <label className="block text-[11px] font-bold text-red-900 uppercase mb-1">
-                                  Motivo de Inasistencia / Justificación *
-                                </label>
-                                <select
-                                  value={motivoInasistencia}
-                                  onChange={(e) => setMotivoInasistencia(e.target.value)}
-                                  className="w-full rounded-md border border-red-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-red-500 focus:outline-none"
-                                >
-                                  <option value="">-- Seleccione una justificación oficial --</option>
-                                  <option value="Inasistencia no justificada (No compareció a la hora convocada)">
-                                    Inasistencia no justificada (No compareció a la hora convocada)
-                                  </option>
-                                  <option value="Baja médica debidamente certificada con reposo oficial">
-                                    Baja médica debidamente certificada con reposo oficial
-                                  </option>
-                                  <option value="Fuerza mayor o calamidad doméstica comprobada">
-                                    Fuerza mayor o calamidad doméstica comprobada
-                                  </option>
-                                  <option value="Retraso grave con solicitud previa de reprogramación">
-                                    Retraso grave con solicitud previa de reprogramación
-                                  </option>
-                                </select>
-                              </div>
-
-                              <div>
-                                <label className="block text-[11px] font-bold text-red-900 uppercase mb-1">
-                                  Observación Adicional de Secretaría
-                                </label>
-                                <textarea
-                                  rows={2}
-                                  placeholder="Detalle los hechos observados por el tribunal y secretaría..."
-                                  value={observacionInasistencia}
-                                  onChange={(e) => setObservacionInasistencia(e.target.value)}
-                                  className="w-full rounded-md border border-red-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-red-500 focus:outline-none"
-                                />
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={handleRegistrarSuspension}
-                                disabled={!motivoInasistencia.trim() || sorteoSuspendido}
-                                className="self-start flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700 disabled:opacity-50"
-                              >
-                                <XCircle className="size-4" />
-                                {sorteoSuspendido ? 'Suspensión Registrada en Acta' : 'Confirmar y Archivar Suspensión'}
-                              </button>
+                          <div className="mt-4 pt-3.5 border-t border-emerald-200/80 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div className="bg-white p-3 rounded border border-emerald-200 shadow-2xs">
+                              <span className="text-[10px] uppercase font-bold text-emerald-700 font-mono">
+                                Área Académica Sorteada
+                              </span>
+                              <p className="font-bold text-emerald-950 mt-0.5">
+                                {postulanteSeleccionado.areaAsignadaNombre || 'Área Oficial Asignada'}
+                              </p>
+                            </div>
+                            <div className="bg-white p-3 rounded border border-emerald-200 shadow-2xs">
+                              <span className="text-[10px] uppercase font-bold text-emerald-700 font-mono">
+                                Caso de Estudio Adjudicado
+                              </span>
+                              <p className="font-bold text-emerald-950 mt-0.5">
+                                {postulanteSeleccionado.casoAsignadoTitulo || 'Caso de Estudio Registrado en Base de Datos'}
+                              </p>
                             </div>
                           </div>
                         </div>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Acciones de Navegación del Paso 1 */}
-                  <div className="flex items-center justify-between border-t border-line pt-4">
-                    <p className="text-xs text-neutral-500">
-                      Paso 1 de 4 · Verificación de identidad y sala
-                    </p>
-
-                    {isVice || !puedeOperarSorteo ? (
-                      <div className="inline-flex items-center gap-2 border border-neutral-200 bg-neutral-100 px-4 py-2.5 text-xs font-semibold text-neutral-600">
-                        <Lock className="size-4 text-neutral-500" />
-                        <span>Inicio de sorteo oficial reservado a Secretaría de Facultad (Solo Consulta)</span>
+                      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-emerald-200">
+                        <p className="text-xs text-emerald-800 font-medium">
+                          Modalidad: Defensa {postulanteSeleccionado.tipoDefensa} · Acto Programado: {postulanteSeleccionado.fechaDefensa}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setFiltroEstadoPostulante('PENDIENTES')}
+                          className="flex items-center gap-1.5 rounded-lg border border-emerald-700 bg-emerald-700 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-800 shadow-2xs cursor-pointer transition-colors"
+                        >
+                          <RotateCcw className="size-3.5" />
+                          <span>Ir a Postulantes Pendientes ({cantPendientes})</span>
+                        </button>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
-                        onClick={handleIniciarSorteoOficial}
-                        className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                      >
-                        <Maximize2 className="size-4" />
-                        <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
-                        <ArrowRight className="size-4" />
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* ── SWITCH INTERACTIVO DE ASISTENCIA ── */}
+                      <div className="rounded-xl border border-gray-200 bg-white p-5">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900 flex items-center gap-2">
+                              <ShieldCheck className="size-4 text-crimson" />
+                              Control de Asistencia del Postulante
+                            </h4>
+                            <p className="mt-0.5 text-xs text-neutral-500">
+                              Debe certificar si el estudiante se encuentra presente en la sala de sorteo.
+                            </p>
+                          </div>
+
+                          {/* Botones Switch */}
+                          {isVice ? (
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-500 font-medium">
+                              <UserCheck className="size-4 text-neutral-400" />
+                              <span>{asistenciaPresente ? 'Presente' : 'Ausente'}</span>
+                            </div>
+                          ) : (
+                            <div className="inline-flex rounded-lg border border-line bg-neutral-100 p-1">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleAsistencia(true)}
+                                className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
+                                  asistenciaPresente
+                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                    : 'text-neutral-600 hover:text-gray-900'
+                                }`}
+                              >
+                                <UserCheck className="size-3.5" />
+                                Presente en Sala
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleAsistencia(false)}
+                                className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-bold transition-all ${
+                                  !asistenciaPresente
+                                    ? 'bg-red-600 text-white shadow-xs'
+                                    : 'text-neutral-600 hover:text-gray-900'
+                                }`}
+                              >
+                                <UserX className="size-3.5" />
+                                Ausente / No Comparece
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Si está Ausente: Exigir Justificación y Suspender */}
+                        {!asistenciaPresente && (
+                          <div className="mt-5 rounded-lg border border-red-200 bg-red-50/80 p-4 animate-fade-in">
+                            <div className="flex items-start gap-3">
+                              <AlertTriangle className="size-5 shrink-0 text-red-600 mt-0.5" />
+                              <div className="flex-1">
+                                <h5 className="text-xs font-bold text-red-900 uppercase">
+                                  Postulante Ausente — Suspensión Obligatoria del Sorteo
+                                </h5>
+                                <p className="mt-1 text-xs text-red-700">
+                                  De acuerdo con el Reglamento General de Grado, ante la inasistencia del postulante no es posible ejecutar el sorteo de áreas ni casos. Ingrese el motivo formal para registrar el acta de suspensión.
+                                </p>
+
+                                <div className="mt-3 flex flex-col gap-3">
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-red-900 uppercase mb-1">
+                                      Motivo de Inasistencia / Justificación *
+                                    </label>
+                                    <select
+                                      value={motivoInasistencia}
+                                      onChange={(e) => setMotivoInasistencia(e.target.value)}
+                                      className="w-full rounded-md border border-red-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-red-500 focus:outline-none"
+                                    >
+                                      <option value="">-- Seleccione una justificación oficial --</option>
+                                      <option value="Inasistencia no justificada (No compareció a la hora convocada)">
+                                        Inasistencia no justificada (No compareció a la hora convocada)
+                                      </option>
+                                      <option value="Baja médica debidamente certificada con reposo oficial">
+                                        Baja médica debidamente certificada con reposo oficial
+                                      </option>
+                                      <option value="Fuerza mayor o calamidad doméstica comprobada">
+                                        Fuerza mayor o calamidad doméstica comprobada
+                                      </option>
+                                      <option value="Retraso grave con solicitud previa de reprogramación">
+                                        Retraso grave con solicitud previa de reprogramación
+                                      </option>
+                                    </select>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-red-900 uppercase mb-1">
+                                      Observación Adicional de Secretaría
+                                    </label>
+                                    <textarea
+                                      rows={2}
+                                      placeholder="Detalle los hechos observados por el tribunal y secretaría..."
+                                      value={observacionInasistencia}
+                                      onChange={(e) => setObservacionInasistencia(e.target.value)}
+                                      className="w-full rounded-md border border-red-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-red-500 focus:outline-none"
+                                    />
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={handleRegistrarSuspension}
+                                    disabled={!motivoInasistencia.trim() || sorteoSuspendido}
+                                    className="self-start flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-red-700 disabled:opacity-50"
+                                  >
+                                    <XCircle className="size-4" />
+                                    {sorteoSuspendido ? 'Suspensión Registrada en Acta' : 'Confirmar y Archivar Suspensión'}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Acciones de Navegación del Paso 1 */}
+                      <div className="flex items-center justify-between border-t border-line pt-4">
+                        <p className="text-xs text-neutral-500">
+                          Paso 1 de 4 · Verificación de identidad y sala
+                        </p>
+
+                        {isVice ? (
+                          <span className="text-xs text-neutral-400 italic">Modo Auditoría (Solo lectura)</span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
+                            onClick={handleIniciarSorteoOficial}
+                            className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            <Maximize2 className="size-4" />
+                            <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
+                            <ArrowRight className="size-4" />
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </section>
             )}
@@ -1828,7 +2048,7 @@ export default function PaginaSorteo() {
                     title="Ruleta Oficial de Áreas de Grado"
                     subtitle="Giro aleatorio CSPRNG auditable con desaceleración natural"
                     spinButtonText="Girar Ruleta de Áreas"
-                    readOnly={isVice || !puedeOperarSorteo}
+                    readOnly={isVice}
                   />
 
                   {/* Área Ganadora Revelada */}
@@ -1909,7 +2129,7 @@ export default function PaginaSorteo() {
                       title={`Casos de Estudio — ${areaGanadora?.codigo}`}
                       subtitle="Selección estricta de casos activos con límite máximo de 2 usos"
                       spinButtonText="Girar Ruleta de Casos"
-                      readOnly={isVice || !puedeOperarSorteo}
+                      readOnly={isVice}
                     />
                   ) : (
                     <div className="p-8 text-center text-xs text-neutral-500">
@@ -2051,9 +2271,23 @@ export default function PaginaSorteo() {
                       <span className="text-[10px] uppercase font-bold text-neutral-500 font-mono">
                         Destino de Notificación
                       </span>
-                      <p className="font-semibold text-neutral-900 truncate mt-0.5">
-                        {postulanteSeleccionado.correo}
+                      <p className="font-semibold text-neutral-900 truncate mt-0.5" title={postulanteSeleccionado.correo}>
+                        {postulanteSeleccionado.correoPersonal ? (
+                          <>
+                            <span className="text-[9px] uppercase font-bold bg-blue-50 text-blue-700 px-1 py-0.5 border border-blue-200 mr-1 font-sans">
+                              Personal
+                            </span>
+                            {postulanteSeleccionado.correoPersonal}
+                          </>
+                        ) : (
+                          postulanteSeleccionado.correo
+                        )}
                       </p>
+                      {postulanteSeleccionado.correoPersonal && postulanteSeleccionado.correoInstitucional && (
+                        <p className="text-[11px] text-neutral-500 truncate mt-0.5" title={postulanteSeleccionado.correoInstitucional}>
+                          Inst: {postulanteSeleccionado.correoInstitucional}
+                        </p>
+                      )}
                       <p className="text-neutral-500 mt-0.5">
                         Defensa Programada: {postulanteSeleccionado.fechaDefensa}
                       </p>
@@ -2185,26 +2419,27 @@ export default function PaginaSorteo() {
                             ¡Pliego Oficial Despachado con Éxito al Correo!
                           </p>
                           <p className="mt-0.5 text-emerald-800">
-                            Se ha enviado el acta digital certificada, el enunciado del caso ({casoGanador.codigo}) y las directrices de defensa al correo institucional <strong>{postulanteSeleccionado.correo}</strong> con copia a Secretaría de Facultad.
+                            Se ha enviado el acta digital en formato PDF oficial adjunto, el enunciado del caso ({casoGanador.codigo}) y las directrices de defensa a <strong>{postulanteSeleccionado.correoPersonal || postulanteSeleccionado.correo}</strong> {postulanteSeleccionado.correoPersonal && postulanteSeleccionado.correoInstitucional ? `y a ${postulanteSeleccionado.correoInstitucional}` : ''} con copia archivada.
                           </p>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface p-4 border border-line">
                         <div>
-                          <p className="text-xs font-bold text-neutral-900">
-                            Despacho Digital de Pliego de Examen
-                          </p>
-                          <p className="text-[11px] text-neutral-500">
-                            Remite automáticamente el caso sorteado al correo institucional del alumno y archiva el acta.
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-bold text-neutral-900">
+                              Despacho Digital de Pliego de Examen
+                            </p>
+                            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-semibold px-1.5 py-0.5 border border-emerald-200">
+                              PDF Oficial Adjunto
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-neutral-500 mt-0.5">
+                            Remite automáticamente el caso y el Acta formal en PDF adjunto a {postulanteSeleccionado.correoPersonal || postulanteSeleccionado.correo}.
                           </p>
                         </div>
 
-                        {isVice || !puedeOperarSorteo ? (
-                          <span className="text-xs font-semibold text-neutral-500 italic">
-                            Despacho formal reservado a Secretaría de Facultad
-                          </span>
-                        ) : (
+                        {isVice ? null : (
                           <button
                             type="button"
                             disabled={despachandoCorreo}
@@ -2213,9 +2448,9 @@ export default function PaginaSorteo() {
                           >
                             <Mail className="size-4" />
                             {despachandoCorreo ? (
-                              'Despachando al correo institucional...'
+                              'Despachando notificación y Acta PDF...'
                             ) : (
-                              <>Despachar al Correo ({postulanteSeleccionado.correo.split('@')[0]}...)</>
+                              <>Despachar al Correo ({((postulanteSeleccionado.correoPersonal || postulanteSeleccionado.correo)).split('@')[0]}...)</>
                             )}
                           </button>
                         )}
@@ -2243,14 +2478,15 @@ export default function PaginaSorteo() {
                         </button>
                       </div>
 
-                      {!isVice && puedeOperarSorteo && (
+                      {!isVice && (
                         <button
                           type="button"
                           onClick={handleIniciarNuevoSorteo}
-                          className="flex items-center gap-2 border border-ink bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800 shadow-xs cursor-pointer"
+                          className="flex items-center gap-2 rounded border border-emerald-800 bg-emerald-800 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 shadow-xs cursor-pointer transition-colors"
                         >
-                          <RotateCcw className="size-3.5" />
-                          Iniciar Nuevo Sorteo
+                          <CheckCircle2 className="size-4" />
+                          <span>Concluir Sorteo y Pasar al Siguiente Postulante</span>
+                          <ArrowRight className="size-3.5" />
                         </button>
                       )}
                     </div>
@@ -2564,7 +2800,7 @@ export default function PaginaSorteo() {
                   subtitle="Giro aleatorio CSPRNG auditable"
                   spinButtonText="Girar Ruleta de Áreas"
                   accentColor="#9E1B32"
-                  readOnly={isVice || !puedeOperarSorteo}
+                  readOnly={isVice}
                 />
 
                 {areaGanadora && (
@@ -2609,7 +2845,7 @@ export default function PaginaSorteo() {
                     subtitle="Selección de casos con límite máximo de 2 usos"
                     spinButtonText="Girar Ruleta de Casos"
                     accentColor="#9E1B32"
-                    readOnly={isVice || !puedeOperarSorteo}
+                    readOnly={isVice}
                   />
                 ) : (
                   <div className="p-8 text-neutral-400 text-sm">

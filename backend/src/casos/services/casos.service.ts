@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import {
+  BulkCasosDto,
   CreateAreaDto,
   CreateCasoDto,
   FilterCasosDto,
@@ -446,6 +447,30 @@ export class CasosService {
       stockCritico: Boolean(row.stock_critico),
       mensajeAlerta: row.mensaje_alerta,
     }));
+  }
+
+  /**
+   * Importación masiva de casos de estudio por lotes.
+   */
+  async bulkImportCasos(dto: BulkCasosDto, user: AuthenticatedUser) {
+    let importados = 0;
+    const errores: string[] = [];
+
+    for (const casoDto of dto.casos) {
+      try {
+        await this.create(casoDto, user);
+        importados++;
+      } catch (err: any) {
+        errores.push(`Caso "${casoDto.titulo}": ${err.message || 'Error al registrar'}`);
+      }
+    }
+
+    return {
+      total: dto.casos.length,
+      importados,
+      fallidos: errores.length,
+      errores,
+    };
   }
 
   /**

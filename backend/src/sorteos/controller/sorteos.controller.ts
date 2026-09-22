@@ -197,7 +197,8 @@ export class SorteosController {
       nombreEstudiante: string;
       carnet: string;
       carrera: string;
-      correo: string;
+      correo?: string;
+      correoInstitucional?: string;
       tipoDefensa: string;
     },
   ) {
@@ -260,7 +261,8 @@ export class SorteosController {
     @Body()
     body: {
       token: string;
-      correo: string;
+      correo?: string;
+      correoInstitucional?: string;
       nombreEstudiante: string;
       carnet: string;
       carrera: string;

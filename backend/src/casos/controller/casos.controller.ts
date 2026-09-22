@@ -15,6 +15,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
+  BulkCasosDto,
   CreateAreaDto,
   CreateCasoDto,
   FilterCasosDto,
@@ -126,6 +127,19 @@ export class CasosController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.casosService.create(dto, user);
+  }
+
+  /**
+   * Importación masiva de casos de estudio por lotes.
+   */
+  @Post('importar')
+  @Roles('JEFE_CARRERA', 'COORDINACION', 'SUPER_ADMIN')
+  @HttpCode(HttpStatus.OK)
+  async importarCasos(
+    @Body() dto: BulkCasosDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.casosService.bulkImportCasos(dto, user);
   }
 
   /**

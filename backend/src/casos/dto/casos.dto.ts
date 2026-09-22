@@ -186,3 +186,9 @@ export interface VistaAreaItemDto {
   stockCritico: boolean;
   mensajeAlerta: string;
 }
+
+export class BulkCasosDto {
+  @IsNotEmpty({ message: 'La lista de casos no puede estar vacía.' })
+  casos!: CreateCasoDto[];
+}
+

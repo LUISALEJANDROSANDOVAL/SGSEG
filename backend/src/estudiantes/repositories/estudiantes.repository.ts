@@ -74,18 +74,92 @@ export class EstudiantesRepository {
   }
 
   /**
-   * Busca una carrera por nombre (búsqueda insensible a mayúsculas/minúsculas).
+   * Busca una carrera por nombre (búsqueda insensible a mayúsculas/minúsculas y tildes).
    */
   async findCarreraByName(nombre: string) {
-    return this.prisma.carrera.findFirst({
+    const clean = nombre.trim();
+    if (!clean) return null;
+
+    // 1. Coincidencia directa insensible
+    const direct = await this.prisma.carrera.findFirst({
       where: {
         nombre: {
-          equals: nombre.trim(),
+          equals: clean,
           mode: 'insensitive',
         },
       },
       include: { facultad: true },
     });
+    if (direct) return direct;
+
+    // 2. Coincidencia parcial insensible en base de datos
+    const partial = await this.prisma.carrera.findFirst({
+      where: {
+        nombre: {
+          contains: clean,
+          mode: 'insensitive',
+        },
+      },
+      include: { facultad: true },
+    });
+    if (partial) return partial;
+
+    // 3. Coincidencia normalizando tildes y caracteres especiales
+    const stripAccents = (str: string) =>
+      str
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+
+    const targetNormalized = stripAccents(clean);
+    const todas = await this.prisma.carrera.findMany({
+      include: { facultad: true },
+    });
+
+    for (const c of todas) {
+      const cNorm = stripAccents(c.nombre);
+      if (
+        cNorm === targetNormalized ||
+        cNorm.includes(targetNormalized) ||
+        targetNormalized.includes(cNorm)
+      ) {
+        return c;
+      }
+      // Manejo de siglas y atajos comunes
+      if (
+        (targetNormalized === 'adm' || targetNormalized.includes('administracion')) &&
+        cNorm.includes('administracion')
+      ) {
+        return c;
+      }
+      if (
+        (targetNormalized === 'ico' || targetNormalized.includes('comercial')) &&
+        cNorm.includes('comercial')
+      ) {
+        return c;
+      }
+      if (
+        (targetNormalized === 'cpa' || targetNormalized.includes('contaduria') || targetNormalized.includes('auditoria')) &&
+        cNorm.includes('contaduria')
+      ) {
+        return c;
+      }
+      if (
+        (targetNormalized === 'ifi' || targetNormalized.includes('financiera')) &&
+        cNorm.includes('financiera')
+      ) {
+        return c;
+      }
+      if (
+        (targetNormalized === 'sis' || targetNormalized.includes('sistemas')) &&
+        cNorm.includes('sistemas')
+      ) {
+        return c;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -102,16 +176,51 @@ export class EstudiantesRepository {
    * Busca un plan de estudio por carrera y nombre exacto o insensible.
    */
   async findPlanByCarreraAndNombre(idCarrera: bigint, nombre: string) {
-    return this.prisma.planEstudio.findFirst({
+    const clean = nombre.trim();
+    if (!clean) return null;
+
+    const direct = await this.prisma.planEstudio.findFirst({
       where: {
         idCarrera,
         nombre: {
-          equals: nombre.trim(),
+          equals: clean,
           mode: 'insensitive',
         },
       },
       include: { carrera: true },
     });
+    if (direct) return direct;
+
+    const partial = await this.prisma.planEstudio.findFirst({
+      where: {
+        idCarrera,
+        nombre: {
+          contains: clean,
+          mode: 'insensitive',
+        },
+      },
+      include: { carrera: true },
+    });
+    if (partial) return partial;
+
+    // Si el texto contiene el año (ej. "2026"), buscar planes que contengan ese año
+    const yearMatch = clean.match(/\d{4}/);
+    if (yearMatch) {
+      const year = yearMatch[0];
+      const byYear = await this.prisma.planEstudio.findFirst({
+        where: {
+          idCarrera,
+          nombre: {
+            contains: year,
+            mode: 'insensitive',
+          },
+        },
+        include: { carrera: true },
+      });
+      if (byYear) return byYear;
+    }
+
+    return null;
   }
 
   /**
@@ -159,6 +268,7 @@ export class EstudiantesRepository {
       carnetIdentidad: string;
       nombreCompleto: string;
       correoInstitucional: string;
+      correoPersonal?: string | null;
       estado?: string;
     },
   ) {
@@ -176,6 +286,7 @@ export class EstudiantesRepository {
         carnetIdentidad: data.carnetIdentidad,
         nombreCompleto: data.nombreCompleto,
         correoInstitucional: data.correoInstitucional,
+        correoPersonal: data.correoPersonal ?? null,
         estado: data.estado ?? 'ACTIVO',
       },
       update: {
@@ -183,6 +294,7 @@ export class EstudiantesRepository {
         carnetIdentidad: data.carnetIdentidad,
         nombreCompleto: data.nombreCompleto,
         correoInstitucional: data.correoInstitucional,
+        ...(data.correoPersonal !== undefined ? { correoPersonal: data.correoPersonal } : {}),
         estado: data.estado ?? 'ACTIVO',
       },
       include: {

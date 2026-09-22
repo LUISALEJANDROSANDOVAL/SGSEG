@@ -51,11 +51,15 @@ export class EstudiantesController {
    * Endpoint para carga masiva de estudiantes mediante archivo Excel/CSV.
    */
   @Post('importar')
-  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file'))
-  async importarDesdeArchivo(@UploadedFile() file: any) {
-    return this.estudiantesService.importarEstudiantesDesdeArchivo(file);
+  async importarDesdeArchivo(
+    @UploadedFile() file: any,
+    @Body() body?: any,
+    @CurrentUser() user?: AuthenticatedUser,
+  ) {
+    return this.estudiantesService.importarEstudiantesDesdeArchivo(file, body, user);
   }
 
   /**

@@ -166,7 +166,7 @@ describe('AuthService', () => {
         service.updateUserEstado(
           '1',
           { estado: 'INACTIVO' },
-          { idUsuario: '1', correoInstitucional: 'coord@uni.edu.bo', rol: 'COORDINACION' },
+          { idUsuario: '1', correoInstitucional: 'vice@uni.edu.bo', rol: 'VICERRECTORADO' },
         ),
       ).rejects.toThrow('No puedes inactivar tu propia cuenta activa');
     });

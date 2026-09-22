@@ -50,7 +50,8 @@ export interface SesionLive {
 }
 
 export interface NotificacionSorteoDto {
-  correo: string;
+  correo?: string;
+  correoInstitucional?: string;
   nombreEstudiante: string;
   carnet: string;
   carrera: string;
@@ -76,7 +77,8 @@ export class SorteosLiveService {
     nombreEstudiante: string;
     carnet: string;
     carrera: string;
-    correo: string;
+    correo?: string;
+    correoInstitucional?: string;
     tipoDefensa: string;
   }): SesionLive {
     const token = crypto.randomUUID();
@@ -86,7 +88,7 @@ export class SorteosLiveService {
       nombreEstudiante: datos.nombreEstudiante,
       carnet: datos.carnet,
       carrera: datos.carrera,
-      correo: datos.correo,
+      correo: datos.correo || datos.correoInstitucional || '',
       tipoDefensa: datos.tipoDefensa,
       fase: 'ESPERANDO',
       areaGanadora: null,
@@ -185,13 +187,14 @@ export class SorteosLiveService {
     const ahora = new Date().toLocaleString('es-BO', {
       timeZone: 'America/La_Paz',
     });
+    const correoDest = dto.correo || dto.correoInstitucional || 'estudiante@utepsa.edu.bo';
 
     // Registro formal del correo en los logs del servidor
     console.log(`
 ================================================================================
 🏛️  UTEPSA - NOTIFICACIÓN OFICIAL DE ASIGNACIÓN DE CASO DE EXAMEN DE GRADO
 ================================================================================
-Destinatario: ${dto.nombreEstudiante} <${dto.correo}>
+Destinatario: ${dto.nombreEstudiante} <${correoDest}>
 CU/CI:        ${dto.carnet}
 Carrera:      ${dto.carrera}
 Código Acta:  ${dto.codigoActa}
@@ -210,10 +213,10 @@ El documento oficial de acta ha sido archivado en los registros de Secretaría d
 
     return {
       enviado: true,
-      destinatario: dto.correo,
+      destinatario: correoDest,
       codigoActa: dto.codigoActa,
       fechaDespacho: ahora,
-      mensaje: `Notificación y pliego oficial despachados con éxito al correo ${dto.correo}.`,
+      mensaje: `Notificación y pliego oficial despachados con éxito al correo ${correoDest}.`,
     };
   }
 
@@ -258,7 +261,8 @@ El documento oficial de acta ha sido archivado en los registros de Secretaría d
    */
   enviarNotificacionInicio(dto: {
     token: string;
-    correo: string;
+    correo?: string;
+    correoInstitucional?: string;
     nombreEstudiante: string;
     carnet: string;
     carrera: string;
@@ -267,12 +271,13 @@ El documento oficial de acta ha sido archivado en los registros de Secretaría d
     const ahora = new Date().toLocaleString('es-BO', {
       timeZone: 'America/La_Paz',
     });
+    const correoDest = dto.correo || dto.correoInstitucional || 'estudiante@utepsa.edu.bo';
 
     console.log(`
 ================================================================================
 🏛️  UTEPSA - INVITACIÓN OFICIAL A SORTEO DIGITAL EN TIEMPO REAL
 ================================================================================
-Destinatario: ${dto.nombreEstudiante} <${dto.correo}>
+Destinatario: ${dto.nombreEstudiante} <${correoDest}>
 CU/CI:        ${dto.carnet}
 Carrera:      ${dto.carrera}
 Enlace Live:  ${dto.linkLive}
@@ -289,8 +294,8 @@ Al ingresar, presione "Estoy Listo para el Sorteo" para certificar su conformida
 
     return {
       enviado: true,
-      destinatario: dto.correo,
-      mensaje: `Enlace de transmisión en vivo despachado exitosamente al correo ${dto.correo}.`,
+      destinatario: correoDest,
+      mensaje: `Enlace de transmisión en vivo despachado exitosamente al correo ${correoDest}.`,
     };
   }
 }

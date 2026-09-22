@@ -477,15 +477,58 @@ export class SorteosService {
       }
     }
 
-    // Despacho asíncrono y encolamiento de correo oficial al estudiante
-    if (this.colaNotificacionesService && estudiante.correoInstitucional) {
+    // Despacho asíncrono y encolamiento de correo oficial al estudiante (con Acta PDF adjunta)
+    const correoDestino = estudiante.correoInstitucional || estudiante.correoPersonal;
+    if (this.colaNotificacionesService && correoDestino) {
       try {
+        let pdfBuffer: Buffer | undefined;
+        try {
+          pdfBuffer = await this.actasPdfService.generarActaPdfBuffer({
+            codigoActa,
+            tokenActa,
+            fechaAsignacion: ahora,
+            plazoLimiteEntrega: plazoLimite,
+            estudiante: {
+              nombreCompleto: estudiante.nombreCompleto,
+              carnetIdentidad: estudiante.carnetIdentidad,
+              carnetEstudiantil: estudiante.carnetEstudiantil,
+              correoInstitucional: estudiante.correoInstitucional || estudiante.correoPersonal || '',
+              carrera: carrera.nombre,
+              facultad: (carrera as any).facultad?.nombre || 'UTEPSA',
+              planEstudio: estudiante.planEstudio?.nombre || 'Plan Vigente',
+            },
+            defensa: {
+              idDefensa: String(defensa.idDefensa),
+              tipoDefensa: defensa.tipoDefensa.nombre,
+              fechaDefensa: defensa.fechaDefensa,
+              periodoAcademico: (defensa as any).periodoAcademico || 'Gestión Académica',
+            },
+            area: {
+              nombre: asignacion.area?.nombre || 'Área Sorteada',
+            },
+            caso: {
+              idCaso: String(dto.idCaso),
+              titulo: asignacion.caso?.titulo || 'Caso de Estudio',
+              contenido: asignacion.caso?.contenido,
+            },
+            usuarioEjecutor: {
+              nombreCompleto: user.nombreCompleto || 'Comisión Evaluadora',
+              correo: (user as any).correo || (user as any).email || 'notificaciones@utepsa.edu',
+              rol: user.rol,
+            },
+          });
+        } catch (pdfErr: any) {
+          this.logger.warn(`No se pudo generar el acta PDF para adjuntar: ${pdfErr.message}`);
+        }
+
         await this.colaNotificacionesService.encolarNotificacion({
           idEstudiante: estudiante.idEstudiante,
           idCasoEstudio: BigInt(dto.idCaso),
           idDefensa,
           idUsuarioEnvio: BigInt(user.idUsuario),
-          correoDestino: estudiante.correoInstitucional,
+          correoDestino,
+          correoPersonal: estudiante.correoPersonal || undefined,
+          correoInstitucional: estudiante.correoInstitucional || undefined,
           nombreEstudiante: estudiante.nombreCompleto,
           carnetEstudiantil: estudiante.carnetEstudiantil,
           carnetIdentidad: estudiante.carnetIdentidad,
@@ -501,6 +544,7 @@ export class SorteosService {
           tipoDefensa: defensa.tipoDefensa.nombre,
           codigoActa,
           tokenActa,
+          pdfBuffer,
         });
       } catch (err: any) {
         this.logger.warn(`No se pudo encolar la notificación por correo: ${err.message}`);

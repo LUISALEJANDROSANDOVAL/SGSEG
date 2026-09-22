@@ -17,6 +17,8 @@ import {
   RotateCcw,
   Search,
   ShieldCheck,
+  Upload,
+  FileSpreadsheet,
   X,
 } from 'lucide-react'
 import { DashboardShell } from '@/components/dashboard-shell'
@@ -81,6 +83,11 @@ export default function PaginaCasos() {
   const [modalNuevaArea, setModalNuevaArea] = useState<boolean>(false)
   const [modalReactivar, setModalReactivar] = useState<CasoEstudio | null>(null)
   const [motivoReactivar, setMotivoReactivar] = useState<string>('')
+  const [modalImportar, setModalImportar] = useState<boolean>(false)
+  const [csvTexto, setCsvTexto] = useState<string>('')
+  const [areaParaImportar, setAreaParaImportar] = useState<string>('')
+  const [importando, setImportando] = useState<boolean>(false)
+  const [importResult, setImportResult] = useState<{ total: number; importados: number; fallidos: number; errores: string[] } | null>(null)
 
   // Formulario nuevo caso
   const [formNuevo, setFormNuevo] = useState({
@@ -375,6 +382,62 @@ export default function PaginaCasos() {
     })
   }
 
+  // Importación masiva de casos de estudio (Excel / CSV)
+  const handleImportarCasos = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!csvTexto.trim()) {
+      setFeedback({ tipo: 'error', mensaje: 'Debes ingresar o pegar contenido en formato CSV.' })
+      return
+    }
+
+    const defaultAreaId = areaParaImportar || (areas[0] ? String(areas[0].idArea) : '')
+    const lines = csvTexto.split('\n').map((l) => l.trim()).filter(Boolean)
+    const casosAImportar: any[] = []
+
+    for (const line of lines) {
+      if (line.toLowerCase().includes('titulo') && line.toLowerCase().includes('contenido')) continue
+      const sep = line.includes(';') ? ';' : ','
+      const parts = line.split(sep).map((p) => p.trim())
+      if (parts.length >= 3) {
+        casosAImportar.push({
+          idArea: parts[0],
+          titulo: parts[1],
+          contenido: parts.slice(2).join(', '),
+        })
+      } else if (parts.length === 2 && defaultAreaId) {
+        casosAImportar.push({
+          idArea: defaultAreaId,
+          titulo: parts[0],
+          contenido: parts[1],
+        })
+      }
+    }
+
+    if (casosAImportar.length === 0) {
+      setFeedback({
+        tipo: 'error',
+        mensaje: 'No se detectaron filas válidas. Formato requerido: ID_AREA,TITULO,CONTENIDO (o selecciona un área predeterminada).',
+      })
+      return
+    }
+
+    setImportando(true)
+    try {
+      const res = await casosApi.bulkImportCasos(casosAImportar)
+      setImportResult(res)
+      setFeedback({
+        tipo: 'exito',
+        mensaje: `Importación exitosa: ${res.importados} de ${res.total} casos registrados en la base de datos.`,
+      })
+      await cargarDatos()
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, 'Error al importar casos masivamente')
+      setFeedback({ tipo: 'error', mensaje: msg })
+    } finally {
+      setImportando(false)
+    }
+  }
+
   return (
     <DashboardShell>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
@@ -392,6 +455,21 @@ export default function PaginaCasos() {
                 >
                   <Plus className="size-3.5" />
                   Nueva Área
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImportResult(null)
+                    setCsvTexto('')
+                    if (areas.length > 0 && !areaParaImportar) {
+                      setAreaParaImportar(String(areas[0].idArea))
+                    }
+                    setModalImportar(true)
+                  }}
+                  className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet className="size-3.5 text-emerald-600" />
+                  Importar Masivo
                 </button>
                 <button
                   type="button"
@@ -1695,6 +1773,113 @@ export default function PaginaCasos() {
                   className="bg-purple-700 px-5 py-2 text-xs font-medium text-white hover:bg-purple-800 disabled:opacity-50 transition-colors"
                 >
                   {actionLoading ? 'Reactivando...' : 'Confirmar Reactivación Especial'}
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: IMPORTACIÓN MASIVA DE CASOS (EXCEL / CSV) ── */}
+      {modalImportar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-2xl border border-line bg-white shadow-xl">
+            <header className="flex items-center justify-between border-b border-line px-6 py-4 bg-emerald-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-sm bg-emerald-100 text-emerald-700">
+                  <FileSpreadsheet className="size-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold tracking-tight text-neutral-900">
+                    Importación Masiva de Casos de Estudio
+                  </h3>
+                  <p className="text-xs text-neutral-500">Carga rápida por lotes vía formato CSV o copiado desde Excel</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalImportar(false)}
+                className="text-neutral-400 hover:text-neutral-700 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </header>
+
+            <form onSubmit={handleImportarCasos} className="p-6 flex flex-col gap-4">
+              <div className="border border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-900 leading-relaxed space-y-1">
+                <p><strong>Instrucciones de formato:</strong></p>
+                <p>Cada línea representa un caso. Puedes usar punto y coma (;) o coma (,) como separador:</p>
+                <code className="block bg-white p-2 border border-emerald-300 font-mono text-[11px] text-neutral-800">
+                  ID_AREA,TITULO_DEL_CASO,PLANTEAMIENTO_Y_PREGUNTAS
+                </code>
+                <p className="text-[11px] text-emerald-700">
+                  Si no incluyes el ID del área en la primera columna, se asignarán al área predeterminada seleccionada abajo.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Área Predeterminada (Fallback)
+                </label>
+                <select
+                  value={areaParaImportar}
+                  onChange={(e) => setAreaParaImportar(e.target.value)}
+                  className="w-full border border-line bg-surface p-2.5 text-xs outline-none focus:border-neutral-400"
+                >
+                  {areas.map((a) => (
+                    <option key={a.idArea} value={String(a.idArea)}>
+                      [ID: {a.idArea}] {a.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Filas de Datos (CSV / Pegado desde Excel) *
+                </label>
+                <textarea
+                  required
+                  rows={6}
+                  value={csvTexto}
+                  onChange={(e) => setCsvTexto(e.target.value)}
+                  placeholder={`Ejemplo:\n400,Implementación de Cero Confianza,Diseñar arquitectura Zero Trust en nube híbrida con políticas IAM...\n400,Auditoría de Vulnerabilidades Web,Ejecutar análisis de código estático y dinámico según OWASP...`}
+                  className="w-full border border-line bg-surface p-3 font-mono text-xs leading-relaxed outline-none focus:border-neutral-400"
+                />
+              </div>
+
+              {importResult && (
+                <div className="border border-line bg-surface p-3 text-xs">
+                  <div className="font-semibold text-neutral-900 mb-1">Resultado de la Carga:</div>
+                  <div className="text-emerald-700 font-medium">Casos registrados: {importResult.importados} de {importResult.total}</div>
+                  {importResult.errores.length > 0 && (
+                    <div className="mt-2 text-rose-700">
+                      <div className="font-medium">Errores ({importResult.errores.length}):</div>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5 max-h-24 overflow-auto text-[11px]">
+                        {importResult.errores.map((err: string, idx: number) => (
+                          <li key={idx}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <footer className="mt-2 flex items-center justify-end gap-3 border-t border-line pt-4">
+                <button
+                  type="button"
+                  onClick={() => setModalImportar(false)}
+                  className="border border-line px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 cursor-pointer"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="submit"
+                  disabled={importando || !csvTexto.trim()}
+                  className="inline-flex items-center gap-2 bg-emerald-700 px-5 py-2 text-xs font-medium text-white hover:bg-emerald-800 disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  <Upload className="size-3.5" />
+                  {importando ? 'Procesando Lote...' : 'Procesar e Importar Casos'}
                 </button>
               </footer>
             </form>
