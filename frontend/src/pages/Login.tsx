@@ -162,51 +162,45 @@ export default function Login() {
   };
 
   return (
-    <main className="flex min-h-screen font-sans antialiased bg-[#f8f9fa]">
+    <main className="flex min-h-screen font-sans antialiased bg-surface text-neutral-900">
       {/* ── PANEL IZQUIERDO – Branding Institucional UTEPSA ── */}
-      <div className="relative hidden lg:flex lg:w-1/2 flex-col items-center justify-center overflow-hidden bg-[#c8102e]">
-        {/* Formas geométricas decorativas de fondo */}
-        <div className="absolute -top-28 -right-28 size-96 rotate-45 rounded-3xl bg-white/5" />
-        <div className="absolute -bottom-20 -left-20 size-80 rotate-12 rounded-3xl bg-black/10" />
-        <div className="absolute top-1/2 right-0 size-56 -translate-y-1/2 rounded-full bg-white/5 blur-3xl" />
-
-        {/* Patrón diagonal */}
+      <div className="relative hidden lg:flex lg:w-1/2 flex-col items-center justify-center overflow-hidden bg-crimson border-r border-crimson/30">
+        {/* Patrón sutil y geométrico característico */}
         <div
-          className="absolute inset-0 opacity-5 pointer-events-none"
+          className="absolute inset-0 opacity-[0.06] pointer-events-none"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
-            backgroundSize: '24px 24px',
+              'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 40px)',
           }}
         />
 
         {/* Bloque central de presentación */}
-        <div className="relative z-10 flex flex-col items-center gap-7 px-8 lg:px-10 text-center text-white max-w-xl xl:max-w-2xl w-full">
-          {/* Logo UTEPSA */}
-          <div className="flex items-center justify-center size-24 rounded-full bg-white/10 ring-4 ring-white/20 shadow-2xl backdrop-blur-md p-3.5 transition-transform hover:scale-105 duration-300">
+        <div className="relative z-10 flex flex-col items-center gap-6 px-10 text-center text-white max-w-xl w-full">
+          {/* Logo UTEPSA en contenedor limpio */}
+          <div className="flex items-center justify-center size-20 border border-white/20 bg-white/10 shadow-xs p-3">
             <img
               src="/logo-uagrm.png"
               alt="Logo UTEPSA"
-              className="size-16 object-contain drop-shadow-md"
+              className="size-14 object-contain"
             />
           </div>
 
           {/* Título institucional */}
-          <div className="w-full max-w-xl">
-            <span className="inline-block px-3.5 py-1 mb-3 text-xs font-semibold uppercase tracking-widest text-white/85 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
+          <div className="w-full">
+            <span className="inline-block px-2.5 py-0.5 mb-2.5 text-[10px] font-bold uppercase tracking-widest text-white/90 bg-white/10 border border-white/20">
               Plataforma Oficial de Grado
             </span>
-            <h1 className="text-2xl lg:text-3xl xl:text-[32px] font-black tracking-tight leading-snug drop-shadow-sm text-balance">
+            <h1 className="text-2xl font-bold tracking-tight leading-snug">
               Sistema de Gestión Integral de Exámenes de Grado, Sorteo Algorítmico y Defensas
             </h1>
-            <p className="mt-3 text-sm font-bold text-white tracking-wider uppercase drop-shadow-sm">
+            <p className="mt-2 text-xs font-semibold text-white/80 tracking-wider uppercase">
               SGSEG · UTEPSA
             </p>
-            <div className="mt-4 mx-auto h-1 w-24 rounded-full bg-white shadow-sm" />
+            <div className="mt-4 mx-auto h-1 w-12 bg-white" />
           </div>
 
-          {/* Tarjetas de pilares académicos */}
-          <div className="flex flex-col gap-3 w-full max-w-md">
+          {/* Tarjetas de pilares académicos con diseño de dashboard */}
+          <div className="flex flex-col gap-2.5 w-full max-w-md text-left">
             {[
               {
                 icon: ShieldCheck,
@@ -226,53 +220,56 @@ export default function Login() {
             ].map(({ icon: Icon, titulo, desc }) => (
               <div
                 key={titulo}
-                className="flex items-center gap-3.5 rounded-xl bg-white/10 p-3.5 text-left backdrop-blur-md border border-white/10 shadow-sm"
+                className="flex items-center gap-3 border border-white/15 bg-white/10 p-3 shadow-xs"
               >
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/20 shadow-inner">
-                  <Icon className="size-5 text-white" />
+                <div className="flex size-8 shrink-0 items-center justify-center border border-white/20 bg-white/15">
+                  <Icon className="size-4 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-white leading-snug">{titulo}</p>
+                  <p className="text-xs font-bold text-white uppercase tracking-wide leading-tight">{titulo}</p>
                   <p className="text-[11px] text-white/75 truncate mt-0.5">{desc}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="text-[11px] text-white/60 pt-1 font-medium">
-            SGSEG · UTEPSA · Universidad Tecnológica Privada de Santa Cruz · © {new Date().getFullYear()}
+          <div className="text-[10px] text-white/60 uppercase tracking-wider font-semibold pt-2">
+            SGSEG · UTEPSA · © {new Date().getFullYear()}
           </div>
         </div>
       </div>
 
       {/* ── PANEL DERECHO – Formulario de Autenticación ── */}
-      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-white px-6 py-10 sm:px-12">
+      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-surface px-6 py-12 sm:px-12">
         {/* Encabezado móvil */}
-        <div className="mb-6 flex flex-col items-center gap-2 lg:hidden text-center">
-          <img src="/logo-uagrm.png" alt="Logo UTEPSA" className="size-14 object-contain" />
-          <h1 className="text-lg font-black text-[#c8102e] leading-snug">
-            Sistema de Gestión Integral de Exámenes de Grado, Sorteo Algorítmico y Defensas
+        <div className="mb-6 flex flex-col items-center gap-2 lg:hidden text-center max-w-sm">
+          <img src="/logo-uagrm.png" alt="Logo UTEPSA" className="size-12 object-contain" />
+          <h1 className="text-base font-bold text-neutral-900 leading-snug">
+            Sistema de Gestión Integral de Exámenes de Grado
           </h1>
-          <p className="text-xs font-bold text-gray-600">SGSEG · UTEPSA</p>
+          <span className="border border-line bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-crimson">
+            SGSEG · UTEPSA
+          </span>
         </div>
 
-        <div className="w-full max-w-md">
-          {/* Título de Formulario */}
+        {/* Tarjeta del formulario estilo Dashboard */}
+        <div className="w-full max-w-md border border-line bg-white p-7 sm:p-8 shadow-xs">
+          {/* Header con barrita de acento carmesí idéntica al dashboard */}
           <div className="mb-6">
-            <div className="h-1 w-10 rounded-full bg-[#c8102e]" />
-            <h2 className="text-2xl font-black text-gray-900 mt-2.5">
+            <div className="h-1 w-8 bg-crimson mb-3" />
+            <h2 className="text-xl font-bold tracking-tight text-neutral-900">
               Iniciar Sesión
             </h2>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-xs text-neutral-500">
               Ingresa tus credenciales institucionales para acceder a tu panel.
             </p>
           </div>
 
-          {/* Alerta de Error */}
+          {/* Alerta de Error con diseño nítido */}
           {error && (
             <div
               role="alert"
-              className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs text-red-700 animate-in fade-in duration-200"
+              className="mb-5 flex items-start gap-2.5 border border-red-200 bg-red-50 p-3 text-xs text-red-700 animate-in fade-in"
             >
               <AlertCircle className="size-4 shrink-0 mt-0.5 text-red-600" />
               <div className="flex-1 leading-relaxed">{error}</div>
@@ -283,11 +280,11 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {/* Correo */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="login-email" className="text-xs font-bold text-gray-700">
+              <label htmlFor="login-email" className="text-xs font-semibold text-neutral-700">
                 Correo Institucional
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <span className="absolute inset-y-0 left-3 flex items-center text-neutral-400">
                   <Mail className="size-4" />
                 </span>
                 <input
@@ -295,11 +292,11 @@ export default function Login() {
                   type="email"
                   required
                   autoComplete="email"
-                  placeholder="usuario@utepsa.edu.bo"
+                  placeholder="vicerrector@uni.edu.bo"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={submitting}
-                  className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-4 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/20 disabled:bg-gray-50"
+                  className="w-full border border-line bg-surface py-2 pl-9 pr-3 text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-ink focus:bg-white outline-none transition-colors disabled:bg-neutral-100"
                 />
               </div>
             </div>
@@ -307,19 +304,19 @@ export default function Login() {
             {/* Contraseña */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label htmlFor="login-password" className="text-xs font-bold text-gray-700">
+                <label htmlFor="login-password" className="text-xs font-semibold text-neutral-700">
                   Contraseña
                 </label>
                 <button
                   type="button"
                   onClick={abrirModalRecuperacion}
-                  className="text-xs font-semibold text-[#c8102e] hover:underline focus:outline-none transition-colors"
+                  className="text-xs font-medium text-crimson hover:underline focus:outline-none transition-colors"
                 >
                   ¿Olvidaste tu contraseña?
                 </button>
               </div>
               <div className="relative">
-                <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <span className="absolute inset-y-0 left-3 flex items-center text-neutral-400">
                   <Lock className="size-4" />
                 </span>
                 <input
@@ -331,12 +328,12 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={submitting}
-                  className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:ring-2 focus:ring-[#c8102e]/20 disabled:bg-gray-50"
+                  className="w-full border border-line bg-surface py-2 pl-9 pr-9 text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-ink focus:bg-white outline-none transition-colors disabled:bg-neutral-100"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-700 cursor-pointer focus:outline-none"
+                  className="absolute inset-y-0 right-2.5 flex items-center text-neutral-400 hover:text-neutral-700 cursor-pointer focus:outline-none"
                   title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   tabIndex={-1}
                 >
@@ -345,35 +342,35 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Botón Submit */}
+            {/* Botón Submit rectangular con diseño de Dashboard */}
             <button
               id="btn-login-submit"
               type="submit"
               disabled={submitting}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-bold text-white shadow-md shadow-red-200 transition-all hover:bg-[#a50d26] hover:shadow-lg active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#c8102e] focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-2 flex w-full items-center justify-center gap-2 bg-crimson py-2.5 px-4 text-xs font-semibold uppercase tracking-wider text-white hover:opacity-95 shadow-xs transition-opacity focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {submitting ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-3.5 animate-spin" />
                   <span>Autenticando en SGSEG...</span>
                 </>
               ) : (
                 <>
                   <span>Ingresar al Sistema</span>
-                  <ArrowRight className="size-4" />
+                  <ArrowRight className="size-3.5" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Pie informativo */}
-          <div className="mt-8 border-t border-gray-100 pt-4 text-center">
-            <p className="text-xs text-gray-400">
+          {/* Pie informativo estilo Dashboard */}
+          <div className="mt-8 border-t border-line pt-4 text-center">
+            <p className="text-[11px] text-neutral-500 leading-relaxed">
               SGSEG · Módulo de Autenticación Centralizada UTEPSA
               <br />
               Servicios protegidos con JWT Bearer y Roles RBAC
             </p>
-            <p className="mt-2 text-[11px] text-gray-400">
+            <p className="mt-2 text-[10px] text-neutral-400">
               © {new Date().getFullYear()} Universidad Tecnológica Privada de Santa Cruz.
               <br />
               Todos los derechos reservados.
@@ -384,51 +381,51 @@ export default function Login() {
 
       {/* ── MODAL RECUPERACIÓN DE CONTRASEÑA ── */}
       {modalRecuperarAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 sm:p-7 shadow-2xl border border-gray-100 relative animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md border border-line bg-white p-6 sm:p-7 shadow-xl relative animate-in zoom-in-95 duration-150">
             <button
               type="button"
               onClick={cerrarModalRecuperacion}
-              className="absolute top-4 right-4 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              className="absolute top-4 right-4 p-1 text-neutral-400 hover:text-neutral-700 transition-colors border border-transparent hover:border-line"
             >
-              <X className="size-5" />
+              <X className="size-4" />
             </button>
 
             {/* PASO 1: Ingreso de Correo Institucional */}
             {pasoRecuperacion === 1 && (
               <>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-red-50 text-[#c8102e] ring-4 ring-red-100/50">
-                    <KeyRound className="size-5" />
+                <div className="flex items-center gap-3 mb-4 border-b border-line pb-3">
+                  <div className="flex size-9 items-center justify-center border border-crimson/20 bg-red-50 text-crimson">
+                    <KeyRound className="size-4" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 leading-tight">
+                    <h3 className="text-base font-bold text-neutral-900 leading-tight">
                       Recuperar Contraseña
                     </h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-[11px] text-neutral-500">
                       Acceso institucional seguro UTEPSA
                     </p>
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-600 mb-4 leading-relaxed">
+                <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
                   Ingresa tu correo institucional registrado para verificar tu identidad y restablecer tu clave de acceso.
                 </p>
 
                 {errorRecuperacion && (
-                  <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 animate-in fade-in">
-                    <AlertCircle className="size-4 shrink-0 mt-0.5 text-red-500" />
+                  <div className="mb-4 flex items-start gap-2 border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+                    <AlertCircle className="size-4 shrink-0 mt-0.5 text-red-600" />
                     <span>{errorRecuperacion}</span>
                   </div>
                 )}
 
                 <form onSubmit={handleSolicitarRecuperacion} className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-gray-700">
+                    <label className="text-xs font-semibold text-neutral-700">
                       Correo Institucional *
                     </label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                      <span className="absolute inset-y-0 left-3 flex items-center text-neutral-400">
                         <Mail className="size-4" />
                       </span>
                       <input
@@ -437,7 +434,7 @@ export default function Login() {
                         placeholder="usuario@utepsa.edu.bo"
                         value={correoRecuperacion}
                         onChange={(e) => setCorreoRecuperacion(e.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                        className="w-full border border-line bg-surface py-2 pl-9 pr-3 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-ink focus:bg-white outline-none transition-colors"
                       />
                     </div>
                   </div>
@@ -446,17 +443,17 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={cerrarModalRecuperacion}
-                      className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:border-ink hover:text-ink transition-colors shadow-xs"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={cargandoRecuperacion || !correoRecuperacion.trim()}
-                      className="flex items-center gap-2 rounded-xl bg-[#c8102e] px-4 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-[#a50d26] disabled:opacity-60"
+                      className="flex items-center gap-1.5 bg-crimson px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:opacity-95 shadow-xs transition-opacity disabled:opacity-60"
                     >
                       {cargandoRecuperacion && <Loader2 className="size-3.5 animate-spin" />}
-                      {cargandoRecuperacion ? 'Verificando...' : 'Continuar'}
+                      <span>{cargandoRecuperacion ? 'Verificando...' : 'Continuar'}</span>
                       <ArrowRight className="size-3.5" />
                     </button>
                   </div>
@@ -467,39 +464,39 @@ export default function Login() {
             {/* PASO 2: Ingreso de Nueva Contraseña */}
             {pasoRecuperacion === 2 && (
               <>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-4 ring-amber-100/50">
-                    <Lock className="size-5" />
+                <div className="flex items-center gap-3 mb-4 border-b border-line pb-3">
+                  <div className="flex size-9 items-center justify-center border border-amber-200 bg-amber-50 text-amber-700">
+                    <Lock className="size-4" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900 leading-tight">
+                    <h3 className="text-base font-bold text-neutral-900 leading-tight">
                       Nueva Contraseña
                     </h3>
-                    <p className="text-xs text-gray-500 truncate max-w-[240px]">
+                    <p className="text-[11px] text-neutral-500 truncate max-w-[240px]">
                       {correoRecuperacion}
                     </p>
                   </div>
                 </div>
 
-                <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-100 p-2.5 text-xs text-emerald-800 flex items-center gap-2">
+                <div className="mb-4 border border-emerald-200 bg-emerald-50/70 p-2.5 text-xs text-emerald-800 flex items-center gap-2">
                   <ShieldCheck className="size-4 text-emerald-600 shrink-0" />
                   <span>Identidad institucional verificada. Ingresa tu nueva clave.</span>
                 </div>
 
                 {errorRecuperacion && (
-                  <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 animate-in fade-in">
-                    <AlertCircle className="size-4 shrink-0 mt-0.5 text-red-500" />
+                  <div className="mb-4 flex items-start gap-2 border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+                    <AlertCircle className="size-4 shrink-0 mt-0.5 text-red-600" />
                     <span>{errorRecuperacion}</span>
                   </div>
                 )}
 
                 <form onSubmit={handleGuardarNuevaPassword} className="flex flex-col gap-3.5">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-gray-700">
+                    <label className="text-xs font-semibold text-neutral-700">
                       Nueva Contraseña *
                     </label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                      <span className="absolute inset-y-0 left-3 flex items-center text-neutral-400">
                         <Lock className="size-4" />
                       </span>
                       <input
@@ -509,12 +506,12 @@ export default function Login() {
                         placeholder="Mínimo 6 caracteres"
                         value={nuevaPassword}
                         onChange={(e) => setNuevaPassword(e.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                        className="w-full border border-line bg-surface py-2 pl-9 pr-9 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-ink focus:bg-white outline-none transition-colors"
                       />
                       <button
                         type="button"
                         onClick={() => setMostrarNuevaPassword(!mostrarNuevaPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 right-2.5 flex items-center text-neutral-400 hover:text-neutral-700"
                       >
                         {mostrarNuevaPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
@@ -522,11 +519,11 @@ export default function Login() {
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-gray-700">
+                    <label className="text-xs font-semibold text-neutral-700">
                       Confirmar Contraseña *
                     </label>
                     <div className="relative">
-                      <span className="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                      <span className="absolute inset-y-0 left-3 flex items-center text-neutral-400">
                         <Lock className="size-4" />
                       </span>
                       <input
@@ -536,12 +533,12 @@ export default function Login() {
                         placeholder="Repite la contraseña"
                         value={confirmarPassword}
                         onChange={(e) => setConfirmarPassword(e.target.value)}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-[#c8102e] focus:bg-white focus:ring-2 focus:ring-[#c8102e]/20"
+                        className="w-full border border-line bg-surface py-2 pl-9 pr-9 text-xs text-neutral-900 placeholder:text-neutral-400 focus:border-ink focus:bg-white outline-none transition-colors"
                       />
                       <button
                         type="button"
                         onClick={() => setMostrarConfirmarPassword(!mostrarConfirmarPassword)}
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 right-2.5 flex items-center text-neutral-400 hover:text-neutral-700"
                       >
                         {mostrarConfirmarPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
@@ -552,17 +549,17 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={cerrarModalRecuperacion}
-                      className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="border border-line bg-white px-3 py-2 text-xs font-medium text-neutral-700 hover:border-ink hover:text-ink transition-colors shadow-xs"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={cargandoRecuperacion || !nuevaPassword || !confirmarPassword}
-                      className="flex items-center gap-2 rounded-xl bg-[#c8102e] px-4 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-[#a50d26] disabled:opacity-60"
+                      className="flex items-center gap-1.5 bg-crimson px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white hover:opacity-95 shadow-xs transition-opacity disabled:opacity-60"
                     >
                       {cargandoRecuperacion && <Loader2 className="size-3.5 animate-spin" />}
-                      {cargandoRecuperacion ? 'Guardando...' : 'Guardar Contraseña'}
+                      <span>{cargandoRecuperacion ? 'Guardando...' : 'Guardar Contraseña'}</span>
                     </button>
                   </div>
                 </form>
@@ -571,18 +568,18 @@ export default function Login() {
 
             {/* PASO 3: Confirmación Exitosa */}
             {pasoRecuperacion === 3 && (
-              <div className="flex flex-col items-center text-center py-2 animate-in zoom-in-95 duration-300">
-                <div className="flex size-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-3 shadow-inner">
-                  <CheckCircle2 className="size-8" />
+              <div className="flex flex-col items-center text-center py-2 animate-in zoom-in-95 duration-200">
+                <div className="flex size-12 items-center justify-center border border-emerald-200 bg-emerald-50 text-emerald-600 mb-3 shadow-xs">
+                  <CheckCircle2 className="size-7" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                <h3 className="text-base font-bold text-neutral-900 mb-1">
                   ¡Contraseña Actualizada!
                 </h3>
-                <p className="text-xs text-gray-600 mb-5 leading-relaxed">
+                <p className="text-xs text-neutral-600 mb-4 leading-relaxed">
                   {exitoRecuperacion || 'Tu contraseña institucional ha sido restablecida exitosamente.'}
                 </p>
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-3 text-xs text-gray-500 mb-5 text-left w-full">
-                  <p className="font-semibold text-gray-700 mb-1">Acceso seguro:</p>
+                <div className="border border-line bg-surface p-3 text-xs text-neutral-600 mb-4 text-left w-full">
+                  <p className="font-semibold text-neutral-900 mb-0.5">Acceso seguro:</p>
                   <p>
                     Ya puedes ingresar al panel institucional con tu nueva clave de acceso.
                   </p>
@@ -590,10 +587,10 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={cerrarModalRecuperacion}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#c8102e] px-4 py-3 text-sm font-bold text-white shadow-md hover:bg-[#a50d26] transition-all"
+                  className="flex w-full items-center justify-center gap-2 bg-crimson py-2.5 px-4 text-xs font-semibold uppercase tracking-wider text-white hover:opacity-95 shadow-xs transition-opacity"
                 >
-                  <ArrowRight className="size-4" />
-                  Iniciar Sesión Ahora
+                  <ArrowRight className="size-3.5" />
+                  <span>Iniciar Sesión Ahora</span>
                 </button>
               </div>
             )}
