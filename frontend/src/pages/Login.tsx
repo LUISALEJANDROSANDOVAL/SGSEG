@@ -163,44 +163,50 @@ export default function Login() {
 
   return (
     <main className="flex min-h-screen font-sans antialiased bg-surface text-neutral-900">
-      {/* ── PANEL IZQUIERDO – Branding Institucional UTEPSA ── */}
-      <div className="relative hidden lg:flex lg:w-1/2 flex-col items-center justify-center overflow-hidden bg-crimson border-r border-crimson/30">
-        {/* Patrón sutil y geométrico característico */}
+      {/* ── PANEL IZQUIERDO – Branding Institucional UTEPSA (Restaurado al diseño anterior) ── */}
+      <div className="relative hidden lg:flex lg:w-1/2 flex-col items-center justify-center overflow-hidden bg-[#c8102e]">
+        {/* Formas geométricas decorativas de fondo */}
+        <div className="absolute -top-28 -right-28 size-96 rotate-45 rounded-3xl bg-white/5" />
+        <div className="absolute -bottom-20 -left-20 size-80 rotate-12 rounded-3xl bg-black/10" />
+        <div className="absolute top-1/2 right-0 size-56 -translate-y-1/2 rounded-full bg-white/5 blur-3xl" />
+
+        {/* Patrón diagonal */}
         <div
-          className="absolute inset-0 opacity-[0.06] pointer-events-none"
+          className="absolute inset-0 opacity-5 pointer-events-none"
           style={{
             backgroundImage:
-              'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 40px)',
+              'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)',
+            backgroundSize: '24px 24px',
           }}
         />
 
         {/* Bloque central de presentación */}
-        <div className="relative z-10 flex flex-col items-center gap-6 px-10 text-center text-white max-w-xl w-full">
-          {/* Logo UTEPSA en contenedor limpio */}
-          <div className="flex items-center justify-center size-20 border border-white/20 bg-white/10 shadow-xs p-3">
+        <div className="relative z-10 flex flex-col items-center gap-7 px-8 lg:px-10 text-center text-white max-w-xl xl:max-w-2xl w-full">
+          {/* Logo UTEPSA */}
+          <div className="flex items-center justify-center size-24 rounded-full bg-white/10 ring-4 ring-white/20 shadow-2xl backdrop-blur-md p-3.5 transition-transform hover:scale-105 duration-300">
             <img
               src="/logo-uagrm.png"
               alt="Logo UTEPSA"
-              className="size-14 object-contain"
+              className="size-16 object-contain drop-shadow-md"
             />
           </div>
 
           {/* Título institucional */}
-          <div className="w-full">
-            <span className="inline-block px-2.5 py-0.5 mb-2.5 text-[10px] font-bold uppercase tracking-widest text-white/90 bg-white/10 border border-white/20">
+          <div className="w-full max-w-xl">
+            <span className="inline-block px-3.5 py-1 mb-3 text-xs font-semibold uppercase tracking-widest text-white/85 bg-white/10 rounded-full border border-white/20 backdrop-blur-sm">
               Plataforma Oficial de Grado
             </span>
-            <h1 className="text-2xl font-bold tracking-tight leading-snug">
+            <h1 className="text-2xl lg:text-3xl xl:text-[32px] font-black tracking-tight leading-snug drop-shadow-sm text-balance">
               Sistema de Gestión Integral de Exámenes de Grado, Sorteo Algorítmico y Defensas
             </h1>
-            <p className="mt-2 text-xs font-semibold text-white/80 tracking-wider uppercase">
+            <p className="mt-3 text-sm font-bold text-white tracking-wider uppercase drop-shadow-sm">
               SGSEG · UTEPSA
             </p>
-            <div className="mt-4 mx-auto h-1 w-12 bg-white" />
+            <div className="mt-4 mx-auto h-1 w-24 rounded-full bg-white shadow-sm" />
           </div>
 
-          {/* Tarjetas de pilares académicos con diseño de dashboard */}
-          <div className="flex flex-col gap-2.5 w-full max-w-md text-left">
+          {/* Tarjetas de pilares académicos */}
+          <div className="flex flex-col gap-3 w-full max-w-md">
             {[
               {
                 icon: ShieldCheck,
@@ -220,20 +226,20 @@ export default function Login() {
             ].map(({ icon: Icon, titulo, desc }) => (
               <div
                 key={titulo}
-                className="flex items-center gap-3 border border-white/15 bg-white/10 p-3 shadow-xs"
+                className="flex items-center gap-3.5 rounded-xl bg-white/10 p-3.5 text-left backdrop-blur-md border border-white/10 shadow-sm"
               >
-                <div className="flex size-8 shrink-0 items-center justify-center border border-white/20 bg-white/15">
-                  <Icon className="size-4 text-white" />
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/20 shadow-inner">
+                  <Icon className="size-5 text-white" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-white uppercase tracking-wide leading-tight">{titulo}</p>
+                  <p className="text-xs font-bold text-white leading-snug">{titulo}</p>
                   <p className="text-[11px] text-white/75 truncate mt-0.5">{desc}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="text-[10px] text-white/60 uppercase tracking-wider font-semibold pt-2">
+          <div className="text-[11px] text-white/60 pt-1 font-medium">
             SGSEG · UTEPSA · © {new Date().getFullYear()}
           </div>
         </div>
