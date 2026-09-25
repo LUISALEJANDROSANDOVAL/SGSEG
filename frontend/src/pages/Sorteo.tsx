@@ -1827,14 +1827,18 @@ export default function PaginaSorteo() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <h4 className="text-sm font-bold text-emerald-950 uppercase tracking-wide">
-                              Sorteo Oficial Concluido — Postulante en Fase de Defensa
+                              {postulanteSeleccionado.tipoDefensa === 'Externa' && postulanteSeleccionado.carrera.toLowerCase().includes('psicolog')
+                                ? "Herencia de Caso: Área y Caso de Estudio asignados desde la Defensa Interna"
+                                : "Sorteo Oficial Concluido — Postulante en Fase de Defensa"}
                             </h4>
                             <span className="rounded-full bg-emerald-600 px-3 py-1 text-[11px] font-black text-white uppercase tracking-wider">
                               Caso Asignado
                             </span>
                           </div>
                           <p className="mt-1 text-xs text-emerald-800 leading-relaxed">
-                            El postulante <strong>{postulanteSeleccionado.nombreCompleto}</strong> ya completó el acto oficial de sorteo de área y caso de estudio reglamentario. No puede ser convocado a un nuevo sorteo ya que su caso se encuentra adjudicado y en preparación para tribunal.
+                            {postulanteSeleccionado.tipoDefensa === 'Externa' && postulanteSeleccionado.carrera.toLowerCase().includes('psicolog')
+                              ? <>El postulante <strong>{postulanteSeleccionado.nombreCompleto}</strong> ha heredado automáticamente el área y caso de estudio de su Defensa Interna aprobada. Su única responsabilidad es defender la versión mejorada del mismo trabajo final. No se requiere girar la ruleta para la modalidad externa.</>
+                              : <>El postulante <strong>{postulanteSeleccionado.nombreCompleto}</strong> ya completó el acto oficial de sorteo de área y caso de estudio reglamentario. No puede ser convocado a un nuevo sorteo ya que su caso se encuentra adjudicado y en preparación para tribunal.</>}
                           </p>
 
                           <div className="mt-4 pt-3.5 border-t border-emerald-200/80 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -2000,16 +2004,54 @@ export default function PaginaSorteo() {
                         {isVice ? (
                           <span className="text-xs text-neutral-400 italic">Modo Auditoría (Solo lectura)</span>
                         ) : (
-                          <button
-                            type="button"
-                            disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
-                            onClick={handleIniciarSorteoOficial}
-                            className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                          >
-                            <Maximize2 className="size-4" />
-                            <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
-                            <ArrowRight className="size-4" />
-                          </button>
+                          {/* Lógica de Bloqueo para Ciencias Empresariales */}
+                          {(() => {
+                            const esEmpresariales = postulanteSeleccionado?.carrera.toLowerCase().includes('empresarial');
+                            const isBeforeDefense = () => {
+                              if (!postulanteSeleccionado?.fechaDefensa) return false;
+                              const parts = postulanteSeleccionado.fechaDefensa.split('/'); // DD/MM/YYYY
+                              if (parts.length === 3) {
+                                const defDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                return today < defDate;
+                              }
+                              return false;
+                            };
+                            const bloqueado = esEmpresariales && isBeforeDefense();
+
+                            if (bloqueado) {
+                              return (
+                                <div className="flex flex-col gap-2 w-full md:w-auto">
+                                  <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 text-xs rounded shadow-xs font-medium">
+                                    ⏳ Por normativa, el sorteo para Ciencias Empresariales se habilitará el <strong>{postulanteSeleccionado?.fechaDefensa}</strong> (Día de la Defensa).
+                                  </div>
+                                  <button
+                                    type="button"
+                                    disabled
+                                    className="flex w-fit items-center gap-2 border border-neutral-300 bg-neutral-100 px-6 py-3 text-xs font-bold text-neutral-400 shadow-xs cursor-not-allowed"
+                                  >
+                                    <Maximize2 className="size-4" />
+                                    <span>Iniciar Sorteo Oficial (Bloqueado)</span>
+                                    <ArrowRight className="size-4" />
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <button
+                                type="button"
+                                disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
+                                onClick={handleIniciarSorteoOficial}
+                                className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                              >
+                                <Maximize2 className="size-4" />
+                                <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
+                                <ArrowRight className="size-4" />
+                              </button>
+                            );
+                          })()}
                         )}
                       </div>
                     </>
@@ -2603,7 +2645,7 @@ export default function PaginaSorteo() {
       {/* OVERLAY MODO PROYECTOR / PANTALLA COMPLETA PARA AUDITORIO */}
       {/* ========================================================= */}
       {modoProyector && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-[#121316] text-white overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#121316] text-white overflow-hidden">
           {/* Barra Superior Proyector */}
           <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-8 py-5 bg-[#0e0f12]">
             <div className="flex items-center gap-4">
@@ -2705,7 +2747,7 @@ export default function PaginaSorteo() {
           </div>
 
           {/* Cuerpo Central del Proyector */}
-          <main className="flex-1 flex flex-col items-center justify-center p-8">
+          <main className="flex-1 flex flex-col items-center justify-center p-4 min-h-0">
             {pasoActual === 1 && (
               <div className="max-w-xl text-center space-y-4">
                 <div className="mx-auto flex size-16 items-center justify-center border border-white/20 bg-white/5 text-neutral-300">
@@ -2793,7 +2835,7 @@ export default function PaginaSorteo() {
 
                 <RuletaCanvas
                   items={ruletaItemsAreas}
-                  size={480}
+                  size={400}
                   onFinish={handleFinalizarSorteoArea}
                   onSpinStart={handleSpinStartArea}
                   title="Ruleta Oficial de Áreas de Grado"

@@ -99,6 +99,60 @@ describe('SorteosService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
+    it('debe impedir sortear área de Ciencias Empresariales antes del día de la defensa', async () => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 5);
+
+      repository.findDefensaWithDetails.mockResolvedValue({
+        idDefensa: BigInt(1),
+        fechaDefensa: futureDate,
+        instancia: {
+          proceso: {
+            estudiante: {
+              planEstudio: {
+                carrera: { 
+                  idCarrera: BigInt(2), 
+                  nombre: 'Administración', 
+                  facultad: { nombre: 'Facultad de Ciencias Empresariales' } 
+                },
+              },
+            },
+          },
+        },
+        sorteos: [],
+      } as any);
+
+      await expect(
+        service.sortearArea({ idDefensa: '1' }, mockSecretariaUser),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('debe impedir sortear área para Defensa Externa de Psicología (herencia automática)', async () => {
+      repository.findDefensaWithDetails.mockResolvedValue({
+        idDefensa: BigInt(1),
+        tipoDefensa: { nombre: 'EXTERNA' },
+        instancia: {
+          proceso: {
+            estudiante: {
+              idPlanEstudio: BigInt(1),
+              planEstudio: {
+                carrera: { 
+                  idCarrera: BigInt(1), 
+                  nombre: 'Licenciatura en Psicología',
+                  facultad: { nombre: 'Humanidades' }
+                },
+              },
+            },
+          },
+        },
+        sorteos: [],
+      } as any);
+
+      await expect(
+        service.sortearArea({ idDefensa: '1' }, mockSecretariaUser),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('debe lanzar BadRequestException si la defensa ya tiene un área sorteada', async () => {
       repository.findDefensaWithDetails.mockResolvedValue({
         idDefensa: BigInt(1),

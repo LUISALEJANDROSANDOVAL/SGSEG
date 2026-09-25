@@ -95,6 +95,26 @@ export class SorteosService {
       }
     }
 
+    // Regla de Negocio: Psicología en Externa hereda el caso de la Interna, no se sortea
+    const esPsicologia = carrera.nombre.toLowerCase().includes('psicolog');
+    if (defensa.tipoDefensa?.nombre === 'EXTERNA' && esPsicologia) {
+      throw new BadRequestException(
+        'La Defensa Externa de Psicología no requiere sorteo. El área y caso se heredan automáticamente de la Defensa Interna aprobada.',
+      );
+    }
+
+    // Regla de Negocio: Ciencias Empresariales solo puede sortear el día de la defensa
+    const esEmpresariales = carrera.facultad?.nombre?.includes('Empresariales') ?? false;
+    if (esEmpresariales) {
+      const hoyStr = new Date().toISOString().split('T')[0];
+      const defensaStr = new Date(defensa.fechaDefensa).toISOString().split('T')[0];
+      if (hoyStr < defensaStr) {
+        throw new BadRequestException(
+          'Por normativa de la Facultad de Ciencias Empresariales, el sorteo solo puede realizarse el mismo día de la defensa.',
+        );
+      }
+    }
+
     // Verificar si ya tiene un sorteo de área activo
     const tieneArea = defensa.sorteos.some((s) => s.area !== null && s.estadoSorteo === 'ACTIVO');
     if (tieneArea) {
@@ -174,6 +194,26 @@ export class SorteosService {
       const allowed = await this.resolveAllowedCarreras(user);
       if (!allowed?.includes(carrera.idCarrera)) {
         throw new ForbiddenException('No tienes permisos para realizar sorteos de otra carrera.');
+      }
+    }
+
+    // Regla de Negocio: Psicología en Externa hereda el caso de la Interna, no se sortea
+    const esPsicologia = carrera.nombre.toLowerCase().includes('psicolog');
+    if (defensa.tipoDefensa?.nombre === 'EXTERNA' && esPsicologia) {
+      throw new BadRequestException(
+        'La Defensa Externa de Psicología no requiere sorteo. El área y caso se heredan automáticamente de la Defensa Interna aprobada.',
+      );
+    }
+
+    // Regla de Negocio: Ciencias Empresariales solo puede sortear el día de la defensa
+    const esEmpresariales = carrera.facultad?.nombre?.includes('Empresariales') ?? false;
+    if (esEmpresariales) {
+      const hoyStr = new Date().toISOString().split('T')[0];
+      const defensaStr = new Date(defensa.fechaDefensa).toISOString().split('T')[0];
+      if (hoyStr < defensaStr) {
+        throw new BadRequestException(
+          'Por normativa de la Facultad de Ciencias Empresariales, el sorteo de caso solo puede realizarse el mismo día de la defensa.',
+        );
       }
     }
 
