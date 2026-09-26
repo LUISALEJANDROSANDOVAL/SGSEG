@@ -225,20 +225,167 @@ async function seedCatalogoOficial(): Promise<{
   };
 }
 
+interface JefeCarreraSeedDef {
+  primerNombre: string;
+  segundoNombre?: string;
+  primerApellido: string;
+  segundoApellido?: string;
+  correoInstitucional: string;
+  carreraNombre: string;
+}
+
+const JEFES_CARRERA_CATALOGO: JefeCarreraSeedDef[] = [
+  // FCT - Facultad de Ciencia y Tecnología
+  {
+    primerNombre: 'Carlos',
+    primerApellido: 'Mendoza',
+    segundoApellido: 'Vargas',
+    correoInstitucional: 'jefe.sistemas@uni.edu.bo',
+    carreraNombre: 'Sistemas',
+  },
+  {
+    primerNombre: 'Rolando',
+    segundoNombre: 'Dany',
+    primerApellido: 'Vaca Díez',
+    segundoApellido: 'Mercado',
+    correoInstitucional: 'jefe.redes@uni.edu.bo',
+    carreraNombre: 'Redes y Telecomunicaciones',
+  },
+  {
+    primerNombre: 'Juan',
+    segundoNombre: 'Pablo',
+    primerApellido: 'Aguilera',
+    segundoApellido: 'Justiniano',
+    correoInstitucional: 'jefe.industrial@uni.edu.bo',
+    carreraNombre: 'Industrial y Comercial',
+  },
+  {
+    primerNombre: 'Oscar',
+    primerApellido: 'Justiniano',
+    segundoApellido: 'Ribera',
+    correoInstitucional: 'jefe.mecanica@uni.edu.bo',
+    carreraNombre: 'Mecánica',
+  },
+  {
+    primerNombre: 'Jorge',
+    segundoNombre: 'Eduardo',
+    primerApellido: 'Roca',
+    segundoApellido: 'Salvatierra',
+    correoInstitucional: 'jefe.electronica@uni.edu.bo',
+    carreraNombre: 'Electrónica y Sistemas',
+  },
+  {
+    primerNombre: 'Mario',
+    segundoNombre: 'Alberto',
+    primerApellido: 'Chávez',
+    segundoApellido: 'Gutiérrez',
+    correoInstitucional: 'jefe.electrica@uni.edu.bo',
+    carreraNombre: 'Ingeniería Eléctrica',
+  },
+
+  // FCE - Facultad de Ciencias Empresariales
+  {
+    primerNombre: 'Claudia',
+    segundoNombre: 'Patricia',
+    primerApellido: 'Arteaga',
+    segundoApellido: 'Mendoza',
+    correoInstitucional: 'jefe.comercial@uni.edu.bo',
+    carreraNombre: 'Ingeniería Comercial',
+  },
+  {
+    primerNombre: 'Fernando',
+    primerApellido: 'Suárez',
+    segundoApellido: 'Morales',
+    correoInstitucional: 'jefe.administracion@uni.edu.bo',
+    carreraNombre: 'Administración General',
+  },
+  {
+    primerNombre: 'Jimena',
+    segundoNombre: 'Andrea',
+    primerApellido: 'Paz',
+    segundoApellido: 'Zeballos',
+    correoInstitucional: 'jefe.marketing@uni.edu.bo',
+    carreraNombre: 'Marketing y Publicidad',
+  },
+  {
+    primerNombre: 'Marco',
+    segundoNombre: 'Antonio',
+    primerApellido: 'Claros',
+    segundoApellido: 'Hurtado',
+    correoInstitucional: 'jefe.financiera@uni.edu.bo',
+    carreraNombre: 'Ingeniería Financiera',
+  },
+  {
+    primerNombre: 'Rosario',
+    primerApellido: 'Méndez',
+    segundoApellido: 'Ortiz',
+    correoInstitucional: 'jefe.contaduria@uni.edu.bo',
+    carreraNombre: 'Contaduría Pública',
+  },
+  {
+    primerNombre: 'Daniel',
+    segundoNombre: 'Eduardo',
+    primerApellido: 'Torrico',
+    segundoApellido: 'Alarcón',
+    correoInstitucional: 'jefe.comercio@uni.edu.bo',
+    carreraNombre: 'Comercio Internacional',
+  },
+  {
+    primerNombre: 'Verónica',
+    segundoNombre: 'Cecilia',
+    primerApellido: 'Banegas',
+    segundoApellido: 'Dorado',
+    correoInstitucional: 'jefe.turismo@uni.edu.bo',
+    carreraNombre: 'Turismo',
+  },
+  {
+    primerNombre: 'Sergio',
+    segundoNombre: 'Andrés',
+    primerApellido: 'Villarroel',
+    segundoApellido: 'Cortez',
+    correoInstitucional: 'jefe.comunicacion@uni.edu.bo',
+    carreraNombre: 'Comunicación Estratégica y Digital',
+  },
+
+  // FCJS - Facultad de Ciencias Jurídicas y Sociales
+  {
+    primerNombre: 'Roberto',
+    primerApellido: 'Quinteros',
+    segundoApellido: 'Alarcón',
+    correoInstitucional: 'jefe.derecho@uni.edu.bo',
+    carreraNombre: 'Derecho',
+  },
+  {
+    primerNombre: 'Mariana',
+    segundoNombre: 'Sofía',
+    primerApellido: 'Gutiérrez',
+    segundoApellido: 'Torrico',
+    correoInstitucional: 'jefe.psicologia@uni.edu.bo',
+    carreraNombre: 'Psicología',
+  },
+  {
+    primerNombre: 'Alejandro',
+    segundoNombre: 'Bruno',
+    primerApellido: 'Melgar',
+    segundoApellido: 'Justiniano',
+    correoInstitucional: 'jefe.rrii@uni.edu.bo',
+    carreraNombre: 'Relaciones Internacionales',
+  },
+];
+
 // ============================================================================
 // 4. Usuarios Institucionales y Jefes de Carrera
 // ============================================================================
-async function seedUsuarios(
-  carreraSistemasId: bigint,
-  carreraDerechoId: bigint,
-  passwordHash: string,
-) {
+async function seedUsuarios(passwordHash: string) {
   console.log('🔐 Creando usuarios institucionales y asignando carreras...');
 
   const coordRole = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'COORDINACION' } });
   const secRole = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'SECRETARIADO' } });
   const viceRole = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'VICERRECTORADO' } });
   const jefeRole = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'JEFE_CARRERA' } });
+  const adminRole = await prisma.rol.findUniqueOrThrow({ where: { nombre: 'SUPER_ADMIN' } });
+  const registroRole = await prisma.rol.findFirst({ where: { nombre: 'REGISTRO' } });
+  const defensaRole = await prisma.rol.findFirst({ where: { nombre: 'DEFENSA' } });
 
   // 1. Coordinación
   await prisma.usuario.create({
@@ -278,45 +425,84 @@ async function seedUsuarios(
     },
   });
 
-  // 4. Jefe de Carrera - Sistemas
-  const jefeSistemas = await prisma.usuario.create({
+  // 4. Super Admin
+  await prisma.usuario.create({
     data: {
-      primerNombre: 'Carlos',
-      primerApellido: 'Mendoza',
-      segundoApellido: 'Vargas',
-      correoInstitucional: 'jefe.sistemas@uni.edu.bo',
+      primerNombre: 'Admin',
+      primerApellido: 'General',
+      segundoApellido: 'SGSEG',
+      correoInstitucional: 'admin@uni.edu.bo',
       passwordHash,
-      idRol: jefeRole.idRol,
+      idRol: adminRole.idRol,
       estado: 'ACTIVO',
     },
   });
 
-  await prisma.usuarioCarrera.create({
-    data: {
-      idUsuario: jefeSistemas.idUsuario,
-      idCarrera: carreraSistemasId,
-    },
-  });
+  // 5. Registro Académico
+  if (registroRole) {
+    await prisma.usuario.create({
+      data: {
+        primerNombre: 'Hernán',
+        primerApellido: 'Daza',
+        segundoApellido: 'Cuéllar',
+        correoInstitucional: 'registro@uni.edu.bo',
+        passwordHash,
+        idRol: registroRole.idRol,
+        estado: 'ACTIVO',
+      },
+    });
+  }
 
-  // 5. Jefe de Carrera - Derecho
-  const jefeDerecho = await prisma.usuario.create({
-    data: {
-      primerNombre: 'Roberto',
-      primerApellido: 'Quinteros',
-      segundoApellido: 'Alarcón',
-      correoInstitucional: 'jefe.derecho@uni.edu.bo',
-      passwordHash,
-      idRol: jefeRole.idRol,
-      estado: 'ACTIVO',
-    },
-  });
+  // 6. Defensas de Grado
+  if (defensaRole) {
+    await prisma.usuario.create({
+      data: {
+        primerNombre: 'Marcela',
+        primerApellido: 'Justiniano',
+        segundoApellido: 'Dorado',
+        correoInstitucional: 'defensas@uni.edu.bo',
+        passwordHash,
+        idRol: defensaRole.idRol,
+        estado: 'ACTIVO',
+      },
+    });
+  }
 
-  await prisma.usuarioCarrera.create({
-    data: {
-      idUsuario: jefeDerecho.idUsuario,
-      idCarrera: carreraDerechoId,
-    },
-  });
+  // 7. Todos los Jefes de Carrera Oficiales (incluyendo Psicología, Marketing, Sistemas, Derecho, etc.)
+  const todasLasCarreras = await prisma.carrera.findMany();
+
+  for (const j of JEFES_CARRERA_CATALOGO) {
+    const carrera = todasLasCarreras.find(
+      (c) => c.nombre.toLowerCase().trim() === j.carreraNombre.toLowerCase().trim(),
+    );
+
+    if (!carrera) {
+      console.warn(`⚠️ Carrera "${j.carreraNombre}" no encontrada en el catálogo. Saltando.`);
+      continue;
+    }
+
+    const usuario = await prisma.usuario.create({
+      data: {
+        primerNombre: j.primerNombre,
+        segundoNombre: j.segundoNombre ?? null,
+        primerApellido: j.primerApellido,
+        segundoApellido: j.segundoApellido ?? null,
+        correoInstitucional: j.correoInstitucional,
+        passwordHash,
+        idRol: jefeRole.idRol,
+        estado: 'ACTIVO',
+      },
+    });
+
+    await prisma.usuarioCarrera.create({
+      data: {
+        idUsuario: usuario.idUsuario,
+        idCarrera: carrera.idCarrera,
+      },
+    });
+
+    console.log(`   ✅ [${j.carreraNombre}]: ${j.correoInstitucional} (${j.primerNombre} ${j.primerApellido})`);
+  }
 
   console.log('✅ Usuarios institucionales y jefes de carrera vinculados exitosamente.');
 }
@@ -526,6 +712,84 @@ async function seedEstudiantesYDefensas(
     },
   });
 
+  // --------------------------------------------------------------------------
+  // C. Estudiantes de PSICOLOGÍA
+  // --------------------------------------------------------------------------
+  const carPsicologia = await prisma.carrera.findFirst({
+    where: { nombre: 'Psicología' },
+    include: { planesEstudio: true },
+  });
+  if (carPsicologia && carPsicologia.planesEstudio.length > 0) {
+    const planPsiId = carPsicologia.planesEstudio[0].idPlanEstudio;
+    const estPsi = await prisma.estudiante.create({
+      data: {
+        idPlanEstudio: planPsiId,
+        carnetEstudiantil: 'PSI-20220001',
+        carnetIdentidad: '7192831 SC',
+        nombreCompleto: 'Luciana Méndez Peña',
+        correoInstitucional: 'luciana.mendez@estudiante.edu.bo',
+        estado: 'ACTIVO',
+      },
+    });
+
+    const procPsi = await prisma.procesoExamenGrado.create({
+      data: { idEstudiante: estPsi.idEstudiante, estadoProceso: 'EN_CURSO' },
+    });
+
+    const instPsi = await prisma.instanciaExamenGrado.create({
+      data: { idProceso: procPsi.idProceso, numeroInstancia: 1, estadoInstancia: 'PENDIENTE' },
+    });
+
+    await prisma.defensaExamenGrado.create({
+      data: {
+        idInstancia: instPsi.idInstancia,
+        idTipoDefensa: tipoExterna.idTipoDefensa,
+        fechaDefensa: new Date(ahora.getTime() + 10 * 24 * 3600 * 1000), // 10 días para Psicología (Sorteo Conjunto)
+        periodoAcademico: 'II-2026',
+        estadoDefensa: 'PROGRAMADA', // Lista para ruleta
+      },
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // D. Estudiantes de MARKETING Y PUBLICIDAD
+  // --------------------------------------------------------------------------
+  const carMarketing = await prisma.carrera.findFirst({
+    where: { nombre: 'Marketing y Publicidad' },
+    include: { planesEstudio: true },
+  });
+  if (carMarketing && carMarketing.planesEstudio.length > 0) {
+    const planMkpId = carMarketing.planesEstudio[0].idPlanEstudio;
+    const estMkp = await prisma.estudiante.create({
+      data: {
+        idPlanEstudio: planMkpId,
+        carnetEstudiantil: 'MKP-20220001',
+        carnetIdentidad: '6829103 SC',
+        nombreCompleto: 'Mateo Justiniano Suárez',
+        correoInstitucional: 'mateo.justiniano@estudiante.edu.bo',
+        estado: 'ACTIVO',
+      },
+    });
+
+    const procMkp = await prisma.procesoExamenGrado.create({
+      data: { idEstudiante: estMkp.idEstudiante, estadoProceso: 'EN_CURSO' },
+    });
+
+    const instMkp = await prisma.instanciaExamenGrado.create({
+      data: { idProceso: procMkp.idProceso, numeroInstancia: 1, estadoInstancia: 'PENDIENTE' },
+    });
+
+    await prisma.defensaExamenGrado.create({
+      data: {
+        idInstancia: instMkp.idInstancia,
+        idTipoDefensa: tipoInterna.idTipoDefensa,
+        fechaDefensa: new Date(ahora.getTime() + 5 * 24 * 3600 * 1000),
+        periodoAcademico: 'II-2026',
+        estadoDefensa: 'PROGRAMADA', // Lista para ruleta
+      },
+    });
+  }
+
   console.log('✅ Estudiantes y defensas creados con estados reglamentarios correctos.');
 }
 
@@ -549,7 +813,7 @@ async function main() {
   const ids = await seedCatalogoOficial();
 
   // 4. Usuarios institucionales y asignación estricta de carreras
-  await seedUsuarios(ids.carreraSistemasId, ids.carreraDerechoId, passwordHash);
+  await seedUsuarios(passwordHash);
 
   // 5. Estudiantes y defensas reglamentarias
   await seedEstudiantesYDefensas(ids.planSistemasId, ids.planDerechoId, ids.carreraDerechoId);

@@ -38,10 +38,13 @@ Al ejecutar el comando `npm run db:seed`, se generan automáticamente los usuari
 | Rol Asignado | Nombre del Usuario | Correo Institucional | Contraseña | Alcance / Propósito |
 | :--- | :--- | :--- | :--- | :--- |
 | **COORDINACION** | Coordinación Académica | `coord@uni.edu.bo` | `Admin123!` | Acceso global, programación de defensas y embudo. |
+| **SUPER_ADMIN** | Admin General SGSEG | `admin@uni.edu.bo` | `Admin123!` | Gestión de contingencia, infraestructura y administración. |
 | **JEFE_CARRERA** | Ing. Carlos Mendoza | `jefe.sistemas@uni.edu.bo` | `Admin123!` | Exclusivo Ingeniería de Sistemas (Casos y Áreas). |
 | **JEFE_CARRERA** | Dr. Roberto Quinteros | `jefe.derecho@uni.edu.bo` | `Admin123!` | Exclusivo Derecho (Casos y Áreas). |
+| **JEFE_CARRERA** | Lic. Mariana Gutiérrez | `jefe.psicologia@uni.edu.bo` | `Admin123!` | Exclusivo Psicología (FCJS - 10 días anticipado conjunto). |
+| **JEFE_CARRERA** | Lic. Jimena Paz | `jefe.marketing@uni.edu.bo` | `Admin123!` | Exclusivo Marketing y Publicidad (FCE). |
 | **SECRETARIADO** | Lic. Ana Flores Pérez | `secretaria@uni.edu.bo` | `Admin123!` | Operación del sorteo digital y emisión de actas. |
-| **VICERRECTORADO** | Dra. Beatriz Gutiérrez | `vicerrector@uni.edu.bo` | `Admin123!` | Auditoría, supervisión general, reportes CSV (sin inicio de sorteo) y alta de roles/usuarios (Jefes de Carrera). |
+| **VICERRECTORADO** | Dra. Beatriz Gutiérrez | `vicerrector@uni.edu.bo` | `Admin123!` | Auditoría, supervisión general, reportes CSV y visor institucional. |
 
 Para consultar la guía detallada de flujo de trabajo y pruebas paso a paso por actor, consulte:
 📖 [Guía de Acceso, Actores y Credenciales](file:///c:/SGSEG/docs/guia_accesos_y_actores.md)
