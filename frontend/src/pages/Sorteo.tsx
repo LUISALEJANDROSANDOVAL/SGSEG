@@ -2004,8 +2004,7 @@ export default function PaginaSorteo() {
                         {isVice ? (
                           <span className="text-xs text-neutral-400 italic">Modo Auditoría (Solo lectura)</span>
                         ) : (
-                          {/* Lógica de Bloqueo para Ciencias Empresariales */}
-                          {(() => {
+                          (() => {
                             const esEmpresariales = postulanteSeleccionado?.carrera.toLowerCase().includes('empresarial');
                             const isBeforeDefense = () => {
                               if (!postulanteSeleccionado?.fechaDefensa) return false;
@@ -2051,7 +2050,7 @@ export default function PaginaSorteo() {
                                 <ArrowRight className="size-4" />
                               </button>
                             );
-                          })()}
+                          })()
                         )}
                       </div>
                     </>
