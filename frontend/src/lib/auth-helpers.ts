@@ -55,13 +55,54 @@ export function esVicerrectorado(user: User | null | undefined): boolean {
 
 /**
  * Determina si el usuario puede operar e iniciar el sorteo digital.
- * Secretaría, Coordinación y Jefe de Carrera pueden realizar el sorteo.
- * Vicerrectorado únicamente tiene función de auditoría y observación (no inicia sorteos).
+ * Exclusivo para Coordinación Académica y Secretaría de Facultad.
+ * Vicerrectorado y Jefe de Carrera únicamente tienen función de auditoría y observación (no inician sorteos).
  */
 export function esOperadorSorteo(user: User | null | undefined): boolean {
   if (!user) return false;
-  if (esVicerrectorado(user)) return false;
-  return true;
+  if (esVicerrectorado(user) || esJefeCarrera(user)) return false;
+  const rol = String(user.rol || '').trim().toLowerCase();
+  const code = String(user.rolCode || '').trim().toUpperCase();
+  return (
+    code === 'COORDINACION' ||
+    code === 'SECRETARIADO' ||
+    code === 'SUPER_ADMIN' ||
+    rol === 'coordinador general' ||
+    rol === 'secretario de facultad' ||
+    rol.includes('coordinad') ||
+    rol.includes('secretar') ||
+    rol === 'administrador general'
+  );
+}
+
+/**
+ * Determina si una carrera corresponde a Psicología o a la Facultad de Ciencias Empresariales (FCE).
+ * Por normativa institucional de UTEPSA, estos estudiantes ÚNICAMENTE tienen sorteo de Área Temática (1 sola ruleta).
+ */
+export function esCarreraSoloArea(carreraNombre?: string | null): boolean {
+  if (!carreraNombre) return false;
+  const lower = carreraNombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // 1. Psicología
+  if (lower.includes('psicolog')) return true;
+
+  // 2. Facultad de Ciencias Empresariales (FCE)
+  if (
+    lower.includes('empresarial') ||
+    lower.includes('comercial') ||
+    lower.includes('administra') ||
+    lower.includes('marketing') ||
+    lower.includes('financiera') ||
+    lower.includes('contadur') ||
+    lower.includes('comercio') ||
+    lower.includes('turismo') ||
+    lower.includes('comunicaci') ||
+    lower.includes('negocio')
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 /**

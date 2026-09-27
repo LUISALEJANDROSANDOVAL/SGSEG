@@ -398,6 +398,16 @@ async function seedUsuarios(passwordHash: string) {
       estado: 'ACTIVO',
     },
   });
+  await prisma.usuario.create({
+    data: {
+      primerNombre: 'Coordinador',
+      primerApellido: 'Académico',
+      correoInstitucional: 'coordinador@utepsa.edu.bo',
+      passwordHash,
+      idRol: coordRole.idRol,
+      estado: 'ACTIVO',
+    },
+  });
 
   // 2. Secretariado
   await prisma.usuario.create({
@@ -406,6 +416,16 @@ async function seedUsuarios(passwordHash: string) {
       primerApellido: 'Flores',
       segundoApellido: 'Pérez',
       correoInstitucional: 'secretaria@uni.edu.bo',
+      passwordHash,
+      idRol: secRole.idRol,
+      estado: 'ACTIVO',
+    },
+  });
+  await prisma.usuario.create({
+    data: {
+      primerNombre: 'Ana',
+      primerApellido: 'Secretaría',
+      correoInstitucional: 'secretaria@utepsa.edu.bo',
       passwordHash,
       idRol: secRole.idRol,
       estado: 'ACTIVO',

@@ -15,6 +15,7 @@ import {
   getJefeCarreraNombre,
   esVicerrectorado,
   esOperadorSorteo,
+  esCarreraSoloArea,
 } from '@/lib/auth-helpers'
 import {
   UserCheck,
@@ -202,6 +203,20 @@ const POSTULANTES_CATALOGO: PostulanteSorteo[] = [
     horaDefensa: '17:45 PM',
     promedioAcademico: 89.0,
   },
+  {
+    id: '8',
+    nombreCompleto: 'Natalia Andrea Paredes Soto',
+    carnetEstudiantil: '202114789',
+    carnetIdentidad: '9283741 SC',
+    correo: 'n.paredes.so@estudiantes.utepsa.edu.bo',
+    carrera: 'Psicología',
+    carreraId: '6',
+    planEstudio: 'Plan 2021 (Vigente)',
+    tipoDefensa: 'Interna',
+    fechaDefensa: '04/09/2026',
+    horaDefensa: '18:30 PM',
+    promedioAcademico: 93.4,
+  },
 ]
 
 // Áreas académicas disponibles con paleta institucional UTEPSA (Rojo, Negro, Blanco)
@@ -340,6 +355,40 @@ const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
       descripcion: 'Análisis de viabilidad económica, TIR/VAN y modelos de negocio.',
       color: '#FFFFFF',
       casosDisponibles: 2,
+    },
+  ],
+  Psicología: [
+    {
+      id: 'area-psi-1',
+      codigo: 'PSI-CLI',
+      nombre: 'Psicología Clínica y de la Salud',
+      descripcion: 'Evaluación psicodiagnóstica, modelos de psicoterapia e intervención en crisis.',
+      color: '#C8102E',
+      casosDisponibles: 0,
+    },
+    {
+      id: 'area-psi-2',
+      codigo: 'PSI-ORG',
+      nombre: 'Psicología Organizacional y del Trabajo',
+      descripcion: 'Comportamiento organizacional, clima laboral, evaluación y bienestar ocupacional.',
+      color: '#121316',
+      casosDisponibles: 0,
+    },
+    {
+      id: 'area-psi-3',
+      codigo: 'PSI-EDU',
+      nombre: 'Psicología Educativa y del Desarrollo',
+      descripcion: 'Dificultades del aprendizaje, neuroeducación y orientación psicopedagógica.',
+      color: '#FFFFFF',
+      casosDisponibles: 0,
+    },
+    {
+      id: 'area-psi-4',
+      codigo: 'PSI-SOC',
+      nombre: 'Psicología Social y Comunitaria',
+      descripcion: 'Proyectos psicosociales, intervención en comunidades y prevención de violencia.',
+      color: '#9E1B32',
+      casosDisponibles: 0,
     },
   ],
 }
@@ -532,14 +581,27 @@ export default function PaginaSorteo() {
     POSTULANTES_CATALOGO[0],
   )
 
+  // Paso 2: Selección / Ruleta de Área
+  const [areaGanadora, setAreaGanadora] = useState<AreaAcademicaSorteo | null>(null)
+
+  // Determinar si el estudiante seleccionado pertenece a Psicología o Ciencias Empresariales (solo ruleta de área)
+  const esSoloArea = useMemo(
+    () => esCarreraSoloArea(postulanteSeleccionado?.carrera),
+    [postulanteSeleccionado?.carrera],
+  )
+
+  // Si una carrera de solo área intentase entrar a paso 3, redirigir a paso 4 o 2
+  useEffect(() => {
+    if (pasoActual === 3 && esSoloArea) {
+      setPasoActual(areaGanadora ? 4 : 2)
+    }
+  }, [pasoActual, esSoloArea, areaGanadora])
+
   // Switch de Asistencia del Postulante
   const [asistenciaPresente, setAsistenciaPresente] = useState<boolean>(true)
   const [motivoInasistencia, setMotivoInasistencia] = useState<string>('')
   const [observacionInasistencia, setObservacionInasistencia] = useState<string>('')
   const [sorteoSuspendido, setSorteoSuspendido] = useState<boolean>(false)
-
-  // Paso 2: Selección / Ruleta de Área
-  const [areaGanadora, setAreaGanadora] = useState<AreaAcademicaSorteo | null>(null)
 
   // Paso 3: Selección / Ruleta de Caso
   const [casoGanador, setCasoGanador] = useState<CasoEstudioSorteo | null>(null)
@@ -861,10 +923,10 @@ export default function PaginaSorteo() {
       label: area.codigo,
       sublabel: area.nombre,
       color: area.color,
-      badge: `${area.casosDisponibles} casos`,
+      badge: esSoloArea ? 'Área Exclusiva' : `${area.casosDisponibles} casos`,
       data: { area },
     }))
-  }, [areasParaCarrera])
+  }, [areasParaCarrera, esSoloArea])
 
   // Cargar casos dinámicamente desde API para el área ganadora
   useEffect(() => {
@@ -1033,6 +1095,9 @@ export default function PaginaSorteo() {
     const area = areasParaCarrera.find((a) => a.id === item.id)
     if (area) {
       setAreaGanadora(area)
+      if (esSoloArea) {
+        prepararActaVeredicto()
+      }
       if (liveToken) {
         sorteosApi.actualizarSesionLive(liveToken, {
           fase: 'AREA_ASIGNADA',
@@ -1068,75 +1133,125 @@ export default function PaginaSorteo() {
   const persistirSorteoEnDb = async (
     postulante: PostulanteSorteo,
     area: AreaAcademicaSorteo,
-    caso: CasoEstudioSorteo,
+    caso?: CasoEstudioSorteo | null,
   ) => {
     setGuardandoEnDb(true)
     setErrorGuardadoDb(null)
     try {
       const rawDefensa = postulante.idDefensa || postulante.id
       const rawArea = String(area.id)
-      const rawCaso = String(caso.id)
-
       const idDefensa = rawDefensa.replace(/\D/g, '') || rawDefensa
       const idArea = rawArea.replace(/\D/g, '') || rawArea
-      const idCaso = rawCaso.replace(/\D/g, '') || rawCaso
+      const ano = new Date().getFullYear()
 
-      // Comprobar si los identificadores son numéricos (registros reales en PostgreSQL)
-      if (/^\d+$/.test(idDefensa) && /^\d+$/.test(idArea) && /^\d+$/.test(idCaso)) {
-        const res = await sorteosApi.finalizarSorteo({
-          idDefensa,
-          idArea,
-          idCaso,
-          estudiantePresente: asistenciaPresente,
-          motivoInasistencia: !asistenciaPresente ? motivoInasistencia : undefined,
-          tokenSesionLive: liveToken || undefined,
-        })
+      if (caso) {
+        const rawCaso = String(caso.id)
+        const idCaso = rawCaso.replace(/\D/g, '') || rawCaso
 
-        if (res?.codigoActa) {
-          setCodigoActa(res.codigoActa)
+        // Comprobar si los identificadores son numéricos (registros reales en PostgreSQL)
+        if (/^\d+$/.test(idDefensa) && /^\d+$/.test(idArea) && /^\d+$/.test(idCaso)) {
+          const res = await sorteosApi.finalizarSorteo({
+            idDefensa,
+            idArea,
+            idCaso,
+            estudiantePresente: asistenciaPresente,
+            motivoInasistencia: !asistenciaPresente ? motivoInasistencia : undefined,
+            tokenSesionLive: liveToken || undefined,
+          })
+
+          if (res?.codigoActa) {
+            setCodigoActa(res.codigoActa)
+          }
+          if (res?.tokenActa) {
+            setHashActa(res.tokenActa)
+          }
+          setGuardadoEnDbExitoso(true)
+          caso.usosActuales = (caso.usosActuales || 0) + 1
+          postulante.estadoDefensa = 'CASO_ASIGNADO'
+          postulante.casoAsignadoTitulo = caso.titulo
+          postulante.areaAsignadaNombre = area.nombre
+
+          setPostulantes((prev) =>
+            prev.map((p) =>
+              p.id === postulante.id || p.idDefensa === postulante.idDefensa
+                ? {
+                    ...p,
+                    estadoDefensa: 'CASO_ASIGNADO',
+                    casoAsignadoTitulo: caso.titulo,
+                    areaAsignadaNombre: area.nombre,
+                  }
+                : p,
+            ),
+          )
+          await loadApiDefensas()
+        } else {
+          // En entorno mock o pruebas locales
+          setGuardadoEnDbExitoso(true)
+          caso.usosActuales = (caso.usosActuales || 0) + 1
+          postulante.estadoDefensa = 'CASO_ASIGNADO'
+          postulante.casoAsignadoTitulo = caso.titulo
+          postulante.areaAsignadaNombre = area.nombre
+          setPostulantes((prev) =>
+            prev.map((p) =>
+              p.id === postulante.id
+                ? {
+                    ...p,
+                    estadoDefensa: 'CASO_ASIGNADO',
+                    casoAsignadoTitulo: caso.titulo,
+                    areaAsignadaNombre: area.nombre,
+                  }
+                : p,
+            ),
+          )
         }
-        if (res?.tokenActa) {
-          setHashActa(res.tokenActa)
+      } else {
+        // Modalidad Exclusiva de Área (Psicología y Ciencias Empresariales)
+        const codigoGenerado = `ACTA-AREA-${idDefensa}-${ano}`
+        setCodigoActa(codigoGenerado)
+        const tokenGenerado = `SHA256:${Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`
+        setHashActa(tokenGenerado)
+
+        if (/^\d+$/.test(idDefensa)) {
+          try {
+            const res = await sorteosApi.sortearArea({
+              idDefensa,
+              estudiantePresente: asistenciaPresente,
+              motivoInasistencia: !asistenciaPresente ? motivoInasistencia : undefined,
+            })
+            if (res?.tokenActa) {
+              setHashActa(res.tokenActa)
+            }
+          } catch (e: any) {
+            console.warn('Registro de área temática en API:', e?.message || e)
+          }
         }
+
+        if (liveToken) {
+          sorteosApi.actualizarSesionLive(liveToken, {
+            fase: 'ACTA_OFICIALIZADA',
+            codigoActa: codigoGenerado,
+            hashActa: tokenGenerado,
+          }).catch(() => {})
+        }
+
         setGuardadoEnDbExitoso(true)
-        caso.usosActuales = (caso.usosActuales || 0) + 1
-        postulante.estadoDefensa = 'CASO_ASIGNADO'
-        postulante.casoAsignadoTitulo = caso.titulo
+        postulante.estadoDefensa = 'AREA_SORTEADA'
+        postulante.casoAsignadoTitulo = 'N/A - Modalidad Exclusiva de Área Temática'
         postulante.areaAsignadaNombre = area.nombre
 
-        // Actualizar el estado en la lista para que pase inmediatamente de Pendientes a En Defensa
         setPostulantes((prev) =>
           prev.map((p) =>
             p.id === postulante.id || p.idDefensa === postulante.idDefensa
               ? {
                   ...p,
-                  estadoDefensa: 'CASO_ASIGNADO',
-                  casoAsignadoTitulo: caso.titulo,
+                  estadoDefensa: 'AREA_SORTEADA',
+                  casoAsignadoTitulo: 'N/A - Modalidad Exclusiva de Área Temática',
                   areaAsignadaNombre: area.nombre,
                 }
               : p,
           ),
         )
         await loadApiDefensas()
-      } else {
-        // En entorno mock o pruebas locales
-        setGuardadoEnDbExitoso(true)
-        caso.usosActuales = (caso.usosActuales || 0) + 1
-        postulante.estadoDefensa = 'CASO_ASIGNADO'
-        postulante.casoAsignadoTitulo = caso.titulo
-        postulante.areaAsignadaNombre = area.nombre
-        setPostulantes((prev) =>
-          prev.map((p) =>
-            p.id === postulante.id
-              ? {
-                  ...p,
-                  estadoDefensa: 'CASO_ASIGNADO',
-                  casoAsignadoTitulo: caso.titulo,
-                  areaAsignadaNombre: area.nombre,
-                }
-              : p,
-          ),
-        )
       }
     } catch (err: any) {
       console.error('Error al persistir sorteo en base de datos:', err)
@@ -1174,7 +1289,7 @@ export default function PaginaSorteo() {
 
   // Despacho del pliego por correo institucional al postulante
   const handleDespacharCorreo = async () => {
-    if (!postulanteSeleccionado || !casoGanador || !areaGanadora) return
+    if (!postulanteSeleccionado || !areaGanadora || (!esSoloArea && !casoGanador)) return
     setDespachandoCorreo(true)
 
     try {
@@ -1185,10 +1300,12 @@ export default function PaginaSorteo() {
         carnet: `${postulanteSeleccionado.carnetEstudiantil} · CI: ${postulanteSeleccionado.carnetIdentidad}`,
         carrera: postulanteSeleccionado.carrera,
         areaNombre: `${areaGanadora.codigo}: ${areaGanadora.nombre}`,
-        casoCodigo: casoGanador.codigo,
-        casoTitulo: casoGanador.titulo,
-        casoContenido: casoGanador.contenido,
-        plazoHoras: casoGanador.plazoHoras,
+        casoCodigo: casoGanador?.codigo || 'MOD-AREA',
+        casoTitulo: casoGanador?.titulo || 'Modalidad Exclusiva de Área Temática',
+        casoContenido:
+          casoGanador?.contenido ||
+          'Conforme a la reglamentación institucional, el examen de grado se fundamenta en el Área Temática sorteada.',
+        plazoHoras: casoGanador?.plazoHoras || 0,
         codigoActa: codigoActa || `ACTA-${Date.now()}`,
         hashActa: hashActa || 'SHA256:VERIFICADO',
       })
@@ -1209,6 +1326,19 @@ export default function PaginaSorteo() {
     }
 
     // Agregar al historial de la sesión
+    const casoParaHistorial: CasoEstudioSorteo = casoGanador || {
+      id: 'area-exclusiva',
+      areaId: areaGanadora.id,
+      areaNombre: areaGanadora.nombre,
+      codigo: 'MOD-AREA',
+      titulo: 'Modalidad Exclusiva de Área Temática',
+      contenido: 'Examen de grado basado exclusivamente en el área temática sorteada conforme a normativa de UTEPSA.',
+      usosActuales: 0,
+      maxUsos: 999,
+      plazoHoras: 0,
+      color: '#0284C7',
+    }
+
     const nuevoRegistro: RegistroHistorialSorteo = {
       id: `hist-${Date.now()}`,
       actaCodigo: codigoActa || `ACTA-${Date.now()}`,
@@ -1218,7 +1348,7 @@ export default function PaginaSorteo() {
       }),
       estudiante: postulanteSeleccionado,
       area: areaGanadora,
-      caso: casoGanador,
+      caso: casoParaHistorial,
       estado: 'OFICIALIZADO',
       correoDespachado: true,
       fechaDespacho: new Date().toLocaleTimeString('es-BO', {
@@ -1480,6 +1610,30 @@ export default function PaginaSorteo() {
           </div>
         )}
 
+        {/* Banner de Supervisión para roles no ejecutores (Jefe de Carrera u otros) */}
+        {!puedeOperarSorteo && !isVice && (
+          <div className="flex items-center justify-between border-l-4 border-l-amber-600 border border-amber-200 bg-amber-50/80 p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center bg-amber-600 text-white rounded-md shadow-xs">
+                <Lock className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold tracking-widest text-amber-900 uppercase">
+                    Modo Supervisión y Auditoría
+                  </span>
+                  <span className="bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-0.5 rounded">
+                    Solo Lectura
+                  </span>
+                </div>
+                <p className="text-xs font-semibold text-amber-900 mt-0.5">
+                  Conforme a la normativa institucional de UTEPSA, la ejecución y giro de ruletas del sorteo está reservada exclusivamente a la <strong>Coordinación Académica</strong> y la <strong>Secretaría de Facultad</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── STEPPER DE PROGRESO EN 4 PASOS ── */}
         <section className="border border-line bg-white shadow-xs">
           <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-line">
@@ -1557,31 +1711,35 @@ export default function PaginaSorteo() {
             {/* Paso 3 */}
             <button
               type="button"
-              disabled={sorteoSuspendido || !areaGanadora}
-              onClick={() => casoGanador && setPasoActual(3)}
+              disabled={sorteoSuspendido || !areaGanadora || esSoloArea}
+              onClick={() => !esSoloArea && casoGanador && setPasoActual(3)}
               className={`flex items-center gap-3 p-4 text-left transition-all ${
-                pasoActual === 3
+                esSoloArea
+                  ? 'opacity-40 cursor-not-allowed bg-neutral-50/50'
+                  : pasoActual === 3
                   ? 'bg-red-50/70 border-b-2 border-b-crimson md:border-b-0 md:border-l-4 md:border-l-crimson'
                   : 'hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
               <div
                 className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                  pasoActual > 3
+                  esSoloArea
+                    ? 'bg-neutral-200 text-neutral-400'
+                    : pasoActual > 3
                     ? 'bg-emerald-600 text-white'
                     : pasoActual === 3
                     ? 'bg-crimson text-white'
                     : 'bg-neutral-200 text-neutral-600'
                 }`}
               >
-                {pasoActual > 3 ? <Check className="size-4" /> : '3'}
+                {esSoloArea ? '-' : pasoActual > 3 ? <Check className="size-4" /> : '3'}
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] tracking-wider text-neutral-500 uppercase font-semibold">
-                  Fase 3
+                  {esSoloArea ? 'No Aplica' : 'Fase 3'}
                 </p>
                 <p className="truncate text-xs font-bold text-gray-900">
-                  Sorteo de Caso
+                  {esSoloArea ? 'Sorteo de Caso (Omitido)' : 'Sorteo de Caso'}
                 </p>
               </div>
             </button>
@@ -1589,8 +1747,8 @@ export default function PaginaSorteo() {
             {/* Paso 4 */}
             <button
               type="button"
-              disabled={sorteoSuspendido || !casoGanador}
-              onClick={() => casoGanador && setPasoActual(4)}
+              disabled={sorteoSuspendido || (!esSoloArea ? !casoGanador : !areaGanadora)}
+              onClick={() => (esSoloArea ? areaGanadora : casoGanador) && setPasoActual(4)}
               className={`flex items-center gap-3 p-4 text-left transition-all ${
                 pasoActual === 4
                   ? 'bg-red-50/70 border-b-2 border-b-crimson md:border-b-0 md:border-l-4 md:border-l-crimson'
@@ -1601,14 +1759,20 @@ export default function PaginaSorteo() {
                 className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                   pasoActual === 4
                     ? 'bg-crimson text-white'
+                    : (esSoloArea ? areaGanadora : casoGanador)
+                    ? 'bg-emerald-600 text-white'
                     : 'bg-neutral-200 text-neutral-600'
                 }`}
               >
-                4
+                {(esSoloArea ? areaGanadora : casoGanador) && pasoActual === 4 ? (
+                  <Check className="size-4" />
+                ) : (
+                  '4'
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] tracking-wider text-neutral-500 uppercase font-semibold">
-                  Fase 4
+                  Fase Final
                 </p>
                 <p className="truncate text-xs font-bold text-gray-900">
                   Veredicto & Despacho
@@ -1892,10 +2056,11 @@ export default function PaginaSorteo() {
                           </div>
 
                           {/* Botones Switch */}
-                          {isVice ? (
+                          {!puedeOperarSorteo ? (
                             <div className="inline-flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-500 font-medium">
                               <UserCheck className="size-4 text-neutral-400" />
                               <span>{asistenciaPresente ? 'Presente' : 'Ausente'}</span>
+                              <span className="text-[10px] text-neutral-400 italic">(Solo Coordinador o Secretario pueden modificar)</span>
                             </div>
                           ) : (
                             <div className="inline-flex rounded-lg border border-line bg-neutral-100 p-1">
@@ -1996,61 +2161,39 @@ export default function PaginaSorteo() {
                       </div>
 
                       {/* Acciones de Navegación del Paso 1 */}
-                      <div className="flex items-center justify-between border-t border-line pt-4">
+                      <div className="flex flex-col sm:flex-row items-center justify-between border-t border-line pt-4 gap-3">
                         <p className="text-xs text-neutral-500">
-                          Paso 1 de 4 · Verificación de identidad y sala
+                          {esSoloArea
+                            ? 'Paso 1 · Verificación de identidad (Modalidad Sorteo Exclusivo de Área)'
+                            : 'Paso 1 de 4 · Verificación de identidad y sala'}
                         </p>
 
-                        {isVice ? (
-                          <span className="text-xs text-neutral-400 italic">Modo Auditoría (Solo lectura)</span>
+                        {!puedeOperarSorteo ? (
+                          <div className="flex items-center gap-2 text-xs text-neutral-500 italic bg-neutral-100 px-3 py-2 border border-neutral-200">
+                            <Lock className="size-3.5 text-neutral-400" />
+                            <span>Modo Supervisión: Solo el Coordinador o Secretario pueden iniciar sorteos oficiales.</span>
+                          </div>
                         ) : (
-                          (() => {
-                            const esEmpresariales = postulanteSeleccionado?.carrera.toLowerCase().includes('empresarial');
-                            const isBeforeDefense = () => {
-                              if (!postulanteSeleccionado?.fechaDefensa) return false;
-                              const parts = postulanteSeleccionado.fechaDefensa.split('/'); // DD/MM/YYYY
-                              if (parts.length === 3) {
-                                const defDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-                                const today = new Date();
-                                today.setHours(0, 0, 0, 0);
-                                return today < defDate;
-                              }
-                              return false;
-                            };
-                            const bloqueado = esEmpresariales && isBeforeDefense();
-
-                            if (bloqueado) {
-                              return (
-                                <div className="flex flex-col gap-2 w-full md:w-auto">
-                                  <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 text-xs rounded shadow-xs font-medium">
-                                    ⏳ Por normativa, el sorteo para Ciencias Empresariales se habilitará el <strong>{postulanteSeleccionado?.fechaDefensa}</strong> (Día de la Defensa).
-                                  </div>
-                                  <button
-                                    type="button"
-                                    disabled
-                                    className="flex w-fit items-center gap-2 border border-neutral-300 bg-neutral-100 px-6 py-3 text-xs font-bold text-neutral-400 shadow-xs cursor-not-allowed"
-                                  >
-                                    <Maximize2 className="size-4" />
-                                    <span>Iniciar Sorteo Oficial (Bloqueado)</span>
-                                    <ArrowRight className="size-4" />
-                                  </button>
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <button
-                                type="button"
-                                disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
-                                onClick={handleIniciarSorteoOficial}
-                                className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
-                              >
-                                <Maximize2 className="size-4" />
-                                <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
-                                <ArrowRight className="size-4" />
-                              </button>
-                            );
-                          })()
+                          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                            {esSoloArea && (
+                              <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-900 px-3 py-2 text-xs font-medium">
+                                <ShieldCheck className="size-4 text-blue-700 shrink-0" />
+                                <span>
+                                  <strong>Normativa UTEPSA:</strong> {postulanteSeleccionado?.carrera} aplica exclusivamente a <strong>Ruleta de Área</strong> (sin sorteo de caso).
+                                </span>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              disabled={!asistenciaPresente || sorteoSuspendido || !postulanteSeleccionado}
+                              onClick={handleIniciarSorteoOficial}
+                              className="flex items-center gap-2 border border-[#9E1B32] bg-[#9E1B32] px-6 py-3 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap"
+                            >
+                              <Maximize2 className="size-4" />
+                              <span>Iniciar Sorteo Oficial (Pantalla Completa & QR)</span>
+                              <ArrowRight className="size-4" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </>
@@ -2083,14 +2226,40 @@ export default function PaginaSorteo() {
                   {/* Ruleta Dinámica de Áreas */}
                   <RuletaCanvas
                     items={ruletaItemsAreas}
-                    size={400}
+                    size={380}
                     onFinish={handleFinalizarSorteoArea}
                     onSpinStart={handleSpinStartArea}
                     title="Ruleta Oficial de Áreas de Grado"
                     subtitle="Giro aleatorio CSPRNG auditable con desaceleración natural"
                     spinButtonText="Girar Ruleta de Áreas"
-                    readOnly={isVice}
+                    readOnly={!puedeOperarSorteo}
+                    actionButton={
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (esSoloArea) {
+                            setPasoActual(4)
+                            if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
+                              await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
+                            }
+                          } else {
+                            setPasoActual(3)
+                          }
+                        }}
+                        className="group relative flex w-full items-center justify-center gap-2 border border-emerald-600 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
+                      >
+                        <span>{esSoloArea ? 'Formalizar Acta de Área & Finalizar Sorteo' : 'Continuar al Sorteo de Caso'}</span>
+                        <ArrowRight className="size-4" />
+                      </button>
+                    }
                   />
+
+                  {!puedeOperarSorteo && (
+                    <p className="text-xs text-neutral-500 italic flex items-center gap-1.5 -mt-2">
+                      <Lock className="size-3.5 text-neutral-400" />
+                      El giro de ruleta está habilitado únicamente para Coordinador y Secretario.
+                    </p>
+                  )}
 
                   {/* Área Ganadora Revelada */}
                   {areaGanadora && (
@@ -2109,7 +2278,7 @@ export default function PaginaSorteo() {
                           </p>
                         </div>
                         <span className="border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
-                          Fase 1 Completada
+                          {esSoloArea ? 'Sorteo Concluido' : 'Fase 1 Completada'}
                         </span>
                       </div>
                     </div>
@@ -2128,10 +2297,19 @@ export default function PaginaSorteo() {
                     <button
                       type="button"
                       disabled={!areaGanadora}
-                      onClick={() => setPasoActual(3)}
+                      onClick={async () => {
+                        if (esSoloArea) {
+                          setPasoActual(4)
+                          if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
+                            await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
+                          }
+                        } else {
+                          setPasoActual(3)
+                        }
+                      }}
                       className="flex items-center gap-2 border border-crimson bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
-                      Continuar al Sorteo de Caso
+                      {esSoloArea ? 'Formalizar Acta de Área & Finalizar Sorteo' : 'Continuar al Sorteo de Caso'}
                       <ArrowRight className="size-4" />
                     </button>
                   </div>
@@ -2142,7 +2320,7 @@ export default function PaginaSorteo() {
             {/* ========================================================= */}
             {/* PASO 3: SORTEO DE CASO DE ESTUDIO */}
             {/* ========================================================= */}
-            {pasoActual === 3 && (
+            {pasoActual === 3 && !esSoloArea && (
               <section className="flex flex-col border border-line bg-white shadow-xs animate-fade-in">
                 <header className="border-b border-line px-6 py-4 flex items-center justify-between">
                   <div>
@@ -2164,18 +2342,40 @@ export default function PaginaSorteo() {
                   {casosParaArea.length > 0 ? (
                     <RuletaCanvas
                       items={ruletaItemsCasos}
-                      size={400}
+                      size={380}
                       onFinish={handleFinalizarSorteoCaso}
                       onSpinStart={handleSpinStartCaso}
                       title={`Casos de Estudio — ${areaGanadora?.codigo}`}
                       subtitle="Selección estricta de casos activos con límite máximo de 2 usos"
                       spinButtonText="Girar Ruleta de Casos"
-                      readOnly={isVice}
+                      readOnly={!puedeOperarSorteo}
+                      actionButton={
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setPasoActual(4)
+                            if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora && casoGanador) {
+                              await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
+                            }
+                          }}
+                          className="group relative flex w-full items-center justify-center gap-2 border border-emerald-600 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
+                        >
+                          <span>Formalizar Acta Oficial y Despacho</span>
+                          <ArrowRight className="size-4" />
+                        </button>
+                      }
                     />
                   ) : (
                     <div className="p-8 text-center text-xs text-neutral-500">
                       No hay casos disponibles en stock para esta área.
                     </div>
+                  )}
+
+                  {!puedeOperarSorteo && (
+                    <p className="text-xs text-neutral-500 italic flex items-center gap-1.5 -mt-2">
+                      <Lock className="size-3.5 text-neutral-400" />
+                      El giro de ruleta está habilitado únicamente para Coordinador y Secretario.
+                    </p>
                   )}
 
                   {/* Caso Ganador Revelado */}
@@ -2244,7 +2444,7 @@ export default function PaginaSorteo() {
             {/* ========================================================= */}
             {/* PASO 4: VEREDICTO FINAL Y DESPACHO (DISEÑO INSTITUCIONAL) */}
             {/* ========================================================= */}
-            {pasoActual === 4 && postulanteSeleccionado && areaGanadora && casoGanador && (
+            {pasoActual === 4 && postulanteSeleccionado && areaGanadora && (esSoloArea || casoGanador) && (
               <section className="flex flex-col gap-6 animate-fade-in">
                 {/* ── ACTA OFICIAL INSTITUCIONAL (SOBRIA Y SIN SUAVIZADOS) ── */}
                 <div className="border border-line bg-white p-6 md:p-8 shadow-xs border-l-4 border-l-crimson">
@@ -2263,7 +2463,9 @@ export default function PaginaSorteo() {
                           UNIVERSIDAD TECNOLÓGICA PRIVADA DE SANTA CRUZ
                         </p>
                         <h3 className="text-base sm:text-lg font-black text-neutral-900 tracking-tight">
-                          ACTA OFICIAL DE ASIGNACIÓN DE ÁREA Y CASO DE EXAMEN DE GRADO
+                          {esSoloArea
+                            ? 'ACTA OFICIAL DE ASIGNACIÓN DE ÁREA DE EXAMEN DE GRADO'
+                            : 'ACTA OFICIAL DE ASIGNACIÓN DE ÁREA Y CASO DE EXAMEN DE GRADO'}
                         </h3>
                         <p className="text-xs text-neutral-500 font-mono">
                           {codigoActa} · {fechaHoraEjecucion || '04/09/2026'}
@@ -2356,15 +2558,23 @@ export default function PaginaSorteo() {
                         <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest font-mono">
                           2. Caso de Estudio Adjudicado
                         </span>
-                        <span className="border border-crimson/30 bg-crimson/10 px-2 py-0.5 text-[10px] font-mono font-bold text-crimson">
-                          {casoGanador.codigo}
-                        </span>
+                        {casoGanador ? (
+                          <span className="border border-crimson/30 bg-crimson/10 px-2 py-0.5 text-[10px] font-mono font-bold text-crimson">
+                            {casoGanador.codigo}
+                          </span>
+                        ) : (
+                          <span className="border border-blue-300 bg-blue-50 px-2 py-0.5 text-[10px] font-mono font-bold text-blue-700">
+                            MODALIDAD DE ÁREA
+                          </span>
+                        )}
                       </div>
                       <h4 className="mt-1.5 text-base font-bold text-neutral-900">
-                        {casoGanador.titulo}
+                        {casoGanador ? casoGanador.titulo : 'Modalidad de Grado por Área Temática'}
                       </h4>
                       <p className="mt-1 text-xs text-neutral-600 line-clamp-2 leading-relaxed">
-                        {casoGanador.contenido}
+                        {casoGanador
+                          ? casoGanador.contenido
+                          : `Por normativa institucional para la carrera de ${postulanteSeleccionado.carrera}, el examen se fundamenta en el Área Temática sorteada sin asignación de caso por ruleta.`}
                       </p>
                     </div>
                   </div>
@@ -2375,10 +2585,14 @@ export default function PaginaSorteo() {
                       <Clock className="size-5 text-neutral-700 shrink-0" />
                       <div>
                         <p className="font-bold text-neutral-900">
-                          Plazo Límite de Entrega de Solución: {casoGanador.plazoHoras} Horas Continuas
+                          {casoGanador
+                            ? `Plazo Límite de Entrega de Solución: ${casoGanador.plazoHoras} Horas Continuas`
+                            : 'Preparación para Defensa: Conforme a Cronograma Académico'}
                         </p>
                         <p className="text-neutral-500 text-[11px] mt-0.5">
-                          El postulante debe cargar su memoria técnica y propuesta antes del término del plazo reglamentario.
+                          {casoGanador
+                            ? 'El postulante debe cargar su memoria técnica y propuesta antes del término del plazo reglamentario.'
+                            : 'El postulante defenderá los contenidos y problemáticas del Área Temática sorteada.'}
                         </p>
                       </div>
                     </div>
@@ -2424,7 +2638,9 @@ export default function PaginaSorteo() {
                             ¡Asignación guardada formalmente en la Base de Datos PostgreSQL!
                           </p>
                           <p className="text-[11px] text-emerald-800 mt-0.5">
-                            Se registró la asignación atómica en la tabla <code className="bg-emerald-100 px-1 py-0.5 rounded font-mono">asignacion_caso</code>, el estado de la defensa se actualizó a <strong className="font-mono">CASO_ASIGNADO</strong> y se generó el acta oficial <strong className="font-mono">{codigoActa}</strong>.
+                            {casoGanador
+                              ? `Se registró la asignación atómica en la tabla asignacion_caso, el estado de la defensa se actualizó a CASO_ASIGNADO y se generó el acta oficial ${codigoActa}.`
+                              : `Se registró el sorteo de área en la base de datos, el estado de la defensa se actualizó a AREA_SORTEADA y se generó el acta oficial ${codigoActa}.`}
                           </p>
                         </div>
                       </div>
@@ -2460,7 +2676,7 @@ export default function PaginaSorteo() {
                             ¡Pliego Oficial Despachado con Éxito al Correo!
                           </p>
                           <p className="mt-0.5 text-emerald-800">
-                            Se ha enviado el acta digital en formato PDF oficial adjunto, el enunciado del caso ({casoGanador.codigo}) y las directrices de defensa a <strong>{postulanteSeleccionado.correoPersonal || postulanteSeleccionado.correo}</strong> {postulanteSeleccionado.correoPersonal && postulanteSeleccionado.correoInstitucional ? `y a ${postulanteSeleccionado.correoInstitucional}` : ''} con copia archivada.
+                            Se ha enviado el acta digital en formato PDF oficial adjunto, {casoGanador ? `el enunciado del caso (${casoGanador.codigo})` : 'el área temática adjudicada'} y las directrices de defensa a <strong>{postulanteSeleccionado.correoPersonal || postulanteSeleccionado.correo}</strong> {postulanteSeleccionado.correoPersonal && postulanteSeleccionado.correoInstitucional ? `y a ${postulanteSeleccionado.correoInstitucional}` : ''} con copia archivada.
                           </p>
                         </div>
                       </div>
@@ -2476,11 +2692,11 @@ export default function PaginaSorteo() {
                             </span>
                           </div>
                           <p className="text-[11px] text-neutral-500 mt-0.5">
-                            Remite automáticamente el caso y el Acta formal en PDF adjunto a {postulanteSeleccionado.correoPersonal || postulanteSeleccionado.correo}.
+                            Remite automáticamente el acta formal en PDF adjunto a {postulanteSeleccionado.correoPersonal || postulanteSeleccionado.correo}.
                           </p>
                         </div>
 
-                        {isVice ? null : (
+                        {!puedeOperarSorteo ? null : (
                           <button
                             type="button"
                             disabled={despachandoCorreo}
@@ -2519,7 +2735,7 @@ export default function PaginaSorteo() {
                         </button>
                       </div>
 
-                      {!isVice && (
+                      {puedeOperarSorteo && (
                         <button
                           type="button"
                           onClick={handleIniciarNuevoSorteo}
@@ -2697,6 +2913,43 @@ export default function PaginaSorteo() {
                 </button>
               )}
 
+              {/* Botón de Siguiente Fase en Cabecera de Proyector (Siempre Visible) */}
+              {pasoActual === 2 && areaGanadora && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (esSoloArea) {
+                      setPasoActual(4)
+                      if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
+                        await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
+                      }
+                    } else {
+                      setPasoActual(3)
+                    }
+                  }}
+                  className="flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all shadow-md animate-pulse cursor-pointer"
+                >
+                  <ArrowRight className="size-4" />
+                  <span>{esSoloArea ? 'Formalizar Acta de Área →' : 'Continuar a Casos →'}</span>
+                </button>
+              )}
+
+              {pasoActual === 3 && casoGanador && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setPasoActual(4)
+                    if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora && casoGanador) {
+                      await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
+                    }
+                  }}
+                  className="flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all shadow-md animate-pulse cursor-pointer"
+                >
+                  <ArrowRight className="size-4" />
+                  <span>Formalizar Acta Oficial →</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleCerrarProyector}
@@ -2746,7 +2999,7 @@ export default function PaginaSorteo() {
           </div>
 
           {/* Cuerpo Central del Proyector */}
-          <main className="flex-1 flex flex-col items-center justify-center p-4 min-h-0">
+          <main className="flex-1 flex flex-col items-center p-4 sm:p-6 overflow-y-auto min-h-0 w-full">
             {pasoActual === 1 && (
               <div className="max-w-xl text-center space-y-4">
                 <div className="mx-auto flex size-16 items-center justify-center border border-white/20 bg-white/5 text-neutral-300">
@@ -2834,38 +3087,76 @@ export default function PaginaSorteo() {
 
                 <RuletaCanvas
                   items={ruletaItemsAreas}
-                  size={400}
+                  size={340}
                   onFinish={handleFinalizarSorteoArea}
                   onSpinStart={handleSpinStartArea}
                   title="Ruleta Oficial de Áreas de Grado"
                   subtitle="Giro aleatorio CSPRNG auditable"
                   spinButtonText="Girar Ruleta de Áreas"
                   accentColor="#9E1B32"
-                  readOnly={isVice}
+                  readOnly={!puedeOperarSorteo}
+                  actionButton={
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (esSoloArea) {
+                          setPasoActual(4)
+                          if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
+                            await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
+                          }
+                        } else {
+                          setPasoActual(3)
+                        }
+                      }}
+                      className="group relative flex w-full items-center justify-center gap-2 border border-emerald-500 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl transition-all hover:bg-emerald-500 active:scale-[0.99] cursor-pointer"
+                    >
+                      <span>{esSoloArea ? 'Formalizar Acta de Área & Finalizar Sorteo' : 'Continuar al Sorteo de Caso'}</span>
+                      <ArrowRight className="size-4" />
+                    </button>
+                  }
                 />
 
                 {areaGanadora && (
-                  <div className="w-full border border-emerald-500/40 bg-emerald-950/20 p-5 text-center animate-fade-in border-l-4 border-l-emerald-500">
+                  <div className="w-full border border-emerald-500/40 bg-emerald-950/40 p-4 text-center animate-fade-in border-l-4 border-l-emerald-500 shadow-xl">
                     <p className="text-[11px] uppercase font-bold tracking-widest text-emerald-400">
                       Área Sorteada y Adjudicada Oficialmente:
                     </p>
-                    <h3 className="text-xl font-black text-white mt-1">
+                    <h3 className="text-lg font-black text-white mt-1">
                       {areaGanadora.codigo}: {areaGanadora.nombre}
                     </h3>
-                    <p className="text-xs text-neutral-300 mt-1">{areaGanadora.descripcion}</p>
-                    <button
-                      type="button"
-                      onClick={() => setPasoActual(3)}
-                      className="mt-4 inline-flex items-center gap-2 border border-white bg-white px-6 py-2.5 text-xs font-bold text-neutral-900 hover:bg-neutral-200 transition-colors cursor-pointer"
-                    >
-                      Continuar a Sorteo de Caso de Estudio →
-                    </button>
+                    <p className="text-xs text-neutral-300 mt-0.5">{areaGanadora.descripcion}</p>
+                    <div className="mt-3 flex items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (esSoloArea) {
+                            setPasoActual(4)
+                            if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
+                              await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
+                            }
+                          } else {
+                            setPasoActual(3)
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition-colors cursor-pointer shadow-md"
+                      >
+                        {esSoloArea ? 'Formalizar Acta de Área & Finalizar Sorteo →' : 'Continuar a Sorteo de Caso de Estudio →'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCerrarProyector}
+                        className="inline-flex items-center gap-1.5 border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-neutral-300 hover:text-white hover:bg-white/20 transition-colors cursor-pointer"
+                      >
+                        <Minimize2 className="size-3.5" />
+                        <span>Ver en Panel Normal</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            {pasoActual === 3 && (
+            {pasoActual === 3 && !esSoloArea && (
               <div className="flex flex-col items-center gap-6 max-w-4xl w-full">
                 <div className="text-center">
                   <span className="border border-[#9E1B32]/40 bg-[#9E1B32]/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
@@ -2879,14 +3170,29 @@ export default function PaginaSorteo() {
                 {casosParaArea.length > 0 ? (
                   <RuletaCanvas
                     items={ruletaItemsCasos}
-                    size={480}
+                    size={340}
                     onFinish={handleFinalizarSorteoCaso}
                     onSpinStart={handleSpinStartCaso}
                     title={`Casos de Estudio — ${areaGanadora?.codigo}`}
                     subtitle="Selección de casos con límite máximo de 2 usos"
                     spinButtonText="Girar Ruleta de Casos"
                     accentColor="#9E1B32"
-                    readOnly={isVice}
+                    readOnly={!puedeOperarSorteo}
+                    actionButton={
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setPasoActual(4)
+                          if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora && casoGanador) {
+                            await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
+                          }
+                        }}
+                        className="group relative flex w-full items-center justify-center gap-2 border border-emerald-500 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl transition-all hover:bg-emerald-500 active:scale-[0.99] cursor-pointer"
+                      >
+                        <span>Formalizar Acta Oficial y Despacho</span>
+                        <ArrowRight className="size-4" />
+                      </button>
+                    }
                   />
                 ) : (
                   <div className="p-8 text-neutral-400 text-sm">
@@ -2920,7 +3226,7 @@ export default function PaginaSorteo() {
               </div>
             )}
 
-            {pasoActual === 4 && areaGanadora && casoGanador && (
+            {pasoActual === 4 && areaGanadora && (esSoloArea || casoGanador) && (
               <div className="max-w-2xl w-full border border-white/20 bg-[#16181d] p-8 text-center space-y-5 animate-fade-in shadow-2xl">
                 <div className="mx-auto flex size-14 items-center justify-center border border-emerald-500 bg-emerald-500/10 text-emerald-400">
                   <ShieldCheck className="size-8" />
@@ -2945,8 +3251,17 @@ export default function PaginaSorteo() {
                   </div>
                   <div className="bg-white/5 p-3 border border-white/10">
                     <span className="text-[10px] text-neutral-400 uppercase font-bold block">Caso Asignado:</span>
-                    <p className="font-bold text-white mt-0.5">{casoGanador.codigo}</p>
-                    <p className="text-neutral-300 text-[11px]">{casoGanador.titulo}</p>
+                    {casoGanador ? (
+                      <>
+                        <p className="font-bold text-white mt-0.5">{casoGanador.codigo}</p>
+                        <p className="text-neutral-300 text-[11px]">{casoGanador.titulo}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-bold text-amber-300 mt-0.5">Sin Sorteo de Caso</p>
+                        <p className="text-neutral-300 text-[11px]">Modalidad Exclusiva de Área Temática</p>
+                      </>
+                    )}
                   </div>
                 </div>
 
