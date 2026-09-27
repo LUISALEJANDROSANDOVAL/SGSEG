@@ -34,10 +34,10 @@ export class SorteosController {
 
   /**
    * Ejecuta el sorteo digital de Área Temática mediante CSPRNG.
-   * Vicerrectorado bloqueado.
+   * Exclusivo para Coordinación y Secretaría.
    */
   @Post('area')
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sortearArea(
     @Body() dto: SortearAreaDto,
@@ -48,10 +48,10 @@ export class SorteosController {
 
   /**
    * Ejecuta el sorteo digital de Caso de Estudio dentro del área asignada.
-   * Vicerrectorado bloqueado.
+   * Exclusivo para Coordinación y Secretaría.
    */
   @Post('caso')
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sortearCaso(
     @Body() dto: SortearCasoDto,
@@ -61,11 +61,11 @@ export class SorteosController {
   }
 
   /**
-   * Ejecuta el sorteo conjunto anticipado de Área y Caso (FCT y Psicología).
-   * Vicerrectorado bloqueado.
+   * Ejecuta el sorteo conjunto anticipado de Área y Caso (FCT).
+   * Exclusivo para Coordinación y Secretaría.
    */
   @Post('conjunto')
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sorteoConjunto(
     @Body() dto: SorteoConjuntoDto,
@@ -76,10 +76,10 @@ export class SorteosController {
 
   /**
    * Finaliza el sorteo y formaliza la asignación atómica (estudiante, área y caso).
-   * Vicerrectorado bloqueado (403 Forbidden).
+   * Exclusivo para Coordinación y Secretaría.
    */
   @Post('finalizar')
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async finalizarSorteo(
     @Body() dto: FinalizarSorteoDto,
@@ -90,10 +90,10 @@ export class SorteosController {
 
   /**
    * Genera un enlace temporal de visualización con token/slug y fecha de expiración.
-   * Vicerrectorado bloqueado.
+   * Exclusivo para Coordinación y Secretaría.
    */
   @Post('enlace-espectador')
-  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async generarEnlaceEspectador(
     @Body() dto: CrearEnlaceEspectadorDto,

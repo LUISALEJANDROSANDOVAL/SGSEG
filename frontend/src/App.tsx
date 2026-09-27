@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/protected-route'
 import Home from '@/pages/Home'
 import Casos from '@/pages/Casos'
@@ -46,6 +46,7 @@ function App() {
               <Sorteo />
             </ProtectedRoute>
           } />
+          <Route path="/sorteos" element={<Navigate to="/sorteo" replace />} />
           
           <Route path="/casos" element={
             <ProtectedRoute allowedRoles={[...TODOS_LOS_ROLES]}>
