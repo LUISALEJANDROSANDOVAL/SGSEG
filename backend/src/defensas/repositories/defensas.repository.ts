@@ -154,28 +154,76 @@ export class DefensasRepository {
         },
       });
 
+      // 3.5 Herencia de Defensa Externa (Psicología)
+      let defensaActualizada = defensa;
+      const carreraNombre = defensa.instancia.proceso.estudiante.planEstudio.carrera.nombre;
+      
+      if (defensa.tipoDefensa.nombre === 'EXTERNA' && carreraNombre.toLowerCase().includes('psicolog')) {
+        const defensaInterna = await tx.defensaExamenGrado.findFirst({
+          where: {
+            instancia: { idProceso: proceso.idProceso },
+            tipoDefensa: { nombre: 'INTERNA' },
+            idCasoUtilizado: { not: null },
+          },
+          orderBy: { fechaDefensa: 'desc' },
+        });
+
+        if (defensaInterna && defensaInterna.idCasoUtilizado) {
+          defensaActualizada = await tx.defensaExamenGrado.update({
+            where: { idDefensa: defensa.idDefensa },
+            data: {
+              idCasoUtilizado: defensaInterna.idCasoUtilizado,
+              estadoDefensa: 'CASO_ASIGNADO',
+            },
+            include: {
+              tipoDefensa: true,
+              instancia: {
+                include: {
+                  proceso: {
+                    include: {
+                      estudiante: {
+                        include: {
+                          planEstudio: {
+                            include: {
+                              carrera: {
+                                include: { facultad: true },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          });
+        }
+      }
+
       // 4. Registro en auditoría
-      const estudiante = defensa.instancia.proceso.estudiante;
+      const estudiante = defensaActualizada.instancia.proceso.estudiante;
       await tx.registroAuditoria.create({
         data: {
           idUsuario: idUsuario ?? null,
-          idDefensa: defensa.idDefensa,
+          idDefensa: defensaActualizada.idDefensa,
           idProceso: proceso.idProceso,
           idInstancia: instancia.idInstancia,
           tipoOperacion: 'PROGRAMACION_DEFENSA',
-          descripcion: `Programación de defensa ${defensa.tipoDefensa.nombre} para ${estudiante.nombreCompleto} (${estudiante.carnetEstudiantil}) con fecha ${data.fechaDefensa.toISOString().split('T')[0]}`,
+          descripcion: `Programación de defensa ${defensaActualizada.tipoDefensa.nombre} para ${estudiante.nombreCompleto} (${estudiante.carnetEstudiantil}) con fecha ${data.fechaDefensa.toISOString().split('T')[0]}`,
           valorNuevo: {
-            idDefensa: String(defensa.idDefensa),
+            idDefensa: String(defensaActualizada.idDefensa),
             estudiante: estudiante.nombreCompleto,
             carnet: estudiante.carnetEstudiantil,
             fechaDefensa: data.fechaDefensa.toISOString().split('T')[0],
-            tipoDefensa: defensa.tipoDefensa.nombre,
+            tipoDefensa: defensaActualizada.tipoDefensa.nombre,
             periodo: data.periodoAcademico,
+            herencia: defensaActualizada.estadoDefensa === 'CASO_ASIGNADO' ? 'Sí' : 'No'
           },
         },
       });
 
-      return defensa;
+      return defensaActualizada;
     });
   }
 

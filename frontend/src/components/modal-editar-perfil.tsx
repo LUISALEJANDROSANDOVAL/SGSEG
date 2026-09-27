@@ -211,8 +211,8 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200">
       
-      {/* ── CONTENEDOR PRINCIPAL BLANCO ELEVADO ── */}
-      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden my-8">
+      {/* ── CONTENEDOR PRINCIPAL BLANCO ELEVADO INSTITUCIONAL ── */}
+      <div className="relative w-full max-w-2xl bg-white rounded-none shadow-2xl border border-gray-300 overflow-hidden my-8">
         
         {/* ── BARRA SUPERIOR DE PESTAÑAS (DENTRO DEL MODAL BLANCO - ALTO CONTRASTE) ── */}
         <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 pt-5 pb-0">
@@ -234,7 +234,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
             >
               Acerca de mí
               {tabActiva === 'acerca' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#c8102e] rounded-full" />
+                <span className="absolute bottom-0 left-0 right-0 h-1 bg-[#c8102e]" />
               )}
             </button>
 
@@ -254,7 +254,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
             >
               Seguridad y Contraseña
               {tabActiva === 'seguridad' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#c8102e] rounded-full" />
+                <span className="absolute bottom-0 left-0 right-0 h-1 bg-[#c8102e]" />
               )}
             </button>
 
@@ -274,7 +274,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
             >
               Configuración
               {tabActiva === 'configuracion' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#c8102e] rounded-full" />
+                <span className="absolute bottom-0 left-0 right-0 h-1 bg-[#c8102e]" />
               )}
             </button>
           </div>
@@ -283,7 +283,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
           <button
             type="button"
             onClick={onCerrar}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors -mt-3.5"
+            className="rounded-none p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors -mt-3.5 cursor-pointer"
           >
             <X className="size-5" />
             <span className="sr-only">Cerrar</span>
@@ -294,13 +294,13 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
         {(mensajeExito || errorMsg) && (
           <div className="px-6 pt-4 animate-in fade-in">
             {mensajeExito && (
-              <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-800">
+              <div className="flex items-center gap-2 rounded-none border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-800">
                 <Check className="size-4 shrink-0 text-emerald-600" />
                 <span>{mensajeExito}</span>
               </div>
             )}
             {errorMsg && (
-              <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-[#c8102e]">
+              <div className="flex items-center gap-2 rounded-none border border-red-300 bg-red-50 px-4 py-2.5 text-xs font-semibold text-[#c8102e]">
                 <AlertCircle className="size-4 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
@@ -321,10 +321,10 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                   type="button"
                   onClick={() => setModoEdicion(!modoEdicion)}
                   title={modoEdicion ? 'Ver información' : 'Editar información del perfil'}
-                  className={`flex size-9 items-center justify-center rounded-lg border transition-all ${
+                  className={`flex size-9 items-center justify-center rounded-none border transition-all cursor-pointer ${
                     modoEdicion
                       ? 'border-[#c8102e] bg-red-50 text-[#c8102e]'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:text-gray-900 shadow-xs'
+                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400 hover:text-gray-900 shadow-2xs'
                   }`}
                 >
                   {modoEdicion ? <X className="size-4" /> : <Pencil className="size-4" />}
@@ -338,10 +338,10 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                     <img
                       src={avatar}
                       alt={user.nombre}
-                      className="size-16 sm:size-18 rounded-full object-cover ring-2 ring-[#c8102e] shadow-sm"
+                      className="size-16 sm:size-18 rounded-none object-cover border border-[#c8102e] shadow-sm"
                     />
                   ) : (
-                    <div className="flex size-16 sm:size-18 items-center justify-center rounded-full bg-[#c8102e] text-xl font-bold text-white shadow-sm">
+                    <div className="flex size-16 sm:size-18 items-center justify-center rounded-none bg-[#c8102e] text-xl font-bold text-white shadow-sm">
                       {iniciales}
                     </div>
                   )}
@@ -352,7 +352,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       title="Cambiar foto de perfil"
-                      className="absolute bottom-0 right-0 flex size-6 items-center justify-center rounded-full bg-gray-900 text-white shadow hover:bg-[#c8102e] transition-colors"
+                      className="absolute bottom-0 right-0 flex size-6 items-center justify-center rounded-none bg-gray-900 text-white shadow hover:bg-[#c8102e] transition-colors cursor-pointer"
                     >
                       <Camera className="size-3" />
                     </button>
@@ -364,7 +364,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                     <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                       {nombreCompletoDisplay}
                     </h2>
-                    <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-100 px-2.5 py-0.5 text-[10px] font-bold text-[#c8102e]">
+                    <span className="hidden sm:inline-flex items-center gap-1 rounded-none bg-red-50 border border-red-200 px-2.5 py-0.5 text-[10px] font-bold text-[#c8102e]">
                       <ShieldCheck className="size-3" />
                       {user.rol}
                     </span>
@@ -386,7 +386,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors shadow-2xs"
+                        className="rounded-none border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-2xs cursor-pointer"
                       >
                         Actualizar foto
                       </button>
@@ -394,7 +394,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                         <button
                           type="button"
                           onClick={eliminarFoto}
-                          className="rounded-md px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                          className="rounded-none border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 transition-colors cursor-pointer"
                         >
                           Quitar foto
                         </button>
@@ -420,14 +420,14 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                           value={primerNombre}
                           onChange={(e) => setPrimerNombre(e.target.value)}
                           placeholder="Primer nombre"
-                          className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                          className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                         />
                         <input
                           type="text"
                           value={segundoNombre}
                           onChange={(e) => setSegundoNombre(e.target.value)}
                           placeholder="Segundo nombre"
-                          className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                          className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                         />
                       </div>
                     </div>
@@ -444,14 +444,14 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                           value={primerApellido}
                           onChange={(e) => setPrimerApellido(e.target.value)}
                           placeholder="Primer apellido"
-                          className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                          className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                         />
                         <input
                           type="text"
                           value={segundoApellido}
                           onChange={(e) => setSegundoApellido(e.target.value)}
                           placeholder="Segundo apellido"
-                          className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                          className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                         />
                       </div>
                     </div>
@@ -471,7 +471,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                         readOnly
                         disabled
                         value={user.email}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-xs font-mono text-gray-500 cursor-not-allowed select-all"
+                        className="w-full h-11 rounded-none border border-gray-200 bg-gray-100 px-3.5 py-2 text-sm font-mono text-gray-500 cursor-not-allowed select-all"
                       />
                     </div>
 
@@ -485,7 +485,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                         value={telefono}
                         onChange={(e) => setTelefono(e.target.value)}
                         placeholder="Ej: +591 70000000"
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                        className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                       />
                     </div>
 
@@ -499,7 +499,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                         readOnly
                         disabled
                         value={user.rol}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-600 cursor-not-allowed"
+                        className="w-full h-11 rounded-none border border-gray-200 bg-gray-100 px-3.5 py-2 text-sm text-gray-600 cursor-not-allowed"
                       />
                     </div>
 
@@ -513,7 +513,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                         readOnly
                         disabled
                         value={carreraNombre}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-600 cursor-not-allowed"
+                        className="w-full h-11 rounded-none border border-gray-200 bg-gray-100 px-3.5 py-2 text-sm text-gray-600 cursor-not-allowed"
                       />
                     </div>
 
@@ -527,7 +527,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                         readOnly
                         disabled
                         value="Bolivia (Estado Plurinacional de)"
-                        className="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-600 cursor-not-allowed"
+                        className="w-full h-11 rounded-none border border-gray-200 bg-gray-100 px-3.5 py-2 text-sm text-gray-600 cursor-not-allowed"
                       />
                     </div>
 
@@ -541,7 +541,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                         readOnly
                         disabled
                         value="Santa Cruz"
-                        className="w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-600 cursor-not-allowed"
+                        className="w-full h-11 rounded-none border border-gray-200 bg-gray-100 px-3.5 py-2 text-sm text-gray-600 cursor-not-allowed"
                       />
                     </div>
 
@@ -555,7 +555,7 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                         value={direccion}
                         onChange={(e) => setDireccion(e.target.value)}
                         placeholder="Dirección institucional o particular"
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                        className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                       />
                     </div>
                   </div>
@@ -565,14 +565,14 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                     <button
                       type="button"
                       onClick={() => setModoEdicion(false)}
-                      className="rounded-lg border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="rounded-none border border-gray-300 bg-white px-5 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={guardando}
-                      className="flex items-center gap-2 rounded-lg bg-[#c8102e] px-5 py-2 text-xs font-bold text-white shadow hover:bg-red-700 transition-all disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-none border border-transparent bg-[#c8102e] px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#a50d26] transition-all disabled:opacity-50 cursor-pointer"
                     >
                       <Save className="size-3.5" />
                       <span>{guardando ? 'Guardando...' : 'Guardar Cambios'}</span>
@@ -663,12 +663,12 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 pr-10 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                      className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                     />
                     <button
                       type="button"
                       onClick={() => setMostrarCurrent(!mostrarCurrent)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
                     >
                       {mostrarCurrent ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
@@ -687,12 +687,12 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Mínimo 6 caracteres"
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 pr-10 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                      className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                     />
                     <button
                       type="button"
                       onClick={() => setMostrarNew(!mostrarNew)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
                     >
                       {mostrarNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
@@ -711,12 +711,12 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repita la nueva contraseña"
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 pr-10 text-xs text-gray-900 outline-none focus:border-[#c8102e] focus:bg-white focus:ring-1 focus:ring-[#c8102e]/20"
+                      className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                     />
                     <button
                       type="button"
                       onClick={() => setMostrarConfirm(!mostrarConfirm)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
                     >
                       {mostrarConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
@@ -724,10 +724,10 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                 </div>
 
                 {/* Requisitos */}
-                <div className="rounded-lg bg-gray-50 p-3 border border-gray-100 flex flex-col gap-1.5 mt-1">
-                  <div className="flex items-center gap-2 text-[11px]">
+                <div className="rounded-none bg-gray-50 p-3.5 border border-gray-200 flex flex-col gap-2 mt-1">
+                  <div className="flex items-center gap-2 text-xs">
                     <CheckCircle2
-                      className={`size-3.5 ${
+                      className={`size-4 ${
                         passTieneMinimo6 ? 'text-emerald-600' : 'text-gray-300'
                       }`}
                     />
@@ -735,9 +735,9 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                       Al menos 6 caracteres
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px]">
+                  <div className="flex items-center gap-2 text-xs">
                     <CheckCircle2
-                      className={`size-3.5 ${
+                      className={`size-4 ${
                         passCoincide ? 'text-emerald-600' : 'text-gray-300'
                       }`}
                     />
@@ -749,13 +749,13 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
               </div>
 
               {/* Botones de acción */}
-              <div className="flex items-center justify-start gap-3 pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-start gap-3 pt-5 border-t border-gray-100">
                 <button
                   type="submit"
                   disabled={guardando || !currentPassword || !newPassword || !passCoincide || !passTieneMinimo6}
-                  className="flex items-center gap-2 rounded-lg bg-[#c8102e] px-5 py-2 text-xs font-bold text-white shadow hover:bg-red-700 transition-all disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 rounded-none border border-transparent bg-[#c8102e] px-6 py-3 text-sm font-bold text-white shadow-xs transition-all hover:bg-[#a50d26] active:bg-[#821528] focus:outline-none focus:ring-2 focus:ring-[#c8102e] disabled:opacity-50 cursor-pointer"
                 >
-                  <KeyRound className="size-3.5" />
+                  <KeyRound className="size-4" />
                   <span>{guardando ? 'Actualizando...' : 'Actualizar Contraseña'}</span>
                 </button>
               </div>
@@ -773,19 +773,19 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+                <div className="rounded-none border border-gray-200 bg-gray-50 p-4">
                   <p className="text-xs font-bold text-gray-800">ID de Usuario</p>
                   <p className="text-sm font-mono text-gray-600 mt-0.5">#{user.id}</p>
                 </div>
-                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+                <div className="rounded-none border border-gray-200 bg-gray-50 p-4">
                   <p className="text-xs font-bold text-gray-800">Período Académico</p>
                   <p className="text-sm text-gray-600 mt-0.5">Semestre 2-2026</p>
                 </div>
-                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+                <div className="rounded-none border border-gray-200 bg-gray-50 p-4">
                   <p className="text-xs font-bold text-gray-800">Estado de Cuenta</p>
                   <p className="text-sm font-semibold text-emerald-700 mt-0.5">ACTIVO (Verificado)</p>
                 </div>
-                <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+                <div className="rounded-none border border-gray-200 bg-gray-50 p-4">
                   <p className="text-xs font-bold text-gray-800">Sede</p>
                   <p className="text-sm text-gray-600 mt-0.5">Campus Central Santa Cruz</p>
                 </div>

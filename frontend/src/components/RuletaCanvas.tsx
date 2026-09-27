@@ -25,6 +25,7 @@ interface RuletaCanvasProps {
   accentColor?: string
   autoSpin?: boolean
   readOnly?: boolean
+  actionButton?: React.ReactNode
 }
 
 // Paleta institucional estricta UTEPSA: Solo Guindo, Negro y Blanco
@@ -58,6 +59,7 @@ export function RuletaCanvas({
   accentColor = '#9E1B32',
   autoSpin = false,
   readOnly = false,
+  actionButton,
 }: RuletaCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [isSpinning, setIsSpinning] = useState(false)
@@ -590,20 +592,24 @@ export function RuletaCanvas({
               <span>Girando ruleta en tiempo real en la sala oficial...</span>
             </div>
           ) : ganador ? (
-            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
-              <Lock className="size-4 text-[#9E1B32]" />
-              <span>Acto Oficial Sorteado y Registrado por el Tribunal</span>
-            </div>
+            actionButton || (
+              <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+                <Lock className="size-4 text-[#9E1B32]" />
+                <span>Acto Oficial Sorteado y Registrado por el Tribunal</span>
+              </div>
+            )
           ) : (
             <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-medium text-neutral-500 shadow-2xs">
               <span>Aguardando inicio del sorteo por el tribunal...</span>
             </div>
           )
         ) : ganador && !isSpinning ? (
-          <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
-            <Lock className="size-4 text-[#9E1B32]" />
-            <span>Acto Oficial Sorteado y Registrado (Bloqueado)</span>
-          </div>
+          actionButton || (
+            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+              <Lock className="size-4 text-[#9E1B32]" />
+              <span>Acto Oficial Sorteado y Registrado (Bloqueado)</span>
+            </div>
+          )
         ) : (
           <button
             type="button"

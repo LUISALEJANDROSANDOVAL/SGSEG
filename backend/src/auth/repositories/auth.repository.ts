@@ -6,8 +6,9 @@ export class AuthRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findByCorreoInstitucional(correoInstitucional: string) {
-    return this.prisma.usuario.findUnique({
-      where: { correoInstitucional },
+    const emailNorm = correoInstitucional.trim().toLowerCase();
+    let user = await this.prisma.usuario.findUnique({
+      where: { correoInstitucional: emailNorm },
       include: {
         rol: true,
         carreras: {
@@ -17,6 +18,45 @@ export class AuthRepository {
         },
       },
     });
+
+    if (user) return user;
+
+    // Fallback para variantes y dominios @utepsa.edu.bo / @uni.edu.bo
+    const aliases: Record<string, string> = {
+      'coordinador@utepsa.edu.bo': 'coord@uni.edu.bo',
+      'coordinacion@utepsa.edu.bo': 'coord@uni.edu.bo',
+      'coord@utepsa.edu.bo': 'coord@uni.edu.bo',
+      'coordinador@uni.edu.bo': 'coord@uni.edu.bo',
+      'secretaria@utepsa.edu.bo': 'secretaria@uni.edu.bo',
+      'secretario@utepsa.edu.bo': 'secretaria@uni.edu.bo',
+      'secretariado@utepsa.edu.bo': 'secretaria@uni.edu.bo',
+      'admin@utepsa.edu.bo': 'admin@uni.edu.bo',
+      'vicerrector@utepsa.edu.bo': 'vicerrector@uni.edu.bo',
+    };
+
+    const targetEmail =
+      aliases[emailNorm] ||
+      (emailNorm.endsWith('@utepsa.edu.bo')
+        ? emailNorm.replace('@utepsa.edu.bo', '@uni.edu.bo')
+        : emailNorm.endsWith('@uni.edu.bo')
+        ? emailNorm.replace('@uni.edu.bo', '@utepsa.edu.bo')
+        : null);
+
+    if (targetEmail && targetEmail !== emailNorm) {
+      user = await this.prisma.usuario.findUnique({
+        where: { correoInstitucional: targetEmail },
+        include: {
+          rol: true,
+          carreras: {
+            include: {
+              carrera: true,
+            },
+          },
+        },
+      });
+    }
+
+    return user;
   }
 
   async findById(idUsuario: number) {

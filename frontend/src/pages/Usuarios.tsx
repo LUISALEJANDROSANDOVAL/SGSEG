@@ -136,7 +136,7 @@ export default function PaginaUsuarios() {
             puedeAdministrar ? (
               <button
                 onClick={abrirModalCrear}
-                className="flex items-center gap-2 bg-ink px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 cursor-pointer"
+                className="flex items-center gap-2 rounded-none bg-[#c8102e] px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#a50d26] cursor-pointer"
               >
                 <Plus className="size-4" />
                 Nuevo usuario
@@ -146,7 +146,7 @@ export default function PaginaUsuarios() {
         />
 
         {!puedeAdministrar && (
-          <div className="flex items-start gap-3 rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-xs">
+          <div className="flex items-start gap-3 rounded-none border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 shadow-xs">
             <Lock className="size-5 shrink-0 text-amber-700 mt-0.5" />
             <div>
               <p className="font-semibold">Acceso de Supervisión y Auditoría (Solo Lectura)</p>
@@ -158,7 +158,7 @@ export default function PaginaUsuarios() {
         )}
 
         {error && (
-          <div className="flex items-center gap-3 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          <div className="flex items-center gap-3 rounded-none border border-red-200 bg-red-50 p-4 text-sm text-red-600">
             <AlertCircle className="size-5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -166,10 +166,10 @@ export default function PaginaUsuarios() {
 
         {loading ? (
           <div className="flex h-64 items-center justify-center">
-            <div className="size-8 animate-spin rounded-full border-4 border-ink border-t-transparent"></div>
+            <div className="size-8 animate-spin border-4 border-[#c8102e] border-t-transparent"></div>
           </div>
         ) : (
-          <section className="border border-line bg-white shadow-sm">
+          <section className="border border-line bg-white shadow-xs">
             <header className="border-b border-line px-5 py-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold tracking-tight">Cuentas Registradas</h2>
               <span className="text-xs text-neutral-500">{usuarios.length} usuarios</span>
@@ -193,7 +193,7 @@ export default function PaginaUsuarios() {
                       <td className="px-5 py-4 font-medium text-neutral-900">{u.nombre}</td>
                       <td className="px-5 py-4 text-neutral-600">{u.email}</td>
                       <td className="px-5 py-4">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
+                        <span className="inline-flex items-center gap-1.5 rounded-none border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-800">
                           <Shield className="size-3 text-slate-500" />
                           {u.rol}
                         </span>
@@ -207,10 +207,10 @@ export default function PaginaUsuarios() {
                       </td>
                       <td className="px-5 py-4">
                         <span
-                          className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded-full ${
+                          className={`inline-block px-2.5 py-0.5 text-[11px] font-medium rounded-none border ${
                             u.activo
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                              : 'bg-red-50 text-red-800 border-red-200'
                           }`}
                         >
                           {u.activo ? 'Activo' : 'Inactivo'}
@@ -221,14 +221,14 @@ export default function PaginaUsuarios() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => abrirModalEditar(u)}
-                              className="p-1.5 text-neutral-500 hover:text-ink transition-colors hover:bg-neutral-100 rounded cursor-pointer"
+                              className="p-1.5 text-neutral-500 hover:text-ink transition-colors hover:bg-neutral-100 rounded-none cursor-pointer"
                               title="Editar usuario"
                             >
                               <Edit2 className="size-4" />
                             </button>
                             <button
                               onClick={() => toggleEstadoUsuario(u)}
-                              className={`p-1.5 transition-colors rounded cursor-pointer ${
+                              className={`p-1.5 transition-colors rounded-none cursor-pointer ${
                                 u.activo
                                   ? 'text-emerald-600 hover:text-red-600 hover:bg-red-50'
                                   : 'text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50'
@@ -252,35 +252,36 @@ export default function PaginaUsuarios() {
 
         {/* Modal de Usuario */}
         {modalAbierto && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md bg-white border border-line shadow-2xl p-6 relative">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+            <div className="w-full max-w-md bg-white border border-gray-300 shadow-2xl p-6 relative rounded-none">
               <button
                 onClick={() => setModalAbierto(false)}
-                className="absolute top-4 right-4 text-neutral-400 hover:text-ink"
+                className="absolute top-4 right-4 text-neutral-400 hover:text-ink cursor-pointer"
               >
                 <X className="size-5" />
               </button>
 
-              <h3 className="text-base font-semibold tracking-tight mb-4">
+              <h3 className="text-base font-bold tracking-tight mb-4 text-gray-900">
                 {editId ? 'Editar Cuenta' : 'Registrar Nuevo Usuario'}
               </h3>
 
               <form onSubmit={guardarUsuario} className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-neutral-600">Nombre Completo</label>
+                  <label className="text-xs font-bold text-gray-800">Nombre Completo <span className="text-[#c8102e]">*</span></label>
                   <input
                     type="text"
                     required
                     value={formNombre}
                     onChange={(e) => setFormNombre(e.target.value)}
-                    className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
+                    placeholder="Ej. Juan Pérez"
+                    className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-neutral-600">Email Institucional</label>
-                    {editId && <span className="text-[10px] text-neutral-400 font-normal">Permanente (No editable)</span>}
+                    <label className="text-xs font-bold text-gray-800">Email Institucional <span className="text-[#c8102e]">*</span></label>
+                    {editId && <span className="text-[10px] text-gray-400 font-normal">Permanente (No editable)</span>}
                   </div>
                   <input
                     type="email"
@@ -288,17 +289,18 @@ export default function PaginaUsuarios() {
                     disabled={Boolean(editId)}
                     value={formEmail}
                     onChange={(e) => setFormEmail(e.target.value)}
-                    className={`w-full border border-line px-3 py-2 text-sm outline-none ${
+                    placeholder="usuario@utepsa.edu.bo"
+                    className={`w-full h-11 rounded-none border px-3.5 py-2 text-sm font-medium outline-none transition-all ${
                       editId
-                        ? 'bg-neutral-100 text-neutral-500 cursor-not-allowed'
-                        : 'bg-surface focus:border-ink focus:bg-white'
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200'
+                        : 'bg-white text-gray-900 placeholder:text-gray-400 border-gray-300 hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]'
                     }`}
                   />
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-neutral-600">
-                    Contraseña {editId && <span className="text-neutral-400 font-normal">(Opcional para actualizar)</span>}
+                  <label className="text-xs font-bold text-gray-800">
+                    Contraseña {editId ? <span className="text-gray-400 font-normal">(Opcional para actualizar)</span> : <span className="text-[#c8102e]">*</span>}
                   </label>
                   <div className="relative">
                     <input
@@ -307,12 +309,12 @@ export default function PaginaUsuarios() {
                       placeholder={editId ? 'Dejar vacío para no cambiar' : 'Contraseña inicial'}
                       value={formPassword}
                       onChange={(e) => setFormPassword(e.target.value)}
-                      className="w-full border border-line bg-surface px-3 py-2 pr-10 text-sm outline-none focus:border-ink focus:bg-white"
+                      className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 pr-10 text-sm font-medium text-gray-900 placeholder:text-gray-400 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowFormPassword(!showFormPassword)}
-                      className="absolute inset-y-0 right-2.5 flex items-center text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                      className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-700 cursor-pointer"
                       title={showFormPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                       tabIndex={-1}
                     >
@@ -322,11 +324,11 @@ export default function PaginaUsuarios() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-semibold text-neutral-600">Rol del Sistema</label>
+                  <label className="text-xs font-bold text-gray-800">Rol del Sistema <span className="text-[#c8102e]">*</span></label>
                   <select
                     value={formRol}
                     onChange={(e) => setFormRol(e.target.value)}
-                    className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
+                    className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                   >
                     {rolesDisponibles.map((r) => (
                       <option key={r} value={r}>{r}</option>
@@ -336,12 +338,12 @@ export default function PaginaUsuarios() {
 
                 {formRol === 'Jefe de Carrera' && (
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-semibold text-neutral-600">Carrera Vinculada</label>
+                    <label className="text-xs font-bold text-gray-800">Carrera Vinculada <span className="text-[#c8102e]">*</span></label>
                     <select
                       value={formCarreraId}
                       required
                       onChange={(e) => setFormCarreraId(e.target.value)}
-                      className="w-full border border-line bg-surface px-3 py-2 text-sm outline-none focus:border-ink focus:bg-white"
+                      className="w-full h-11 rounded-none border border-gray-300 bg-white px-3.5 py-2 text-sm font-medium text-gray-900 outline-none transition-all hover:border-gray-400 focus:border-[#c8102e] focus:ring-1 focus:ring-[#c8102e]"
                     >
                       <option value="">Seleccione carrera...</option>
                       {carreras.map((c) => (
@@ -357,16 +359,16 @@ export default function PaginaUsuarios() {
                     id="formActivo"
                     checked={formActivo}
                     onChange={(e) => setFormActivo(e.target.checked)}
-                    className="size-4"
+                    className="size-4 rounded-none border-gray-300 text-[#c8102e] focus:ring-[#c8102e]"
                   />
-                  <label htmlFor="formActivo" className="text-xs font-semibold text-neutral-600 select-none">
+                  <label htmlFor="formActivo" className="text-xs font-semibold text-gray-700 select-none">
                     Cuenta Activa
                   </label>
                 </div>
 
                 <button
                   type="submit"
-                  className="mt-2 w-full bg-ink py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 cursor-pointer"
+                  className="mt-2 w-full h-11 rounded-none border border-transparent bg-[#c8102e] py-2 text-sm font-bold text-white shadow-xs transition-all hover:bg-[#a50d26] active:bg-[#821528] cursor-pointer"
                 >
                   Guardar
                 </button>

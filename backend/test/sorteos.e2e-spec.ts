@@ -5,6 +5,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { PrismaService } from '../src/prisma/services/prisma.service';
+import { DefensasRepository } from '../src/defensas/repositories/defensas.repository';
 
 describe('Módulo Sorteos (e2e)', () => {
   let app: INestApplication<App>;
@@ -181,5 +182,152 @@ describe('Módulo Sorteos (e2e)', () => {
       .expect(400);
 
     expect(res.body.message).toContain('Stock crítico agotado');
+  });
+
+  describe('Bloqueo de fechas (Ciencias Empresariales)', () => {
+    it('debe rechazar sorteo anticipado para la Facultad de Ciencias Empresariales', async () => {
+      let facultadEmp = await prisma.facultad.findFirst({ where: { nombre: 'Facultad E2E Empresariales' } });
+      if (!facultadEmp) {
+        facultadEmp = await prisma.facultad.create({ data: { nombre: 'Facultad E2E Empresariales' } });
+      }
+
+      let carreraEmp = await prisma.carrera.findFirst({ where: { nombre: 'Carrera E2E Adm' } });
+      if (!carreraEmp) {
+        carreraEmp = await prisma.carrera.create({ data: { nombre: 'Carrera E2E Adm', idFacultad: facultadEmp.idFacultad } });
+      }
+
+      let planEmp = await prisma.planEstudio.findFirst({ where: { nombre: 'Plan E2E Adm' } });
+      if (!planEmp) {
+        planEmp = await prisma.planEstudio.create({ data: { nombre: 'Plan E2E Adm', idCarrera: carreraEmp.idCarrera } });
+      }
+      
+      const tipoDefensa = await prisma.tipoDefensa.findFirst({ where: { nombre: 'INTERNA' } });
+      
+      const estEmp = await prisma.estudiante.create({
+        data: {
+          carnetEstudiantil: `EMP-${Date.now()}`,
+          carnetIdentidad: '999',
+          nombreCompleto: 'Est Empresariales',
+          correoInstitucional: `emp${Date.now()}@uni.edu.bo`,
+          idPlanEstudio: planEmp.idPlanEstudio
+        }
+      });
+
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 10); // 10 days in the future
+
+      const proceso = await prisma.procesoExamenGrado.create({
+        data: { idEstudiante: estEmp.idEstudiante }
+      });
+
+      const instancia = await prisma.instanciaExamenGrado.create({
+        data: { idProceso: proceso.idProceso, numeroInstancia: 1 }
+      });
+
+      const defensaEmp = await prisma.defensaExamenGrado.create({
+        data: {
+          idInstancia: instancia.idInstancia,
+          idTipoDefensa: tipoDefensa!.idTipoDefensa,
+          fechaDefensa: futureDate,
+          estadoDefensa: 'PROGRAMADA',
+          periodoAcademico: '2026-1'
+        }
+      });
+
+      // Try to raffle Area (should fail with 400 Bad Request)
+      await request(app.getHttpServer())
+        .post('/sorteos/area')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          idDefensa: String(defensaEmp.idDefensa),
+          estudiantePresente: true,
+        })
+        .expect(400);
+
+      // Cleanup
+      await prisma.defensaExamenGrado.delete({ where: { idDefensa: defensaEmp.idDefensa } });
+      await prisma.instanciaExamenGrado.delete({ where: { idInstancia: instancia.idInstancia } });
+      await prisma.procesoExamenGrado.delete({ where: { idProceso: proceso.idProceso } });
+      await prisma.estudiante.delete({ where: { idEstudiante: estEmp.idEstudiante } });
+    });
+  });
+
+  describe('Herencia de Sorteo (Psicología Externa)', () => {
+    it('debe heredar el caso de la Interna y bloquear nuevo sorteo en la Externa de Psicología', async () => {
+      let facultadPsi = await prisma.facultad.findFirst({ where: { nombre: 'Facultad Humanidades' } });
+      if (!facultadPsi) facultadPsi = await prisma.facultad.create({ data: { nombre: 'Facultad Humanidades' } });
+
+      let carreraPsi = await prisma.carrera.findFirst({ where: { nombre: 'Licenciatura en Psicología E2E' } });
+      if (!carreraPsi) carreraPsi = await prisma.carrera.create({ data: { nombre: 'Licenciatura en Psicología E2E', idFacultad: facultadPsi.idFacultad } });
+
+      let planPsi = await prisma.planEstudio.findFirst({ where: { nombre: 'Plan Psicología' } });
+      if (!planPsi) planPsi = await prisma.planEstudio.create({ data: { nombre: 'Plan Psicología', idCarrera: carreraPsi.idCarrera } });
+      
+      const tipoInterna = await prisma.tipoDefensa.findFirst({ where: { nombre: 'INTERNA' } });
+      const tipoExterna = await prisma.tipoDefensa.findFirst({ where: { nombre: 'EXTERNA' } });
+      
+      const estPsi = await prisma.estudiante.create({
+        data: {
+          carnetEstudiantil: `PSI-${Date.now()}`,
+          carnetIdentidad: '777',
+          nombreCompleto: 'Est Psicología',
+          correoInstitucional: `psi${Date.now()}@uni.edu.bo`,
+          idPlanEstudio: planPsi.idPlanEstudio
+        }
+      });
+
+      const proceso = await prisma.procesoExamenGrado.create({
+        data: { idEstudiante: estPsi.idEstudiante }
+      });
+
+      const instancia = await prisma.instanciaExamenGrado.create({
+        data: { idProceso: proceso.idProceso, numeroInstancia: 1 }
+      });
+
+      const casoDb = await prisma.casoEstudio.findFirst();
+
+      // Crear Defensa INTERNA con Caso Asignado
+      const defensaInterna = await prisma.defensaExamenGrado.create({
+        data: {
+          idInstancia: instancia.idInstancia,
+          idTipoDefensa: tipoInterna!.idTipoDefensa,
+          fechaDefensa: new Date(),
+          estadoDefensa: 'CALIFICADO',
+          periodoAcademico: '2026-1',
+          idCasoUtilizado: casoDb!.idCasoEstudio
+        }
+      });
+
+      // Simular programación de Defensa EXTERNA a través del repositorio (para invocar la herencia)
+      const defensasRepo = app.get(DefensasRepository);
+      const defensaExterna = await defensasRepo.programarDefensa({
+        idEstudiante: estPsi.idEstudiante,
+        idTipoDefensa: tipoExterna!.idTipoDefensa,
+        fechaDefensa: new Date(),
+        periodoAcademico: '2026-1'
+      });
+
+      // Verificamos que se heredó
+      const externaActualizada = await prisma.defensaExamenGrado.findUnique({ where: { idDefensa: defensaExterna.idDefensa } });
+      expect(externaActualizada!.estadoDefensa).toBe('CASO_ASIGNADO');
+      expect(externaActualizada!.idCasoUtilizado).toBe(casoDb!.idCasoEstudio);
+
+      // Intentamos sortear área para la EXTERNA y debe fallar
+      await request(app.getHttpServer())
+        .post('/sorteos/area')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          idDefensa: String(defensaExterna.idDefensa),
+          estudiantePresente: true,
+        })
+        .expect(400);
+
+      // Cleanup
+      await prisma.defensaExamenGrado.delete({ where: { idDefensa: externaActualizada!.idDefensa } });
+      await prisma.defensaExamenGrado.delete({ where: { idDefensa: defensaInterna.idDefensa } });
+      await prisma.instanciaExamenGrado.delete({ where: { idInstancia: instancia.idInstancia } });
+      await prisma.procesoExamenGrado.delete({ where: { idProceso: proceso.idProceso } });
+      await prisma.estudiante.delete({ where: { idEstudiante: estPsi.idEstudiante } });
+    });
   });
 });

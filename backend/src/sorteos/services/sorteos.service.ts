@@ -95,6 +95,33 @@ export class SorteosService {
       }
     }
 
+    // Regla de Negocio: Psicología en Externa hereda el caso de la Interna, no se sortea
+    const esPsicologia = carrera.nombre.toLowerCase().includes('psicolog');
+    if (defensa.tipoDefensa?.nombre === 'EXTERNA' && esPsicologia) {
+      throw new BadRequestException(
+        'La Defensa Externa de Psicología no requiere sorteo. El área y caso se heredan automáticamente de la Defensa Interna aprobada.',
+      );
+    }
+
+    // Regla de Negocio: Empresariales sortea el mismo día de la defensa
+    const facultadNombre = (carrera.facultad?.nombre || '').toLowerCase();
+    const esEmpresariales =
+      facultadNombre.includes('empresar') ||
+      carrera.nombre.toLowerCase().includes('comercial') ||
+      carrera.nombre.toLowerCase().includes('administra') ||
+      carrera.nombre.toLowerCase().includes('market') ||
+      carrera.nombre.toLowerCase().includes('financ');
+
+    if (esEmpresariales) {
+      const hoyStr = new Date().toISOString().slice(0, 10);
+      const defensaStr = new Date(defensa.fechaDefensa).toISOString().slice(0, 10);
+      if (hoyStr < defensaStr) {
+        throw new BadRequestException(
+          'El sorteo para la Facultad de Ciencias Empresariales debe realizarse el mismo día de la defensa.',
+        );
+      }
+    }
+
     // Verificar si ya tiene un sorteo de área activo
     const tieneArea = defensa.sorteos.some((s) => s.area !== null && s.estadoSorteo === 'ACTIVO');
     if (tieneArea) {
@@ -175,6 +202,26 @@ export class SorteosService {
       if (!allowed?.includes(carrera.idCarrera)) {
         throw new ForbiddenException('No tienes permisos para realizar sorteos de otra carrera.');
       }
+    }
+
+    // Regla de Negocio: Psicología y Ciencias Empresariales tienen modalidad de sorteo exclusivo de Área Temática
+    const esPsicologia = carrera.nombre.toLowerCase().includes('psicolog');
+    const esEmpresariales =
+      (carrera.facultad?.nombre?.toLowerCase().includes('empresarial') ?? false) ||
+      carrera.nombre.toLowerCase().includes('comercial') ||
+      carrera.nombre.toLowerCase().includes('administra') ||
+      carrera.nombre.toLowerCase().includes('marketing') ||
+      carrera.nombre.toLowerCase().includes('financiera') ||
+      carrera.nombre.toLowerCase().includes('contadur') ||
+      carrera.nombre.toLowerCase().includes('comercio') ||
+      carrera.nombre.toLowerCase().includes('turismo') ||
+      carrera.nombre.toLowerCase().includes('comunicaci') ||
+      carrera.nombre.toLowerCase().includes('empresarial');
+
+    if (esPsicologia || esEmpresariales) {
+      throw new BadRequestException(
+        `Las carreras de ${esPsicologia ? 'Psicología' : 'Ciencias Empresariales'} tienen modalidad de sorteo exclusivo de Área Temática. No admiten sorteo de caso de estudio por ruleta.`,
+      );
     }
 
     // Verificar si ya tiene caso asignado
