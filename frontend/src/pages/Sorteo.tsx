@@ -837,8 +837,11 @@ export default function PaginaSorteo() {
     )
   }, [postulantes, busquedaPostulante, isJefe, jefeCarreraId, filtroEstadoPostulante])
 
-  // Sincronizar postulante seleccionado cuando se filtra la lista
+  // Sincronizar postulante seleccionado cuando se filtra la lista (solo en paso 1 de selección)
   useEffect(() => {
+    // Si estamos en medio de un sorteo activo (pasos 2, 3 o 4), NO alterar el postulante en curso
+    if (pasoActual > 1) return
+
     if (postulantesFiltrados.length > 0) {
       if (!postulanteSeleccionado || !postulantesFiltrados.some((p) => p.id === postulanteSeleccionado?.id)) {
         setPostulanteSeleccionado(postulantesFiltrados[0])
@@ -846,7 +849,7 @@ export default function PaginaSorteo() {
     } else {
       setPostulanteSeleccionado(null)
     }
-  }, [postulantesFiltrados, postulanteSeleccionado])
+  }, [postulantesFiltrados, postulanteSeleccionado, pasoActual])
 
   // Cargar áreas dinámicamente desde API para la carrera del estudiante
   useEffect(() => {
@@ -1130,6 +1133,13 @@ export default function PaginaSorteo() {
           if (res?.tokenActa) {
             setHashActa(res.tokenActa)
           }
+          if (liveToken && res?.tokenActa && res?.codigoActa) {
+            sorteosApi.actualizarSesionLive(liveToken, {
+              fase: 'ACTA_OFICIALIZADA',
+              codigoActa: res.codigoActa,
+              hashActa: res.tokenActa,
+            }).catch(() => {})
+          }
           setGuardadoEnDbExitoso(true)
           caso.usosActuales = (caso.usosActuales || 0) + 1
           postulante.estadoDefensa = 'CASO_ASIGNADO'
@@ -1257,7 +1267,7 @@ export default function PaginaSorteo() {
   }
 
   // Finalización del Sorteo de Caso
-  const handleFinalizarSorteoCaso = async (item: RuletaItem) => {
+  const handleFinalizarSorteoCaso = (item: RuletaItem) => {
     const caso = casosParaArea.find((c) => c.id === item.id)
     if (caso) {
       setCasoGanador(caso)
@@ -1273,10 +1283,6 @@ export default function PaginaSorteo() {
           },
           ruletaGiroActivo: false,
         }).catch(() => {})
-      }
-
-      if (postulanteSeleccionado && areaGanadora) {
-        await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, caso)
       }
     }
   }
@@ -2370,16 +2376,7 @@ export default function PaginaSorteo() {
                       subtitle="Selección estricta de casos activos con límite máximo de 2 usos"
                       spinButtonText="Girar Ruleta de Casos"
                       readOnly={!puedeOperarSorteo}
-                      actionButton={
-                        <button
-                          type="button"
-                          onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
-                          className="group relative flex w-full items-center justify-center gap-2 border border-emerald-600 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
-                        >
-                          <span>Formalizar Acta Oficial y Despacho</span>
-                          <ArrowRight className="size-4" />
-                        </button>
-                      }
+                      actionButton={null}
                     />
                   ) : (
                     <div className="p-8 text-center text-xs text-neutral-500">
@@ -2440,12 +2437,21 @@ export default function PaginaSorteo() {
 
                     <button
                       type="button"
-                      disabled={!casoGanador}
+                      disabled={!casoGanador || guardandoEnDb}
                       onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
                       className="flex items-center gap-2 border border-crimson bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
-                      Formalizar Acta & Despacho
-                      <ArrowRight className="size-4" />
+                      {guardandoEnDb ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          <span>Guardando Acta...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Formalizar Acta & Despacho</span>
+                          <ArrowRight className="size-4" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -3014,11 +3020,21 @@ export default function PaginaSorteo() {
               {pasoActual === 3 && casoGanador && (
                 <button
                   type="button"
+                  disabled={guardandoEnDb}
                   onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
-                  className="flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all shadow-md animate-pulse cursor-pointer"
+                  className="flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all shadow-md animate-pulse cursor-pointer disabled:opacity-50"
                 >
-                  <ArrowRight className="size-4" />
-                  <span>Formalizar Acta Oficial →</span>
+                  {guardandoEnDb ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      <span>Guardando Acta...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="size-4" />
+                      <span>Formalizar Acta Oficial →</span>
+                    </>
+                  )}
                 </button>
               )}
 
@@ -3176,16 +3192,7 @@ export default function PaginaSorteo() {
                     spinButtonText="Girar Ruleta de Casos"
                     accentColor="#9E1B32"
                     readOnly={!puedeOperarSorteo}
-                    actionButton={
-                      <button
-                        type="button"
-                        onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
-                        className="group relative flex w-full items-center justify-center gap-2 border border-emerald-500 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl transition-all hover:bg-emerald-500 active:scale-[0.99] cursor-pointer"
-                      >
-                        <span>Formalizar Acta Oficial y Despacho</span>
-                        <ArrowRight className="size-4" />
-                      </button>
-                    }
+                    actionButton={null}
                   />
                 ) : (
                   <div className="p-8 text-neutral-400 text-sm">
@@ -3209,10 +3216,18 @@ export default function PaginaSorteo() {
                     </p>
                     <button
                       type="button"
+                      disabled={guardandoEnDb}
                       onClick={() => handleAvanzarAFormalizacion(false)}
-                      className="mt-4 inline-flex items-center gap-2 border border-white bg-white px-6 py-2.5 text-xs font-bold text-neutral-900 hover:bg-neutral-200 transition-colors cursor-pointer"
+                      className="mt-4 inline-flex items-center gap-2 border border-white bg-white px-6 py-2.5 text-xs font-bold text-neutral-900 hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50"
                     >
-                      Formalizar Acta Oficial y Despacho →
+                      {guardandoEnDb ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin text-neutral-900" />
+                          <span>Guardando Acta Oficial...</span>
+                        </>
+                      ) : (
+                        <span>Formalizar Acta Oficial y Despacho →</span>
+                      )}
                     </button>
                   </div>
                 )}
