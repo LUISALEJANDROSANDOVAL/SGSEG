@@ -12,7 +12,11 @@ export class PrismaService
 
   constructor() {
     const connectionString =
-      process.env.DATABASE_URL ??
+      process.env.DATABASE_URL ||
+      process.env.STORAGE_URL ||
+      process.env.POSTGRES_PRISMA_URL ||
+      process.env.POSTGRES_URL ||
+      process.env.STORAGE_DATABASE_URL ||
       'postgresql://sgseg:sgseg@localhost:5437/sgseg?schema=public';
     const pool = new Pool({ connectionString });
     const adapter = new PrismaPg(pool);
