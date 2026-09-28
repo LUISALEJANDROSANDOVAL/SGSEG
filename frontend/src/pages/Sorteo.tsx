@@ -621,6 +621,27 @@ export default function PaginaSorteo() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [mostrarModalQR, setMostrarModalQR] = useState<boolean>(false)
 
+  // Tamaño dinámico de la ruleta para encuadre y centrado perfecto en modo proyector
+  const [tamanoRuletaProyector, setTamanoRuletaProyector] = useState<number>(400)
+
+  useEffect(() => {
+    const calcularTamanoRuleta = () => {
+      const h = window.innerHeight
+      // Espacio ocupado por elementos fijos en modo proyector:
+      // Header: ~50px, Ficha postulante: ~40px, Footer: ~32px, Título: ~38px, Botón de giro: ~46px, paddings y gaps: ~24px -> ~230px
+      const disponible = h - 235
+      // Clampeamos el tamaño para que nunca desborde ni se corte verticalmente
+      // En laptops estándar (600-750px): 360-440px
+      // En pantallas 1080p o proyector completo: 470px máx
+      const optimo = Math.min(470, Math.max(300, Math.floor(disponible)))
+      setTamanoRuletaProyector(optimo)
+    }
+
+    calcularTamanoRuleta()
+    window.addEventListener('resize', calcularTamanoRuleta)
+    return () => window.removeEventListener('resize', calcularTamanoRuleta)
+  }, [modoProyector])
+
   // Polling del estado de la sesión en vivo para detectar conexión y confirmación del estudiante
   useEffect(() => {
     if (!liveToken) return
@@ -2862,16 +2883,16 @@ export default function PaginaSorteo() {
       {modoProyector && (
         <div className="fixed inset-0 z-50 flex flex-col bg-[#121316] text-white overflow-hidden">
           {/* Barra Superior Proyector */}
-          <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-8 py-5 bg-[#0e0f12]">
-            <div className="flex items-center gap-4">
-              <div className="flex size-12 items-center justify-center bg-[#9E1B32] text-white font-black text-lg shadow-inner">
+          <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-6 sm:px-8 py-3 sm:py-3.5 bg-[#0e0f12]">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="flex size-10 sm:size-11 items-center justify-center bg-[#9E1B32] text-white font-black text-base sm:text-lg shadow-inner">
                 U
               </div>
               <div>
-                <p className="text-[11px] font-mono font-bold tracking-widest text-[#C8102E] uppercase">
+                <p className="text-[10px] sm:text-[11px] font-mono font-bold tracking-widest text-[#C8102E] uppercase">
                   Universidad Tecnológica Privada de Santa Cruz · Auditorio Central
                 </p>
-                <h1 className="text-xl font-black tracking-tight text-white">
+                <h1 className="text-lg sm:text-xl font-black tracking-tight text-white">
                   ACTO SOLEMNE DE SORTEO PÚBLICO DE ÁREA Y CASO DE GRADO
                 </h1>
               </div>
@@ -2963,22 +2984,22 @@ export default function PaginaSorteo() {
           </header>
 
           {/* Ficha del Postulante en Pantalla Grande */}
-          <div className="border-b border-white/10 bg-[#16181d] px-8 py-3.5 flex flex-wrap items-center justify-between gap-4 text-xs">
-            <div className="flex items-center gap-6">
+          <div className="border-b border-white/10 bg-[#16181d] px-6 sm:px-8 py-2.5 sm:py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-4 sm:gap-6">
               <div>
                 <span className="text-[10px] uppercase text-neutral-400 font-bold block">Postulante en Sala:</span>
                 <span className="text-sm font-black text-white">
                   {postulanteSeleccionado?.nombreCompleto || 'Postulante no seleccionado'}
                 </span>
               </div>
-              <div className="h-6 w-px bg-white/15" />
+              <div className="h-5 w-px bg-white/15" />
               <div>
                 <span className="text-[10px] uppercase text-neutral-400 font-bold block">Carrera Académica:</span>
                 <span className="font-semibold text-neutral-200">
                   {postulanteSeleccionado?.carrera}
                 </span>
               </div>
-              <div className="h-6 w-px bg-white/15" />
+              <div className="h-5 w-px bg-white/15" />
               <div>
                 <span className="text-[10px] uppercase text-neutral-400 font-bold block">Identificación:</span>
                 <span className="font-mono text-neutral-300">
@@ -2992,14 +3013,14 @@ export default function PaginaSorteo() {
                 <Lock className="size-3 text-[#C8102E]" />
                 Auditoría Criptográfica Activa
               </span>
-              <span className="border border-white/20 bg-white/5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
+              <span className="border border-white/20 bg-white/5 px-2.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
                 Paso {pasoActual} de 4
               </span>
             </div>
           </div>
 
           {/* Cuerpo Central del Proyector */}
-          <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto min-h-0 w-full">
+          <main className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 overflow-y-auto min-h-0 w-full">
             {pasoActual === 1 && (
               <div className="max-w-xl text-center space-y-4 my-auto">
                 <div className="mx-auto flex size-16 items-center justify-center border border-white/20 bg-white/5 text-neutral-300">
@@ -3026,19 +3047,19 @@ export default function PaginaSorteo() {
             )}
 
             {pasoActual === 2 && (
-              <div className="flex flex-col items-center gap-4 max-w-5xl w-full my-auto">
+              <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 max-w-5xl w-full my-auto">
                 <div className="text-center">
-                  <span className="border border-[#9E1B32]/40 bg-[#9E1B32]/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
+                  <span className="border border-[#9E1B32]/40 bg-[#9E1B32]/20 px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
                     Fase 1: Asignación de Área de la Carrera ({postulanteSeleccionado?.carrera})
                   </span>
-                  <h2 className="text-2xl lg:text-3xl font-black text-white mt-1">
+                  <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5 sm:mt-1">
                     Sorteo Oficial de Área Académica
                   </h2>
                 </div>
 
                 <RuletaCanvas
                   items={ruletaItemsAreas}
-                  size={540}
+                  size={tamanoRuletaProyector}
                   onFinish={handleFinalizarSorteoArea}
                   onSpinStart={handleSpinStartArea}
                   spinButtonText="Girar Ruleta de Áreas"
@@ -3106,12 +3127,12 @@ export default function PaginaSorteo() {
             )}
 
             {pasoActual === 3 && !esSoloArea && (
-              <div className="flex flex-col items-center gap-4 max-w-5xl w-full my-auto">
+              <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 max-w-5xl w-full my-auto">
                 <div className="text-center">
-                  <span className="border border-[#9E1B32]/40 bg-[#9E1B32]/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
+                  <span className="border border-[#9E1B32]/40 bg-[#9E1B32]/20 px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
                     Fase 2: Asignación de Caso para {areaGanadora?.codigo} ({areaGanadora?.nombre})
                   </span>
-                  <h2 className="text-2xl lg:text-3xl font-black text-white mt-1">
+                  <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5 sm:mt-1">
                     Sorteo Oficial de Caso de Estudio
                   </h2>
                 </div>
@@ -3119,7 +3140,7 @@ export default function PaginaSorteo() {
                 {casosParaArea.length > 0 ? (
                   <RuletaCanvas
                     items={ruletaItemsCasos}
-                    size={540}
+                    size={tamanoRuletaProyector}
                     onFinish={handleFinalizarSorteoCaso}
                     onSpinStart={handleSpinStartCaso}
                     spinButtonText="Girar Ruleta de Casos"
@@ -3247,7 +3268,7 @@ export default function PaginaSorteo() {
           </main>
 
           {/* Pie de Pantalla Proyector */}
-          <footer className="border-t border-white/10 bg-[#0e0f12] px-8 py-3 flex items-center justify-between text-[11px] text-neutral-400 font-mono">
+          <footer className="border-t border-white/10 bg-[#0e0f12] px-6 sm:px-8 py-2 sm:py-2.5 flex items-center justify-between text-[10px] sm:text-[11px] text-neutral-400 font-mono">
             <span>SGSEG · Sistema de Gestión de Exámenes de Grado UTEPSA</span>
             <span>Sorteo Público Inalterable conforme a Reglamento de Graduación</span>
           </footer>
