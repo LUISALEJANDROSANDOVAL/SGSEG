@@ -1085,7 +1085,7 @@ export default function PaginaSorteo() {
     postulante: PostulanteSorteo,
     area: AreaAcademicaSorteo,
     caso?: CasoEstudioSorteo | null,
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; error?: string }> => {
     setGuardandoEnDb(true)
     setErrorGuardadoDb(null)
     try {
@@ -1233,12 +1233,12 @@ export default function PaginaSorteo() {
         )
         await loadApiDefensas()
       }
-      return true
+      return { success: true }
     } catch (err: any) {
       console.error('Error al persistir sorteo en base de datos:', err)
       const msg = err.response?.data?.message || err.message || 'Error al guardar el sorteo en la base de datos'
       setErrorGuardadoDb(msg)
-      return false
+      return { success: false, error: msg }
     } finally {
       setGuardandoEnDb(false)
     }
@@ -1254,15 +1254,15 @@ export default function PaginaSorteo() {
     if (!postulanteSeleccionado || !areaGanadora) return
     if (!isSoloArea && !casoGanador) return
 
-    const success = await persistirSorteoEnDb(
+    const res = await persistirSorteoEnDb(
       postulanteSeleccionado,
       areaGanadora,
       isSoloArea ? null : casoGanador
     )
-    if (success) {
+    if (res.success) {
       setPasoActual(4)
     } else {
-      alert("Hubo un error al guardar en la base de datos: " + (errorGuardadoDb || "Error desconocido."));
+      alert("Hubo un error al guardar en la base de datos: " + (res.error || "Error desconocido."));
     }
   }
 

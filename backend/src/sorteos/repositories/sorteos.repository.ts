@@ -827,6 +827,7 @@ export class SorteosRepository {
         }
 
         if (
+          defensa.estadoDefensa === 'CASO_ASIGNADO' &&
           defensa.asignacionCaso &&
           ['ASIGNADO', 'EN_CURSO'].includes(defensa.asignacionCaso.estado)
         ) {
@@ -852,20 +853,28 @@ export class SorteosRepository {
           idSorteo = nuevoSorteo.idSorteo;
         }
 
-        // 5. Persistir la asignación definitiva
-        const asignacion = await tx.asignacionCaso.create({
-          data: {
-            idEstudiante: params.idEstudiante,
+        // 5. Persistir la asignación definitiva (upsert para soportar re-sorteo de defensas programadas)
+        const asignacionData = {
+          idEstudiante: params.idEstudiante,
+          idArea: params.idArea,
+          idCaso: params.idCaso,
+          idUsuarioEjecutor: params.idUsuarioEjecutor,
+          idSorteo,
+          tokenActa: params.tokenActa,
+          codigoActa: params.codigoActa,
+          plazoLimiteEntrega: params.plazoLimiteEntrega,
+          estado: 'ASIGNADO',
+          modalidad: 'AREA_Y_CASO',
+          fechaAsignacion: new Date(),
+        };
+
+        const asignacion = await tx.asignacionCaso.upsert({
+          where: { idDefensa: params.idDefensa },
+          create: {
             idDefensa: params.idDefensa,
-            idArea: params.idArea,
-            idCaso: params.idCaso,
-            idUsuarioEjecutor: params.idUsuarioEjecutor,
-            idSorteo,
-            tokenActa: params.tokenActa,
-            codigoActa: params.codigoActa,
-            plazoLimiteEntrega: params.plazoLimiteEntrega,
-            estado: 'ASIGNADO',
+            ...asignacionData,
           },
+          update: asignacionData,
           include: {
             estudiante: {
               include: {
@@ -983,7 +992,11 @@ export class SorteosRepository {
         throw new NotFoundException(`Defensa con ID ${params.idDefensa} no encontrada.`);
       }
 
-      if (defensa.asignacionCaso && ['ASIGNADO', 'EN_CURSO'].includes(defensa.asignacionCaso.estado)) {
+      if (
+        defensa.estadoDefensa === 'AREA_SORTEADA' &&
+        defensa.asignacionCaso &&
+        ['ASIGNADO', 'EN_CURSO'].includes(defensa.asignacionCaso.estado)
+      ) {
         throw new BadRequestException('Esta defensa ya cuenta con una asignación activa.');
       }
 
@@ -1004,20 +1017,27 @@ export class SorteosRepository {
         idSorteo = nuevoSorteo.idSorteo;
       }
 
-      // 3. Persistir la asignación definitiva (sin caso)
-      const asignacion = await tx.asignacionCaso.create({
-        data: {
-          idEstudiante: params.idEstudiante,
+      // 3. Persistir la asignación definitiva (upsert)
+      const asignacionData = {
+        idEstudiante: params.idEstudiante,
+        idArea: params.idArea,
+        idCaso: null,
+        modalidad: 'SOLO_AREA',
+        idUsuarioEjecutor: params.idUsuarioEjecutor,
+        idSorteo,
+        tokenActa: params.tokenActa,
+        codigoActa: params.codigoActa,
+        estado: 'ASIGNADO',
+        fechaAsignacion: new Date(),
+      };
+
+      const asignacion = await tx.asignacionCaso.upsert({
+        where: { idDefensa: params.idDefensa },
+        create: {
           idDefensa: params.idDefensa,
-          idArea: params.idArea,
-          idCaso: null,
-          modalidad: 'SOLO_AREA',
-          idUsuarioEjecutor: params.idUsuarioEjecutor,
-          idSorteo,
-          tokenActa: params.tokenActa,
-          codigoActa: params.codigoActa,
-          estado: 'ASIGNADO',
+          ...asignacionData,
         },
+        update: asignacionData,
         include: {
           estudiante: { include: { planEstudio: { include: { carrera: true } } } },
           area: true,
