@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import {
   AlertOctagon,
   AlertTriangle,
@@ -20,7 +20,11 @@ import {
   Upload,
   FileSpreadsheet,
   X,
+  ExternalLink,
+  Paperclip,
+  Loader2,
 } from 'lucide-react'
+import { uploadFileToPinata, isPinataConfigured } from '@/lib/pinata.service'
 import { DashboardShell } from '@/components/dashboard-shell'
 import { EncabezadoPagina } from '@/components/encabezado-pagina'
 import { TableSkeleton } from '@/components/table-skeleton'
@@ -112,6 +116,46 @@ export default function PaginaCasos() {
     nombre: '',
     umbralDisponibilidad: 2,
   })
+
+  // Estados y referencias para subida de anexos a Pinata IPFS
+  const [subiendoPinataNuevo, setSubiendoPinataNuevo] = useState<boolean>(false)
+  const [subiendoPinataEditar, setSubiendoPinataEditar] = useState<boolean>(false)
+  const [pinataErrorNuevo, setPinataErrorNuevo] = useState<string | null>(null)
+  const [pinataErrorEditar, setPinataErrorEditar] = useState<string | null>(null)
+  const fileInputNuevoRef = useRef<HTMLInputElement>(null)
+  const fileInputEditarRef = useRef<HTMLInputElement>(null)
+
+  const handleSubirArchivoNuevo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSubiendoPinataNuevo(true)
+    setPinataErrorNuevo(null)
+    try {
+      const res = await uploadFileToPinata(file)
+      setFormNuevo((prev) => ({ ...prev, documentoAdjunto: res.gatewayUrl }))
+    } catch (err: any) {
+      setPinataErrorNuevo(err.message || 'Error al subir archivo a Pinata IPFS')
+    } finally {
+      setSubiendoPinataNuevo(false)
+      if (fileInputNuevoRef.current) fileInputNuevoRef.current.value = ''
+    }
+  }
+
+  const handleSubirArchivoEditar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSubiendoPinataEditar(true)
+    setPinataErrorEditar(null)
+    try {
+      const res = await uploadFileToPinata(file)
+      setFormEditar((prev) => ({ ...prev, documentoAdjunto: res.gatewayUrl }))
+    } catch (err: any) {
+      setPinataErrorEditar(err.message || 'Error al subir archivo a Pinata IPFS')
+    } finally {
+      setSubiendoPinataEditar(false)
+      if (fileInputEditarRef.current) fileInputEditarRef.current.value = ''
+    }
+  }
 
   // Inicialización de carreras según el rol del usuario
   useEffect(() => {
@@ -1335,16 +1379,75 @@ export default function PaginaCasos() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">
-                  Enlace a documento adjunto o material anexo (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formNuevo.documentoAdjunto}
-                  onChange={(e) => setFormNuevo({ ...formNuevo, documentoAdjunto: e.target.value })}
-                  placeholder="URL o ruta de anexos técnicos..."
-                  className="w-full border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-neutral-700">
+                    Documento Anexo / Material Complementario (opcional)
+                  </label>
+                  <span className="text-[10px] text-neutral-500 font-mono">
+                    Pinata IPFS {isPinataConfigured() ? '✓ Conectado' : '⚡ Local'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={formNuevo.documentoAdjunto}
+                    onChange={(e) => setFormNuevo({ ...formNuevo, documentoAdjunto: e.target.value })}
+                    placeholder="URL de Pinata IPFS (https://...mypinata.cloud/ipfs/...) o externa"
+                    className="flex-1 border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400 font-mono text-[11px]"
+                  />
+
+                  <input
+                    ref={fileInputNuevoRef}
+                    type="file"
+                    onChange={handleSubirArchivoNuevo}
+                    accept=".pdf,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                    className="hidden"
+                  />
+
+                  <button
+                    type="button"
+                    disabled={subiendoPinataNuevo}
+                    onClick={() => fileInputNuevoRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 border border-line bg-white px-3 py-2 text-xs font-semibold text-neutral-800 hover:text-crimson hover:bg-neutral-50 shadow-2xs cursor-pointer disabled:opacity-50 shrink-0"
+                    title="Subir archivo PDF u otro anexo a la red descentralizada IPFS vía Pinata"
+                  >
+                    {subiendoPinataNuevo ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin text-crimson" />
+                        <span>Subiendo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Paperclip className="size-3.5 text-crimson" />
+                        <span>Subir a Pinata</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {pinataErrorNuevo && (
+                  <p className="mt-1 text-[11px] text-red-600 font-medium">
+                    ⚠️ {pinataErrorNuevo}
+                  </p>
+                )}
+
+                {formNuevo.documentoAdjunto && (
+                  <div className="mt-1.5 flex items-center justify-between bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] text-emerald-800">
+                    <span className="truncate max-w-[320px] font-mono">
+                      ✓ Anexo enlazado a IPFS
+                    </span>
+                    <a
+                      href={formNuevo.documentoAdjunto}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-bold text-emerald-900 hover:underline shrink-0"
+                    >
+                      <ExternalLink className="size-3" />
+                      <span>Ver Anexo</span>
+                    </a>
+                  </div>
+                )}
               </div>
 
               <footer className="mt-2 flex items-center justify-end gap-3 border-t border-line pt-4">
@@ -1415,9 +1518,20 @@ export default function PaginaCasos() {
               {modalDetalleCaso.documentoAdjunto && (
                 <div>
                   <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1">
-                    Documento Anexo
+                    Documento Anexo (IPFS / Pinata)
                   </p>
-                  <p className="text-xs text-neutral-600 font-mono underline break-all">
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={modalDetalleCaso.documentoAdjunto}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-crimson bg-red-50 border border-red-200 hover:bg-red-100 transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="size-3.5" />
+                      <span>Abrir Documento Anexo en IPFS</span>
+                    </a>
+                  </div>
+                  <p className="text-[10px] text-neutral-500 font-mono mt-1 break-all">
                     {modalDetalleCaso.documentoAdjunto}
                   </p>
                 </div>
@@ -1571,15 +1685,65 @@ export default function PaginaCasos() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">
-                    Documento Anexo (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formEditar.documentoAdjunto}
-                    onChange={(e) => setFormEditar({ ...formEditar, documentoAdjunto: e.target.value })}
-                    className="w-full border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-neutral-700">
+                      Documento Anexo (opcional)
+                    </label>
+                    <span className="text-[10px] text-neutral-500 font-mono">
+                      Pinata IPFS
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={formEditar.documentoAdjunto}
+                      onChange={(e) => setFormEditar({ ...formEditar, documentoAdjunto: e.target.value })}
+                      placeholder="URL IPFS..."
+                      className="flex-1 border border-line bg-surface px-3 py-2 text-xs outline-none focus:border-neutral-400 font-mono text-[11px]"
+                    />
+                    <input
+                      ref={fileInputEditarRef}
+                      type="file"
+                      onChange={handleSubirArchivoEditar}
+                      accept=".pdf,.doc,.docx,.zip,.png,.jpg,.jpeg"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      disabled={subiendoPinataEditar}
+                      onClick={() => fileInputEditarRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 border border-line bg-white px-2.5 py-2 text-xs font-semibold text-neutral-800 hover:text-crimson hover:bg-neutral-50 shadow-2xs cursor-pointer disabled:opacity-50 shrink-0"
+                      title="Subir archivo anexo a IPFS vía Pinata"
+                    >
+                      {subiendoPinataEditar ? (
+                        <Loader2 className="size-3.5 animate-spin text-crimson" />
+                      ) : (
+                        <Paperclip className="size-3.5 text-crimson" />
+                      )}
+                      <span>{subiendoPinataEditar ? 'Subiendo...' : 'Subir'}</span>
+                    </button>
+                  </div>
+                  {pinataErrorEditar && (
+                    <p className="mt-1 text-[11px] text-red-600 font-medium">
+                      ⚠️ {pinataErrorEditar}
+                    </p>
+                  )}
+                  {formEditar.documentoAdjunto && (
+                    <div className="mt-1 flex items-center justify-between bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] text-emerald-800">
+                      <span className="truncate max-w-[200px] font-mono">
+                        ✓ Enlazado a IPFS
+                      </span>
+                      <a
+                        href={formEditar.documentoAdjunto}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-bold text-emerald-900 hover:underline"
+                      >
+                        <ExternalLink className="size-2.5" />
+                        <span>Ver</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 
