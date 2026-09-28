@@ -149,7 +149,7 @@ export function RuletaCanvas({
     const centerX = displaySize / 2
     const centerY = displaySize / 2
     const outerRadius = displaySize / 2 - 18
-    const innerHubRadius = 42
+    const innerHubRadius = Math.max(42, Math.round(displaySize * 0.105))
     const numSlices = items.length
     const sliceAngle = (2 * Math.PI) / numSlices
 
@@ -236,7 +236,7 @@ export function RuletaCanvas({
       ctx.lineWidth = 1
       ctx.stroke()
 
-      // 4. Texto y etiquetas del slice (Centrados y multilínea inteligente)
+      // 4. Texto y etiquetas del slice (Centrados perfectamente a nivel radial y angular)
       ctx.save()
       ctx.rotate(startAngle + sliceAngle / 2)
       ctx.textAlign = 'center'
@@ -246,72 +246,81 @@ export function RuletaCanvas({
       const textColor = item.textColor || (isLight ? '#121316' : '#FFFFFF')
       ctx.fillStyle = textColor
 
-      // Ajuste tipográfico dinámico según cantidad de elementos
-      const maxTextLength = numSlices <= 2 ? 30 : numSlices <= 4 ? 26 : numSlices > 8 ? 16 : 22
-      let labelText = item.label
-      if (labelText.length > maxTextLength) {
-        labelText = labelText.substring(0, maxTextLength - 2) + '...'
-      }
+      // Factor de escala proporcional al tamaño del canvas
+      const scale = displaySize / 450
+      const fontSize = Math.round(
+        (numSlices <= 3 ? 18 : numSlices <= 6 ? 15.5 : numSlices <= 8 ? 14 : 12) *
+          Math.min(Math.max(scale, 0.85), 1.35)
+      )
+      const subFontSize = Math.round(
+        (numSlices <= 3 ? 13 : numSlices <= 6 ? 11.5 : numSlices <= 8 ? 10.5 : 9.5) *
+          Math.min(Math.max(scale, 0.85), 1.35)
+      )
 
-      // Tamaño de fuente grande y visible
-      const fontSize = numSlices <= 2 ? 19 : numSlices <= 4 ? 17 : numSlices <= 6 ? 15 : numSlices <= 8 ? 14 : numSlices <= 12 ? 12 : 11
-      const subFontSize = numSlices <= 2 ? 13.5 : numSlices <= 4 ? 12.5 : numSlices <= 6 ? 11.5 : numSlices <= 8 ? 10.5 : 10
+      // Ancho radial disponible para el texto con márgenes de seguridad respecto al eje y bisel
+      const availableRadialLength = outerRadius - innerHubRadius
+      const maxAllowedWidth = availableRadialLength * 0.82
+      const midRadius = innerHubRadius + availableRadialLength * 0.52
 
-      ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
-      ctx.shadowColor = isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.8)'
+      ctx.shadowColor = isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(0, 0, 0, 0.85)'
       ctx.shadowBlur = 4
       ctx.shadowOffsetX = 1
       ctx.shadowOffsetY = 1
 
-      // Radio centrado perfectamente en el punto medio del sector
-      const midRadius = (innerHubRadius + outerRadius) / 2 + (numSlices <= 2 ? 4 : 6)
+      // Medir y ajustar título principal
+      let labelText = item.label.trim()
+      ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+      while (ctx.measureText(labelText).width > maxAllowedWidth && labelText.length > 5) {
+        labelText = labelText.substring(0, labelText.length - 2) + '…'
+      }
 
+      // Medir y ajustar subtítulo multilínea
+      let lines: string[] = []
       if (item.sublabel && numSlices <= 8) {
-        const rawSub = item.sublabel.trim()
-        const maxCharsPerLine = numSlices <= 2 ? 22 : numSlices <= 4 ? 18 : 15
-        
-        // Dividir subtítulo en máximo 2 líneas limpias por palabras
-        let lines: string[] = []
-        if (rawSub.length > maxCharsPerLine) {
-          const words = rawSub.split(' ')
-          let l1 = ''
-          let l2 = ''
-          for (const w of words) {
-            if ((l1 + ' ' + w).trim().length <= maxCharsPerLine && l2 === '') {
-              l1 = (l1 + ' ' + w).trim()
-            } else {
-              l2 = (l2 + ' ' + w).trim()
-            }
+        const words = item.sublabel.trim().split(/\s+/)
+        let currentLine = ''
+        ctx.font = `600 ${subFontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+        for (const word of words) {
+          const testLine = currentLine ? `${currentLine} ${word}` : word
+          if (ctx.measureText(testLine).width <= maxAllowedWidth) {
+            currentLine = testLine
+          } else {
+            if (currentLine) lines.push(currentLine)
+            currentLine = word
           }
-          if (l2.length > maxCharsPerLine + 3) {
-            l2 = l2.substring(0, maxCharsPerLine) + '...'
-          }
-          lines = [l1, l2].filter(Boolean)
-        } else {
-          lines = [rawSub]
         }
+        if (currentLine) lines.push(currentLine)
 
+        // Limitar a máximo 2 líneas para preservar centrado simétrico estricto
+        if (lines.length > 2) {
+          let combined = lines.slice(1).join(' ')
+          while (ctx.measureText(combined).width > maxAllowedWidth && combined.length > 4) {
+            combined = combined.substring(0, combined.length - 2) + '…'
+          }
+          lines = [lines[0], combined]
+        }
+      }
+
+      // Dibujar texto con centrado vertical simétrico exacto
+      if (lines.length === 2) {
+        const step = Math.round(subFontSize * 1.15 + 2.5)
         ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
-        if (lines.length === 2) {
-          // Título arriba
-          ctx.fillText(labelText, midRadius, -18)
+        ctx.fillText(labelText, midRadius, -step)
 
-          // Subtítulo en 2 líneas
-          ctx.font = `600 ${subFontSize}px "Plus Jakarta Sans", Inter, sans-serif`
-          ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.92)' : 'rgba(255, 255, 255, 0.95)'
-          ctx.fillText(lines[0], midRadius, 2)
-          ctx.fillText(lines[1], midRadius, 18)
-        } else {
-          // Título arriba
-          ctx.fillText(labelText, midRadius, -10)
+        ctx.font = `600 ${subFontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+        ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.92)' : 'rgba(255, 255, 255, 0.95)'
+        ctx.fillText(lines[0], midRadius, 0)
+        ctx.fillText(lines[1], midRadius, step)
+      } else if (lines.length === 1) {
+        const offset = Math.round((subFontSize + 3) / 2)
+        ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+        ctx.fillText(labelText, midRadius, -offset)
 
-          // Subtítulo en 1 línea
-          ctx.font = `600 ${subFontSize}px "Plus Jakarta Sans", Inter, sans-serif`
-          ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.92)' : 'rgba(255, 255, 255, 0.95)'
-          ctx.fillText(lines[0], midRadius, 11)
-        }
+        ctx.font = `600 ${subFontSize}px "Plus Jakarta Sans", Inter, sans-serif`
+        ctx.fillStyle = isLight ? 'rgba(18, 19, 22, 0.92)' : 'rgba(255, 255, 255, 0.95)'
+        ctx.fillText(lines[0], midRadius, offset)
       } else {
-        // Título principal centrado verticalmente
+        ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", Inter, sans-serif`
         ctx.fillText(labelText, midRadius, 0)
       }
 
@@ -358,7 +367,7 @@ export function RuletaCanvas({
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 11px Inter, sans-serif'
+    ctx.font = `bold ${Math.round(Math.max(10, innerHubRadius * 0.26))}px Inter, sans-serif`
     ctx.fillText('SGSEG', centerX, centerY)
   }, [items, size, accentColor])
 
@@ -584,28 +593,28 @@ export function RuletaCanvas({
       )}
 
       {/* Botón de Giro Principal o Bloqueo Oficial (No re-sorteo) */}
-      <div className="mt-6 flex w-full max-w-sm flex-col items-center gap-2">
+      <div className="mt-3.5 sm:mt-4 flex w-full max-w-sm flex-col items-center gap-2">
         {readOnly ? (
           isSpinning ? (
-            <div className="flex w-full items-center justify-center gap-2 border border-[#9E1B32]/30 bg-[#9E1B32]/10 py-3 px-4 text-xs font-semibold text-[#9E1B32] shadow-2xs animate-pulse">
+            <div className="flex w-full items-center justify-center gap-2 border border-[#9E1B32]/30 bg-[#9E1B32]/10 py-2.5 px-4 text-xs font-semibold text-[#9E1B32] shadow-2xs animate-pulse">
               <RefreshCw className="size-4 animate-spin text-[#9E1B32]" />
               <span>Girando ruleta en tiempo real en la sala oficial...</span>
             </div>
           ) : ganador ? (
             actionButton || (
-              <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+              <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
                 <Lock className="size-4 text-[#9E1B32]" />
                 <span>Acto Oficial Sorteado y Registrado por el Tribunal</span>
               </div>
             )
           ) : (
-            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-medium text-neutral-500 shadow-2xs">
+            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2 px-4 text-xs font-medium text-neutral-500 shadow-2xs">
               <span>Aguardando inicio del sorteo por el tribunal...</span>
             </div>
           )
         ) : ganador && !isSpinning ? (
           actionButton || (
-            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-3 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
               <Lock className="size-4 text-[#9E1B32]" />
               <span>Acto Oficial Sorteado y Registrado (Bloqueado)</span>
             </div>
@@ -615,7 +624,7 @@ export function RuletaCanvas({
             type="button"
             onClick={girarRuleta}
             disabled={isSpinning || disabled || items.length === 0}
-            className="group relative flex w-full items-center justify-center gap-2 rounded-none border border-[#9E1B32] bg-[#9E1B32] px-6 py-3.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#821528] active:bg-[#6c1121] disabled:cursor-not-allowed disabled:opacity-50"
+            className="group relative flex w-full items-center justify-center gap-2 rounded-none border border-[#9E1B32] bg-[#9E1B32] px-6 py-2.5 sm:py-3 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#821528] active:bg-[#6c1121] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshCw
               className={`size-4 transition-transform ${
