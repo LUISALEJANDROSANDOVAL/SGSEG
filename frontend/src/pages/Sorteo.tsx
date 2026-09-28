@@ -2226,7 +2226,7 @@ export default function PaginaSorteo() {
                   {/* Ruleta Dinámica de Áreas */}
                   <RuletaCanvas
                     items={ruletaItemsAreas}
-                    size={380}
+                    size={440}
                     onFinish={handleFinalizarSorteoArea}
                     onSpinStart={handleSpinStartArea}
                     title="Ruleta Oficial de Áreas de Grado"
@@ -2342,7 +2342,7 @@ export default function PaginaSorteo() {
                   {casosParaArea.length > 0 ? (
                     <RuletaCanvas
                       items={ruletaItemsCasos}
-                      size={380}
+                      size={440}
                       onFinish={handleFinalizarSorteoCaso}
                       onSpinStart={handleSpinStartCaso}
                       title={`Casos de Estudio — ${areaGanadora?.codigo}`}
@@ -2999,9 +2999,9 @@ export default function PaginaSorteo() {
           </div>
 
           {/* Cuerpo Central del Proyector */}
-          <main className="flex-1 flex flex-col items-center p-4 sm:p-6 overflow-y-auto min-h-0 w-full">
+          <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto min-h-0 w-full">
             {pasoActual === 1 && (
-              <div className="max-w-xl text-center space-y-4">
+              <div className="max-w-xl text-center space-y-4 my-auto">
                 <div className="mx-auto flex size-16 items-center justify-center border border-white/20 bg-white/5 text-neutral-300">
                   <UserCheck className="size-8 text-[#C8102E]" />
                 </div>
@@ -3026,72 +3026,61 @@ export default function PaginaSorteo() {
             )}
 
             {pasoActual === 2 && (
-              <div className="flex flex-col items-center gap-6 max-w-4xl w-full">
+              <div className="flex flex-col items-center gap-4 max-w-5xl w-full my-auto">
                 <div className="text-center">
                   <span className="border border-[#9E1B32]/40 bg-[#9E1B32]/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
                     Fase 1: Asignación de Área de la Carrera ({postulanteSeleccionado?.carrera})
                   </span>
-                  <h2 className="text-2xl font-black text-white mt-2">
+                  <h2 className="text-2xl lg:text-3xl font-black text-white mt-1">
                     Sorteo Oficial de Área Académica
                   </h2>
                 </div>
 
-                {/* Banner de Verificación y Código QR en Sala para el Postulante */}
-                <div className="flex flex-wrap items-center justify-between gap-4 w-full border border-white/15 bg-white/5 p-4">
-                  <div className="flex items-center gap-4">
+                {/* Banner de Verificación Compacto e Integrado */}
+                <div className="flex items-center justify-between gap-4 w-full max-w-xl border border-white/10 bg-white/5 px-4 py-2 text-xs">
+                  <div className="flex items-center gap-3">
                     {qrCodeUrl && (
                       <img
                         src={qrCodeUrl}
                         alt="Código QR Sorteo"
-                        className="size-16 bg-white p-1 border border-white/30 cursor-pointer hover:scale-105 transition-transform"
+                        className="size-9 bg-white p-0.5 border border-white/30 cursor-pointer hover:scale-105 transition-transform"
                         onClick={() => setMostrarModalQR(true)}
                         title="Clic para ampliar código QR"
                       />
                     )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs font-bold text-white">Transmisión Móvil para el Postulante</p>
-                        {liveSessionData?.estudianteListo ? (
-                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 font-mono font-bold">
-                            CONECTADO & LISTO
-                          </span>
-                        ) : liveSessionData?.estudianteConectado ? (
-                          <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 font-mono font-bold">
-                            EN LÍNEA
-                          </span>
-                        ) : (
-                          <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 font-mono font-bold">
-                            ESPERANDO ESCANEO
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-neutral-400 mt-1">
-                        {liveSessionData?.estudianteListo
-                          ? `El postulante ${postulanteSeleccionado?.nombreCompleto} ha confirmado en su móvil que está listo para el sorteo.`
-                          : 'El postulante puede escanear el código QR con su celular o acceder mediante el enlace enviado a su correo institucional.'}
-                      </p>
-                    </div>
+                    <span className="font-semibold text-neutral-200">Móvil Postulante:</span>
+                    {liveSessionData?.estudianteListo ? (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 font-mono font-bold">
+                        CONECTADO & LISTO
+                      </span>
+                    ) : liveSessionData?.estudianteConectado ? (
+                      <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 font-mono font-bold">
+                        EN LÍNEA
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 font-mono font-bold">
+                        ESPERANDO ESCANEO
+                      </span>
+                    )}
                   </div>
 
                   {qrCodeUrl && (
                     <button
                       type="button"
                       onClick={() => setMostrarModalQR(true)}
-                      className="border border-white/20 bg-white/10 hover:bg-white/20 text-white text-xs px-3.5 py-2 transition-colors cursor-pointer font-semibold inline-flex items-center gap-1.5"
+                      className="border border-white/20 bg-white/10 hover:bg-white/20 text-white text-[11px] px-2.5 py-1 transition-colors cursor-pointer font-semibold inline-flex items-center gap-1"
                     >
-                      <QrCode className="size-3.5 text-[#C8102E]" />
-                      <span>Ampliar QR</span>
+                      <QrCode className="size-3 text-[#C8102E]" />
+                      <span>Ver QR</span>
                     </button>
                   )}
                 </div>
 
                 <RuletaCanvas
                   items={ruletaItemsAreas}
-                  size={340}
+                  size={540}
                   onFinish={handleFinalizarSorteoArea}
                   onSpinStart={handleSpinStartArea}
-                  title="Ruleta Oficial de Áreas de Grado"
-                  subtitle="Giro aleatorio CSPRNG auditable"
                   spinButtonText="Girar Ruleta de Áreas"
                   accentColor="#9E1B32"
                   readOnly={!puedeOperarSorteo}
@@ -3157,12 +3146,12 @@ export default function PaginaSorteo() {
             )}
 
             {pasoActual === 3 && !esSoloArea && (
-              <div className="flex flex-col items-center gap-6 max-w-4xl w-full">
+              <div className="flex flex-col items-center gap-4 max-w-5xl w-full my-auto">
                 <div className="text-center">
                   <span className="border border-[#9E1B32]/40 bg-[#9E1B32]/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#C8102E]">
                     Fase 2: Asignación de Caso para {areaGanadora?.codigo} ({areaGanadora?.nombre})
                   </span>
-                  <h2 className="text-2xl font-black text-white mt-2">
+                  <h2 className="text-2xl lg:text-3xl font-black text-white mt-1">
                     Sorteo Oficial de Caso de Estudio
                   </h2>
                 </div>
@@ -3170,11 +3159,9 @@ export default function PaginaSorteo() {
                 {casosParaArea.length > 0 ? (
                   <RuletaCanvas
                     items={ruletaItemsCasos}
-                    size={340}
+                    size={540}
                     onFinish={handleFinalizarSorteoCaso}
                     onSpinStart={handleSpinStartCaso}
-                    title={`Casos de Estudio — ${areaGanadora?.codigo}`}
-                    subtitle="Selección de casos con límite máximo de 2 usos"
                     spinButtonText="Girar Ruleta de Casos"
                     accentColor="#9E1B32"
                     readOnly={!puedeOperarSorteo}
