@@ -26,6 +26,7 @@ interface RuletaCanvasProps {
   autoSpin?: boolean
   readOnly?: boolean
   actionButton?: React.ReactNode
+  mostrarTarjetaResultado?: boolean
 }
 
 // Paleta institucional estricta UTEPSA: Solo Guindo, Negro y Blanco
@@ -60,6 +61,7 @@ export function RuletaCanvas({
   autoSpin = false,
   readOnly = false,
   actionButton,
+  mostrarTarjetaResultado = false,
 }: RuletaCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [isSpinning, setIsSpinning] = useState(false)
@@ -579,8 +581,8 @@ export function RuletaCanvas({
         </button>
       </div>
 
-      {/* Resultado Destacado Sobrio e Institucional */}
-      {ganador && !isSpinning && (
+      {/* Resultado Destacado Sobrio e Institucional (Opcional, desactivado por defecto para evitar duplicidad) */}
+      {mostrarTarjetaResultado && ganador && !isSpinning && (
         <div className="mt-5 w-full max-w-md animate-fade-in-up border-l-4 border-l-[#9E1B32] border border-line bg-white p-4 text-center shadow-xs">
           <span className="inline-block border border-[#9E1B32]/30 bg-[#9E1B32]/10 px-3 py-1 text-[10px] font-bold tracking-widest text-[#9E1B32] uppercase">
             Resultado Oficial Sorteado
