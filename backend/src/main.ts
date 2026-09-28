@@ -12,14 +12,32 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // CORS Configuration
-  const corsOrigins =
-    process.env.NODE_ENV === 'production' && process.env.CORS_ORIGINS
-      ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
-      : (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) =>
-          callback(null, true);
-
   app.enableCors({
-    origin: corsOrigins,
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Permitir herramientas locales, server-to-server o sin cabecera origin
+      if (!origin) return callback(null, true);
+
+      // Permitir cualquier dominio de Vercel o localhost
+      if (
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1') ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('.vercel.app')
+      ) {
+        return callback(null, true);
+      }
+
+      // Si se configuró CORS_ORIGINS
+      if (process.env.CORS_ORIGINS) {
+        const allowed = process.env.CORS_ORIGINS.split(',').map((o) => o.trim());
+        if (allowed.includes(origin) || allowed.includes('*')) {
+          return callback(null, true);
+        }
+      }
+
+      // Por defecto en SGSEG institucional
+      return callback(null, true);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
