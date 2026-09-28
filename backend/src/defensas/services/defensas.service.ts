@@ -12,12 +12,16 @@ import {
   UpdateDefensaDto,
 } from '../dto/defensas.dto';
 import { DefensasRepository } from '../repositories/defensas.repository';
+import {
+  esPsicologiaCarrera,
+  esCarreraEmpresariales,
+} from '../../common/helpers/carrera-helpers';
 
 export interface ReglasSorteoCalculadas {
-  modalidad: 'ANTICIPADO_CONJUNTO' | 'SEPARADO_DIA_DEFENSA';
+  modalidad: 'ANTICIPADO_CONJUNTO' | 'SEPARADO_DIA_DEFENSA' | 'ANTICIPADO_SOLO_AREA';
   descripcionModalidad: string;
   fechaSorteoAreaRecomendada: string;
-  fechaSorteoCasoRecomendada: string;
+  fechaSorteoCasoRecomendada?: string;
   plazoPreparacionDias?: number;
   tiempoResolucionHoras?: number;
   diasParaDefensa: number;
@@ -58,7 +62,8 @@ export class DefensasService {
   ): ReglasSorteoCalculadas {
     const facLower = (facultadNombre ?? '').toLowerCase();
     const carLower = (carreraNombre ?? '').toLowerCase();
-    const esPsicologia = carLower.includes('psicolog');
+    const esPsicologia = esPsicologiaCarrera(carreraNombre);
+    const esEmpresariales = esCarreraEmpresariales(carreraNombre, facultadNombre);
     const esFCT =
       facLower.includes('tecnolog') ||
       facLower.includes('ingenier') ||
@@ -88,12 +93,23 @@ export class DefensasService {
     const diffTime = defensaDate.getTime() - hoyUtc.getTime();
     const diasParaDefensa = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (esFCT || esPsicologia) {
-      // Grupo A: FCT y Psicología (Sorteo conjunto anticipado de Área y Caso)
+    if (esPsicologia) {
+      // Psicología: Sorteo anticipado SOLO DE ÁREA (10 días antes)
+      const fechaSorteo = new Date(defensaDate.getTime());
+      fechaSorteo.setUTCDate(fechaSorteo.getUTCDate() - 10);
+      const fechaSorteoStr = fechaSorteo.toISOString().split('T')[0];
+
+      return {
+        modalidad: 'ANTICIPADO_SOLO_AREA',
+        descripcionModalidad: `Sorteo de Área Temática anticipado (10 días de preparación previa)`,
+        fechaSorteoAreaRecomendada: fechaSorteoStr,
+        plazoPreparacionDias: 10,
+        diasParaDefensa,
+      };
+    } else if (esFCT) {
+      // Grupo A: FCT (Sorteo conjunto anticipado de Área y Caso)
       let plazoDias = 7;
-      if (esPsicologia) {
-        plazoDias = 10;
-      } else if (carLower.includes('industrial')) {
+      if (carLower.includes('industrial')) {
         plazoDias = 5;
       } else if (carLower.includes('mecánica') || carLower.includes('mecanica')) {
         plazoDias = 14;

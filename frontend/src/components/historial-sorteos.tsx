@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import {
+  Download,
   Eye,
   FileCheck2,
+  Loader2,
   Printer,
   RefreshCw,
   ShieldCheck,
   X,
 } from 'lucide-react'
-import { sorteosApi, type SorteoItem } from '@/lib/sorteos.api'
+import { sorteosApi, type SorteoItem, descargarArchivoActa } from '@/lib/sorteos.api'
 import { useAuth } from '@/context/AuthContext'
 import { esJefeCarrera, getJefeCarreraId } from '@/lib/auth-helpers'
 
@@ -24,6 +26,7 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
   const [loading, setLoading] = useState<boolean>(true)
   const [total, setTotal] = useState<number>(0)
   const [actaSeleccionada, setActaSeleccionada] = useState<SorteoItem | null>(null)
+  const [descargandoId, setDescargandoId] = useState<string | null>(null)
 
   const cargarHistorial = async () => {
     setLoading(true)
@@ -139,15 +142,42 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
                       {def?.tipoDefensa?.nombre || 'INTERNA'}
                     </span>
 
-                    <button
-                      type="button"
-                      onClick={() => setActaSeleccionada(sorteo)}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 hover:text-[#c8102e] transition-colors"
-                      title="Ver Acta Oficial de Sorteo"
-                    >
-                      <Eye className="size-3" />
-                      <span>Ver Acta</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setActaSeleccionada(sorteo)}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-neutral-600 hover:text-crimson transition-colors border border-line bg-white px-2 py-1 shadow-2xs hover:bg-surface cursor-pointer"
+                        title="Ver Acta Oficial de Sorteo"
+                      >
+                        <Eye className="size-3" />
+                        <span>Ver Acta</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={descargandoId === sorteo.idSorteo}
+                        onClick={async () => {
+                          try {
+                            setDescargandoId(sorteo.idSorteo)
+                            const idDefensa = sorteo.idDefensa || sorteo.defensa?.idDefensa
+                            await descargarArchivoActa(idDefensa, `ACTA-${sorteo.idSorteo}`)
+                          } catch (err: any) {
+                            alert('No se pudo descargar el acta en PDF: ' + (err.message || err))
+                          } finally {
+                            setDescargandoId(null)
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-800 hover:text-crimson transition-colors border border-line bg-white px-2 py-1 shadow-2xs hover:bg-surface cursor-pointer disabled:opacity-50"
+                        title="Descargar Acta Oficial en PDF"
+                      >
+                        {descargandoId === sorteo.idSorteo ? (
+                          <Loader2 className="size-3 animate-spin text-crimson" />
+                        ) : (
+                          <Download className="size-3 text-crimson" />
+                        )}
+                        <span>{descargandoId === sorteo.idSorteo ? 'Descargando...' : 'Descargar PDF'}</span>
+                      </button>
+                    </div>
                   </div>
                 </li>
               )
@@ -189,10 +219,12 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
                   Certificado de Asignación Aleatoria
                 </p>
                 <h4 className="text-base font-bold text-neutral-900 mt-1 print:text-black">
-                  ACTA DE SORTEO N° {actaSeleccionada.idSorteo.padStart(6, '0')}
+                  {(actaSeleccionada as any).defensa?.asignacionCaso?.codigoActa
+                    ? `ACTA OFICIAL ${(actaSeleccionada as any).defensa.asignacionCaso.codigoActa}`
+                    : `ACTA DE SORTEO N° ${actaSeleccionada.idSorteo.padStart(6, '0')}`}
                 </h4>
                 <p className="text-[11px] text-neutral-500 font-mono print:text-neutral-700">
-                  Fecha y Hora del Acto: {new Date(actaSeleccionada.fechaHora).toLocaleString()}
+                  Fecha y Hora del Acto: {new Date(actaSeleccionada.fechaHora).toLocaleString('es-BO')}
                 </p>
               </div>
 
@@ -221,30 +253,50 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
               </div>
 
               {/* Resultado del Sorteo */}
-              <div className="border border-line p-4 flex flex-col gap-2 print:border-neutral-300">
-                <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-                  Resultado del Bolillero Digital
-                </span>
-                {actaSeleccionada.area && (
-                  <div>
-                    <span className="text-neutral-500 text-[11px]">Área Académica Asignada:</span>
-                    <p className="text-sm font-bold text-neutral-900 print:text-black">
-                      {actaSeleccionada.area.areaResultado.nombre}
-                    </p>
+              {(() => {
+                const areaNombre =
+                  actaSeleccionada.area?.areaResultado?.nombre ||
+                  (actaSeleccionada as any).defensa?.asignacionCaso?.area?.nombre ||
+                  (actaSeleccionada as any).defensa?.casoUtilizado?.area?.nombre ||
+                  'Área Académica Asignada';
+                const casoObj =
+                  actaSeleccionada.caso?.casoSeleccionado ||
+                  (actaSeleccionada as any).defensa?.asignacionCaso?.caso ||
+                  (actaSeleccionada as any).defensa?.casoUtilizado;
+                return (
+                  <div className="border border-line p-4 flex flex-col gap-2 print:border-neutral-300">
+                    <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                      Resultado del Bolillero Digital
+                    </span>
+                    <div>
+                      <span className="text-neutral-500 text-[11px]">Área Académica Asignada:</span>
+                      <p className="text-sm font-bold text-neutral-900 print:text-black">
+                        {areaNombre}
+                      </p>
+                    </div>
+                    {casoObj ? (
+                      <div className="mt-1">
+                        <span className="text-neutral-500 text-[11px]">Caso de Estudio Seleccionado:</span>
+                        <p className="text-sm font-bold text-neutral-900 print:text-black">
+                          {casoObj.titulo}
+                        </p>
+                        {casoObj.contenido && (
+                          <p className="text-[11px] text-neutral-600 mt-1 italic line-clamp-3 print:line-clamp-none">
+                            "{casoObj.contenido}"
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        <span className="text-neutral-500 text-[11px]">Modalidad de Caso:</span>
+                        <p className="text-xs text-neutral-700 italic">
+                          Modalidad exclusiva de Área Temática (sin asignación de caso por ruleta).
+                        </p>
+                      </div>
+                    )}
                   </div>
-                )}
-                {actaSeleccionada.caso && (
-                  <div className="mt-1">
-                    <span className="text-neutral-500 text-[11px]">Caso de Estudio Seleccionado:</span>
-                    <p className="text-sm font-bold text-neutral-900 print:text-black">
-                      {actaSeleccionada.caso.casoSeleccionado.titulo}
-                    </p>
-                    <p className="text-[11px] text-neutral-600 mt-1 italic line-clamp-3 print:line-clamp-none">
-                      "{actaSeleccionada.caso.casoSeleccionado.contenido}"
-                    </p>
-                  </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Testigos y Presencia */}
               <div className="grid grid-cols-2 gap-3 text-[11px]">
@@ -274,7 +326,7 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
                   Sello de Integridad Criptográfica (SHA-256)
                 </span>
                 <p className="font-mono text-[10px] text-neutral-800 break-all select-all">
-                  {actaSeleccionada.tokenActa || 'UTEPSA-VERIFIED-HASH-SEAL'}
+                  {(actaSeleccionada as any).defensa?.asignacionCaso?.tokenActa || actaSeleccionada.tokenActa || 'UTEPSA-VERIFIED-HASH-SEAL'}
                 </p>
               </div>
 
@@ -293,19 +345,46 @@ export function HistorialSorteos({ refreshTrigger }: HistorialSorteosProps) {
               </div>
 
               {/* Acciones */}
-              <footer className="mt-2 flex items-center justify-between border-t border-line pt-4 print:hidden">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs"
-                >
-                  <Printer className="size-3.5" />
-                  <span>Imprimir Acta Oficial</span>
-                </button>
+              <footer className="mt-2 flex items-center justify-between border-t border-line pt-4 print:hidden gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-xs cursor-pointer"
+                  >
+                    <Printer className="size-3.5" />
+                    <span>Imprimir</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={descargandoId === actaSeleccionada.idSorteo}
+                    onClick={async () => {
+                      try {
+                        setDescargandoId(actaSeleccionada.idSorteo)
+                        const idDefensa = actaSeleccionada.idDefensa || actaSeleccionada.defensa?.idDefensa
+                        await descargarArchivoActa(idDefensa, `ACTA-${actaSeleccionada.idSorteo}`)
+                      } catch (err: any) {
+                        alert('No se pudo descargar el acta en PDF: ' + (err.message || err))
+                      } finally {
+                        setDescargandoId(null)
+                      }
+                    }}
+                    className="flex items-center gap-1.5 border border-crimson bg-crimson px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#821528] shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {descargandoId === actaSeleccionada.idSorteo ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Download className="size-3.5" />
+                    )}
+                    <span>Descargar Acta en PDF</span>
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setActaSeleccionada(null)}
-                  className="border border-line bg-ink px-4 py-1.5 text-xs font-medium text-white hover:bg-neutral-800"
+                  className="border border-line bg-ink px-4 py-1.5 text-xs font-medium text-white hover:bg-neutral-800 cursor-pointer"
                 >
                   Cerrar
                 </button>

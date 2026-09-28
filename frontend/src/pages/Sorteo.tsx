@@ -5,7 +5,8 @@ import { RuletaCanvas, type RuletaItem } from '@/components/RuletaCanvas'
 import { estudiantesApi, type Estudiante } from '@/lib/estudiantes.api'
 import { defensasApi, type Defensa } from '@/lib/defensas.api'
 import { casosApi } from '@/lib/casos.api'
-import { sorteosApi } from '@/lib/sorteos.api'
+import { sorteosApi, descargarArchivoActa } from '@/lib/sorteos.api'
+import { HistorialSorteos } from '@/components/historial-sorteos'
 import QRCode from 'qrcode'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
@@ -41,6 +42,9 @@ import {
   Lock,
   X,
   Users,
+  FileText,
+  History,
+  Loader2,
 } from 'lucide-react'
 
 // Definiciones de tipos para el flujo del sorteo
@@ -573,13 +577,14 @@ export default function PaginaSorteo() {
   // ── ESTADO GENERAL DEL FLUJO EN 4 PASOS ──
   // 1 = Postulante & Asistencia, 2 = Área, 3 = Caso, 4 = Despacho
   const [pasoActual, setPasoActual] = useState<1 | 2 | 3 | 4>(1)
+  const [vistaActiva, setVistaActiva] = useState<'SORTEO' | 'HISTORIAL'>('SORTEO')
+  const [descargandoActa, setDescargandoActa] = useState<boolean>(false)
+  const [feedbackDescarga, setFeedbackDescarga] = useState<string | null>(null)
 
   // Lista de postulantes disponibles
-  const [postulantes, setPostulantes] = useState<PostulanteSorteo[]>(POSTULANTES_CATALOGO)
+  const [postulantes, setPostulantes] = useState<PostulanteSorteo[]>([])
   const [busquedaPostulante, setBusquedaPostulante] = useState('')
-  const [postulanteSeleccionado, setPostulanteSeleccionado] = useState<PostulanteSorteo | null>(
-    POSTULANTES_CATALOGO[0],
-  )
+  const [postulanteSeleccionado, setPostulanteSeleccionado] = useState<PostulanteSorteo | null>(null)
 
   // Paso 2: Selección / Ruleta de Área
   const [areaGanadora, setAreaGanadora] = useState<AreaAcademicaSorteo | null>(null)
@@ -671,32 +676,7 @@ export default function PaginaSorteo() {
   const [casosDb, setCasosDb] = useState<CasoEstudioSorteo[]>([])
 
   // Historial de la sesión
-  const [historialSesion, setHistorialSesion] = useState<RegistroHistorialSorteo[]>([
-    {
-      id: 'hist-1',
-      actaCodigo: 'ACTA-2026-0904-01',
-      fechaHora: '09:12 AM',
-      estudiante: POSTULANTES_CATALOGO[1],
-      area: AREAS_CATALOGO['Administración de Empresas']?.[0],
-      caso: CASOS_CATALOGO[8],
-      estado: 'OFICIALIZADO',
-      correoDespachado: true,
-      fechaDespacho: '09:15 AM',
-      hashVerificacion: 'e89a4b2c1f9300ab28d09e',
-    },
-    {
-      id: 'hist-2',
-      actaCodigo: 'ACTA-2026-0904-02',
-      fechaHora: '09:45 AM',
-      estudiante: POSTULANTES_CATALOGO[2],
-      area: AREAS_CATALOGO['Ingeniería Comercial']?.[0],
-      caso: CASOS_CATALOGO[10],
-      estado: 'OFICIALIZADO',
-      correoDespachado: true,
-      fechaDespacho: '09:48 AM',
-      hashVerificacion: '7c4d19aa201e54bc81f440',
-    },
-  ])
+  const [historialSesion, setHistorialSesion] = useState<RegistroHistorialSorteo[]>([])
 
   // Estados de persistencia en Base de Datos PostgreSQL
   const [guardandoEnDb, setGuardandoEnDb] = useState<boolean>(false)
@@ -787,6 +767,8 @@ export default function PaginaSorteo() {
       }
     } catch {
       // Usa catálogo por defecto en caso de no conexión a base de datos
+      setPostulantes(POSTULANTES_CATALOGO)
+      return POSTULANTES_CATALOGO
     }
     return []
   }, [])
@@ -1054,12 +1036,7 @@ export default function PaginaSorteo() {
       minute: '2-digit',
       second: '2-digit',
     })
-    const randomHex = Math.random().toString(16).substring(2, 10).toUpperCase()
-    const codigo = `ACTA-2026-0904-${Math.floor(100 + Math.random() * 900)}`
-    const hash = `SHA256:${Math.random().toString(36).substring(2)}${randomHex}${Math.random().toString(36).substring(2)}`.toUpperCase()
 
-    setCodigoActa(codigo)
-    setHashActa(hash)
     setFechaHoraEjecucion(fechaFormateada)
   }, [])
 
@@ -1155,7 +1132,7 @@ export default function PaginaSorteo() {
     postulante: PostulanteSorteo,
     area: AreaAcademicaSorteo,
     caso?: CasoEstudioSorteo | null,
-  ) => {
+  ): Promise<boolean> => {
     setGuardandoEnDb(true)
     setErrorGuardadoDb(null)
     try {
@@ -1163,7 +1140,6 @@ export default function PaginaSorteo() {
       const rawArea = String(area.id)
       const idDefensa = rawDefensa.replace(/\D/g, '') || rawDefensa
       const idArea = rawArea.replace(/\D/g, '') || rawArea
-      const ano = new Date().getFullYear()
 
       if (caso) {
         const rawCaso = String(caso.id)
@@ -1227,31 +1203,36 @@ export default function PaginaSorteo() {
         }
       } else {
         // Modalidad Exclusiva de Área (Psicología y Ciencias Empresariales)
-        const codigoGenerado = `ACTA-AREA-${idDefensa}-${ano}`
-        setCodigoActa(codigoGenerado)
-        const tokenGenerado = `SHA256:${Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`
-        setHashActa(tokenGenerado)
+        let tokenReal = ''
+        let codigoReal = ''
 
         if (/^\d+$/.test(idDefensa)) {
           try {
-            const res = await sorteosApi.sortearArea({
+            const res = await sorteosApi.finalizarSorteoSoloArea({
               idDefensa,
+              idArea,
               estudiantePresente: asistenciaPresente,
               motivoInasistencia: !asistenciaPresente ? motivoInasistencia : undefined,
+              tokenSesionLive: liveToken || undefined,
             })
             if (res?.tokenActa) {
               setHashActa(res.tokenActa)
+              tokenReal = res.tokenActa
+            }
+            if (res?.codigoActa) {
+              setCodigoActa(res.codigoActa)
+              codigoReal = res.codigoActa
             }
           } catch (e: any) {
             console.warn('Registro de área temática en API:', e?.message || e)
           }
         }
 
-        if (liveToken) {
+        if (liveToken && tokenReal && codigoReal) {
           sorteosApi.actualizarSesionLive(liveToken, {
             fase: 'ACTA_OFICIALIZADA',
-            codigoActa: codigoGenerado,
-            hashActa: tokenGenerado,
+            codigoActa: codigoReal,
+            hashActa: tokenReal,
           }).catch(() => {})
         }
 
@@ -1274,12 +1255,36 @@ export default function PaginaSorteo() {
         )
         await loadApiDefensas()
       }
+      return true
     } catch (err: any) {
       console.error('Error al persistir sorteo en base de datos:', err)
       const msg = err.response?.data?.message || err.message || 'Error al guardar el sorteo en la base de datos'
       setErrorGuardadoDb(msg)
+      return false
     } finally {
       setGuardandoEnDb(false)
+    }
+  }
+
+
+  const handleAvanzarAFormalizacion = async (isSoloArea: boolean) => {
+    if (guardadoEnDbExitoso) {
+      setPasoActual(4)
+      return
+    }
+    if (guardandoEnDb) return
+    if (!postulanteSeleccionado || !areaGanadora) return
+    if (!isSoloArea && !casoGanador) return
+
+    const success = await persistirSorteoEnDb(
+      postulanteSeleccionado,
+      areaGanadora,
+      isSoloArea ? null : casoGanador
+    )
+    if (success) {
+      setPasoActual(4)
+    } else {
+      alert("Hubo un error al guardar en la base de datos: " + (errorGuardadoDb || "Error desconocido."));
     }
   }
 
@@ -1327,8 +1332,8 @@ export default function PaginaSorteo() {
           casoGanador?.contenido ||
           'Conforme a la reglamentación institucional, el examen de grado se fundamenta en el Área Temática sorteada.',
         plazoHoras: casoGanador?.plazoHoras || 0,
-        codigoActa: codigoActa || `ACTA-${Date.now()}`,
-        hashActa: hashActa || 'SHA256:VERIFICADO',
+        codigoActa: codigoActa,
+        hashActa: hashActa,
       })
     } catch (err) {
       console.warn('Aviso: el despacho por servidor falló o está sin conexión, procediendo con registro local', err)
@@ -1341,8 +1346,8 @@ export default function PaginaSorteo() {
     if (liveToken) {
       sorteosApi.actualizarSesionLive(liveToken, {
         fase: 'ACTA_OFICIALIZADA',
-        codigoActa: codigoActa || `ACTA-${Date.now()}`,
-        hashActa: hashActa || 'SHA256:VERIFICADO',
+        codigoActa: codigoActa,
+        hashActa: hashActa,
       }).catch(() => {})
     }
 
@@ -1362,7 +1367,7 @@ export default function PaginaSorteo() {
 
     const nuevoRegistro: RegistroHistorialSorteo = {
       id: `hist-${Date.now()}`,
-      actaCodigo: codigoActa || `ACTA-${Date.now()}`,
+      actaCodigo: codigoActa || 'ACTA-PENDIENTE',
       fechaHora: new Date().toLocaleTimeString('es-BO', {
         hour: '2-digit',
         minute: '2-digit',
@@ -1433,25 +1438,26 @@ export default function PaginaSorteo() {
   }
 
   // Descargar acta oficial
-  const handleDescargarPDF = async () => {
-    if (!postulanteSeleccionado) {
+  const handleDescargarPDF = async (defensaIdEspecifica?: string, codigoActaEspecifico?: string) => {
+    const idDef = defensaIdEspecifica || postulanteSeleccionado?.idDefensa || postulanteSeleccionado?.id
+    if (!idDef) {
       alert('Seleccione un postulante para generar el acta.')
       return
     }
+    setDescargandoActa(true)
+    setFeedbackDescarga('Generando y descargando acta oficial de sorteo en PDF...')
     try {
-      const idDefensa = postulanteSeleccionado.idDefensa || postulanteSeleccionado.id
-      const blob = await sorteosApi.descargarActaPdf(idDefensa)
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `Acta-Sorteo-${codigoActa || idDefensa}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    } catch (e) {
+      const cod = codigoActaEspecifico || codigoActa || `DEF-${idDef}`
+      await descargarArchivoActa(idDef, cod)
+      setFeedbackDescarga('¡Acta oficial descargada exitosamente en PDF!')
+      setTimeout(() => setFeedbackDescarga(null), 4500)
+    } catch (e: any) {
       console.error('Error al descargar acta PDF:', e)
-      alert('No se pudo generar el acta en PDF. Asegúrese de haber finalizado el sorteo para esta defensa.')
+      const msg = e.message || 'No se pudo generar el acta en PDF. Asegúrese de haber finalizado el sorteo para esta defensa.'
+      alert('Error en descarga: ' + msg)
+      setFeedbackDescarga(null)
+    } finally {
+      setDescargandoActa(false)
     }
   }
 
@@ -1655,8 +1661,49 @@ export default function PaginaSorteo() {
           </div>
         )}
 
-        {/* ── STEPPER DE PROGRESO EN 4 PASOS ── */}
-        <section className="border border-line bg-white shadow-xs">
+        {/* Selector de Pestañas: Mesa de Sorteo vs Historial de Actas */}
+        <div className="flex items-center justify-between border-b border-line bg-white px-4 pt-2 shadow-xs">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setVistaActiva('SORTEO')}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold transition-all cursor-pointer border-b-2 ${
+                vistaActiva === 'SORTEO'
+                  ? 'border-crimson text-crimson bg-surface'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              <RotateCcw className="size-3.5" />
+              <span>Mesa de Sorteo Activo</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setVistaActiva('HISTORIAL')}
+              className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold transition-all cursor-pointer border-b-2 ${
+                vistaActiva === 'HISTORIAL'
+                  ? 'border-crimson text-crimson bg-surface'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              <History className="size-3.5 text-crimson" />
+              <span>Historial Oficial de Actas y Sorteos</span>
+            </button>
+          </div>
+
+          <span className="text-[11px] text-neutral-500 hidden sm:inline-block">
+            {vistaActiva === 'SORTEO' ? 'Flujo de Asignación en 4 Pasos' : 'Actas registradas en PostgreSQL'}
+          </span>
+        </div>
+
+        {vistaActiva === 'HISTORIAL' ? (
+          <div className="space-y-6">
+            <HistorialSorteos refreshTrigger={pasoActual} />
+          </div>
+        ) : (
+          <>
+            {/* ── STEPPER DE PROGRESO EN 4 PASOS ── */}
+            <section className="border border-line bg-white shadow-xs">
           <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-line">
             {/* Paso 1 */}
             <button
@@ -1769,7 +1816,7 @@ export default function PaginaSorteo() {
             <button
               type="button"
               disabled={sorteoSuspendido || (!esSoloArea ? !casoGanador : !areaGanadora)}
-              onClick={() => (esSoloArea ? areaGanadora : casoGanador) && setPasoActual(4)}
+              onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
               className={`flex items-center gap-3 p-4 text-left transition-all ${
                 pasoActual === 4
                   ? 'bg-red-50/70 border-b-2 border-b-crimson md:border-b-0 md:border-l-4 md:border-l-crimson'
@@ -1896,10 +1943,16 @@ export default function PaginaSorteo() {
                               type="button"
                               onClick={() => {
                                 setPostulanteSeleccionado(postulante)
+                                setPasoActual(1)
                                 setAreaGanadora(null)
                                 setCasoGanador(null)
                                 setSorteoSuspendido(false)
                                 setAsistenciaPresente(true)
+                                setGuardandoEnDb(false)
+                                setGuardadoEnDbExitoso(false)
+                                setCodigoActa('')
+                                setHashActa('')
+                                setCorreoDespachadoExitoso(false)
                               }}
                               className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-xs transition-colors cursor-pointer ${
                                 seleccionado
@@ -2257,12 +2310,9 @@ export default function PaginaSorteo() {
                     actionButton={
                       <button
                         type="button"
-                        onClick={async () => {
+                        onClick={() => {
                           if (esSoloArea) {
-                            setPasoActual(4)
-                            if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
-                              await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
-                            }
+                            handleAvanzarAFormalizacion(true)
                           } else {
                             setPasoActual(3)
                           }
@@ -2318,16 +2368,13 @@ export default function PaginaSorteo() {
                     <button
                       type="button"
                       disabled={!areaGanadora}
-                      onClick={async () => {
-                        if (esSoloArea) {
-                          setPasoActual(4)
-                          if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
-                            await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
+                      onClick={() => {
+                          if (esSoloArea) {
+                            handleAvanzarAFormalizacion(true)
+                          } else {
+                            setPasoActual(3)
                           }
-                        } else {
-                          setPasoActual(3)
-                        }
-                      }}
+                        }}
                       className="flex items-center gap-2 border border-crimson bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
                       {esSoloArea ? 'Formalizar Acta de Área & Finalizar Sorteo' : 'Continuar al Sorteo de Caso'}
@@ -2373,12 +2420,7 @@ export default function PaginaSorteo() {
                       actionButton={
                         <button
                           type="button"
-                          onClick={async () => {
-                            setPasoActual(4)
-                            if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora && casoGanador) {
-                              await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
-                            }
-                          }}
+                          onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
                           className="group relative flex w-full items-center justify-center gap-2 border border-emerald-600 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
                         >
                           <span>Formalizar Acta Oficial y Despacho</span>
@@ -2446,12 +2488,7 @@ export default function PaginaSorteo() {
                     <button
                       type="button"
                       disabled={!casoGanador}
-                      onClick={async () => {
-                        setPasoActual(4)
-                        if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora && casoGanador) {
-                          await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
-                        }
-                      }}
+                      onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
                       className="flex items-center gap-2 border border-crimson bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#821528] disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                     >
                       Formalizar Acta & Despacho
@@ -2735,6 +2772,52 @@ export default function PaginaSorteo() {
                       </div>
                     )}
 
+                    {/* Tarjeta de Descarga Directa del Acta Oficial */}
+                    <div className="border border-emerald-300 bg-emerald-50/70 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-10 items-center justify-center bg-crimson text-white shrink-0 shadow-xs">
+                          <FileText className="size-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-bold text-neutral-900">
+                              Acta Oficial de Sorteo de Grado (PDF)
+                            </p>
+                            <span className="bg-white border border-emerald-300 text-emerald-800 text-[10px] font-mono px-1.5 py-0.2 font-semibold">
+                              {codigoActa || 'ACTA-OFICIAL'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-neutral-600 mt-0.5">
+                            Documento normativo con firma de Jefe de Carrera, testigo y estudiante.
+                          </p>
+                          {feedbackDescarga && (
+                            <p className="text-[11px] font-bold text-emerald-800 mt-1 animate-pulse">
+                              {feedbackDescarga}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={descargandoActa}
+                        onClick={() => handleDescargarPDF()}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 border border-crimson bg-crimson px-5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#821528] active:bg-[#6c1121] disabled:opacity-50 transition-colors cursor-pointer shrink-0"
+                      >
+                        {descargandoActa ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" />
+                            <span>Generando PDF...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="size-4" />
+                            <span>Descargar Acta en PDF</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
                     {/* Acciones Secundarias: Imprimir, Descargar PDF, Nuevo Sorteo */}
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                       <div className="flex items-center gap-2">
@@ -2748,11 +2831,12 @@ export default function PaginaSorteo() {
                         </button>
                         <button
                           type="button"
-                          onClick={handleDescargarPDF}
-                          className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-2xs cursor-pointer"
+                          disabled={descargandoActa}
+                          onClick={() => handleDescargarPDF()}
+                          className="flex items-center gap-1.5 border border-line bg-white px-3.5 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-2xs cursor-pointer disabled:opacity-50"
                         >
-                          <Download className="size-3.5" />
-                          Descargar PDF
+                          <Download className="size-3.5 text-crimson" />
+                          <span>Descargar PDF</span>
                         </button>
                       </div>
 
@@ -2816,6 +2900,15 @@ export default function PaginaSorteo() {
                     {historialSesion.length} actos registrados hoy
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setVistaActiva('HISTORIAL')}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-crimson hover:underline cursor-pointer"
+                  title="Ver todo el historial de actas registradas"
+                >
+                  <History className="size-3" />
+                  <span>Ver Todos</span>
+                </button>
               </header>
 
               <div className="flex-1 overflow-y-auto divide-y divide-line max-h-[520px]">
@@ -2866,6 +2959,17 @@ export default function PaginaSorteo() {
                               Despachado a {registro.estudiante.correo} ({registro.fechaDespacho})
                             </p>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const idDef = registro.estudiante.idDefensa || registro.estudiante.id
+                              handleDescargarPDF(idDef, registro.actaCodigo)
+                            }}
+                            className="mt-2 flex items-center justify-center gap-1.5 border border-line bg-white px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:text-crimson hover:bg-neutral-50 transition-colors shadow-2xs cursor-pointer w-full"
+                          >
+                            <Download className="size-3 text-crimson" />
+                            <span>Descargar Acta PDF</span>
+                          </button>
                         </div>
                       )}
                     </div>
@@ -2875,6 +2979,8 @@ export default function PaginaSorteo() {
             </div>
           </aside>
         </div>
+        </>
+        )}
       </div>
 
       {/* ========================================================= */}
@@ -2938,16 +3044,13 @@ export default function PaginaSorteo() {
               {pasoActual === 2 && areaGanadora && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    if (esSoloArea) {
-                      setPasoActual(4)
-                      if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
-                        await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
-                      }
-                    } else {
-                      setPasoActual(3)
-                    }
-                  }}
+                  onClick={() => {
+                          if (esSoloArea) {
+                            handleAvanzarAFormalizacion(true)
+                          } else {
+                            setPasoActual(3)
+                          }
+                        }}
                   className="flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all shadow-md animate-pulse cursor-pointer"
                 >
                   <ArrowRight className="size-4" />
@@ -2958,12 +3061,7 @@ export default function PaginaSorteo() {
               {pasoActual === 3 && casoGanador && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    setPasoActual(4)
-                    if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora && casoGanador) {
-                      await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
-                    }
-                  }}
+                  onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
                   className="flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all shadow-md animate-pulse cursor-pointer"
                 >
                   <ArrowRight className="size-4" />
@@ -3068,16 +3166,13 @@ export default function PaginaSorteo() {
                   actionButton={
                     <button
                       type="button"
-                      onClick={async () => {
-                        if (esSoloArea) {
-                          setPasoActual(4)
-                          if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
-                            await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
+                      onClick={() => {
+                          if (esSoloArea) {
+                            handleAvanzarAFormalizacion(true)
+                          } else {
+                            setPasoActual(3)
                           }
-                        } else {
-                          setPasoActual(3)
-                        }
-                      }}
+                        }}
                       className="group relative flex w-full items-center justify-center gap-2 border border-emerald-500 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl transition-all hover:bg-emerald-500 active:scale-[0.99] cursor-pointer"
                     >
                       <span>{esSoloArea ? 'Formalizar Acta de Área & Finalizar Sorteo' : 'Continuar al Sorteo de Caso'}</span>
@@ -3098,12 +3193,9 @@ export default function PaginaSorteo() {
                     <div className="mt-3 flex items-center justify-center gap-3">
                       <button
                         type="button"
-                        onClick={async () => {
+                        onClick={() => {
                           if (esSoloArea) {
-                            setPasoActual(4)
-                            if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora) {
-                              await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, null)
-                            }
+                            handleAvanzarAFormalizacion(true)
                           } else {
                             setPasoActual(3)
                           }
@@ -3149,12 +3241,7 @@ export default function PaginaSorteo() {
                     actionButton={
                       <button
                         type="button"
-                        onClick={async () => {
-                          setPasoActual(4)
-                          if (!guardadoEnDbExitoso && !guardandoEnDb && postulanteSeleccionado && areaGanadora && casoGanador) {
-                            await persistirSorteoEnDb(postulanteSeleccionado, areaGanadora, casoGanador)
-                          }
-                        }}
+                        onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
                         className="group relative flex w-full items-center justify-center gap-2 border border-emerald-500 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl transition-all hover:bg-emerald-500 active:scale-[0.99] cursor-pointer"
                       >
                         <span>Formalizar Acta Oficial y Despacho</span>
@@ -3184,7 +3271,7 @@ export default function PaginaSorteo() {
                     </p>
                     <button
                       type="button"
-                      onClick={() => setPasoActual(4)}
+                      onClick={() => handleAvanzarAFormalizacion(false)}
                       className="mt-4 inline-flex items-center gap-2 border border-white bg-white px-6 py-2.5 text-xs font-bold text-neutral-900 hover:bg-neutral-200 transition-colors cursor-pointer"
                     >
                       Formalizar Acta Oficial y Despacho →

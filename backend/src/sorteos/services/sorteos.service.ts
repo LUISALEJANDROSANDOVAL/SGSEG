@@ -10,9 +10,15 @@ import {
 import * as crypto from 'crypto';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import {
+  esPsicologiaCarrera,
+  esCarreraEmpresariales,
+  esModalidadSoloArea,
+} from '../../common/helpers/carrera-helpers';
+import {
   CrearEnlaceEspectadorDto,
   FilterSorteosDto,
   FinalizarSorteoDto,
+  FinalizarSorteoSoloAreaDto,
   SortearAreaDto,
   SortearCasoDto,
   SorteoConjuntoDto,
@@ -96,7 +102,7 @@ export class SorteosService {
     }
 
     // Regla de Negocio: Psicología en Externa hereda el caso de la Interna, no se sortea
-    const esPsicologia = carrera.nombre.toLowerCase().includes('psicolog');
+    const esPsicologia = esPsicologiaCarrera(carrera.nombre);
     if (defensa.tipoDefensa?.nombre === 'EXTERNA' && esPsicologia) {
       throw new BadRequestException(
         'La Defensa Externa de Psicología no requiere sorteo. El área y caso se heredan automáticamente de la Defensa Interna aprobada.',
@@ -104,13 +110,7 @@ export class SorteosService {
     }
 
     // Regla de Negocio: Empresariales sortea el mismo día de la defensa
-    const facultadNombre = (carrera.facultad?.nombre || '').toLowerCase();
-    const esEmpresariales =
-      facultadNombre.includes('empresar') ||
-      carrera.nombre.toLowerCase().includes('comercial') ||
-      carrera.nombre.toLowerCase().includes('administra') ||
-      carrera.nombre.toLowerCase().includes('market') ||
-      carrera.nombre.toLowerCase().includes('financ');
+    const esEmpresariales = esCarreraEmpresariales(carrera.nombre, carrera.facultad?.nombre);
 
     if (esEmpresariales) {
       const hoyStr = new Date().toISOString().slice(0, 10);
@@ -205,22 +205,9 @@ export class SorteosService {
     }
 
     // Regla de Negocio: Psicología y Ciencias Empresariales tienen modalidad de sorteo exclusivo de Área Temática
-    const esPsicologia = carrera.nombre.toLowerCase().includes('psicolog');
-    const esEmpresariales =
-      (carrera.facultad?.nombre?.toLowerCase().includes('empresarial') ?? false) ||
-      carrera.nombre.toLowerCase().includes('comercial') ||
-      carrera.nombre.toLowerCase().includes('administra') ||
-      carrera.nombre.toLowerCase().includes('marketing') ||
-      carrera.nombre.toLowerCase().includes('financiera') ||
-      carrera.nombre.toLowerCase().includes('contadur') ||
-      carrera.nombre.toLowerCase().includes('comercio') ||
-      carrera.nombre.toLowerCase().includes('turismo') ||
-      carrera.nombre.toLowerCase().includes('comunicaci') ||
-      carrera.nombre.toLowerCase().includes('empresarial');
-
-    if (esPsicologia || esEmpresariales) {
+    if (esModalidadSoloArea(carrera.nombre, carrera.facultad?.nombre)) {
       throw new BadRequestException(
-        `Las carreras de ${esPsicologia ? 'Psicología' : 'Ciencias Empresariales'} tienen modalidad de sorteo exclusivo de Área Temática. No admiten sorteo de caso de estudio por ruleta.`,
+        `Las carreras de modalidad "Solo Área" (como Psicología o Empresariales) no admiten sorteo de caso de estudio por ruleta. Utilice el endpoint de Área.`,
       );
     }
 
@@ -319,6 +306,13 @@ export class SorteosService {
       }
     }
 
+    // Regla de Negocio: Psicología tiene modalidad SOLO ÁREA — no admite sorteo conjunto
+    if (esPsicologiaCarrera(carrera.nombre)) {
+      throw new BadRequestException(
+        'Psicología tiene modalidad de sorteo exclusivo de Área Temática. Use el endpoint POST /sorteos/area.'
+      );
+    }
+
     if (defensa.idCasoUtilizado) {
       throw new BadRequestException('Esta defensa ya tiene un caso asignado.');
     }
@@ -363,7 +357,7 @@ export class SorteosService {
       poolAreaIds: areas.map((a: any) => a.idArea),
       idConfigSorteoCaso: configCaso.idConfigSorteoCaso,
       idCasoSeleccionado: casoGanador.idCasoEstudio,
-      plazoLimiteEntrega: defensa.fechaDefensa,
+      plazoLimiteEntrega: undefined, // El plazo se calcula al finalizar el sorteo
     });
 
     const tokenActa = this.generarTokenActa(
@@ -608,6 +602,70 @@ export class SorteosService {
   }
 
   /**
+   * Finaliza el sorteo de modalidad SOLO ÁREA.
+   */
+  async finalizarSorteoSoloArea(dto: FinalizarSorteoSoloAreaDto, user: AuthenticatedUser) {
+    const idDefensa = BigInt(dto.idDefensa);
+    const defensa = await this.repository.findDefensaWithDetails(idDefensa);
+
+    if (!defensa) {
+      throw new NotFoundException(`Defensa con ID ${dto.idDefensa} no encontrada.`);
+    }
+
+    const estudiante = defensa.instancia.proceso.estudiante;
+    const carrera = estudiante.planEstudio.carrera;
+
+    if (user.rol === 'JEFE_CARRERA') {
+      const allowed = await this.resolveAllowedCarreras(user);
+      if (!allowed?.includes(carrera.idCarrera)) {
+        throw new ForbiddenException('No tienes permisos para finalizar sorteos de otra carrera.');
+      }
+    }
+
+    const ahora = new Date();
+    const ano = ahora.getFullYear();
+    const codigoActa = `ACTA-AREA-${defensa.idDefensa}-${ano}`;
+    const tokenActa = this.generarTokenActa(
+      defensa.sorteos[0]?.idSorteo ?? BigInt(0),
+      defensa.idDefensa,
+      BigInt(dto.idArea), // Para área usamos el ID de área como resultadoId
+      ahora,
+    );
+
+    const asignacion = await this.repository.finalizarYAsignarSorteoSoloArea({
+      idDefensa,
+      idEstudiante: estudiante.idEstudiante,
+      idArea: BigInt(dto.idArea),
+      idUsuarioEjecutor: BigInt(user.idUsuario),
+      idPlanEstudioContexto: estudiante.idPlanEstudio,
+      fechaDefensaContexto: defensa.fechaDefensa,
+      estudiantePresente: dto.estudiantePresente ?? true,
+      motivoInasistencia: dto.motivoInasistencia,
+      tokenActa,
+      codigoActa,
+    });
+
+    if (dto.tokenSesionLive) {
+      try {
+        await this.repository.actualizarFaseSesionEspectador(
+          dto.tokenSesionLive,
+          'ACTA_OFICIALIZADA',
+          { asignacion: this.serializeBigInt(asignacion) },
+        );
+      } catch {
+        // Silencioso
+      }
+    }
+
+    return {
+      mensaje: 'Sorteo finalizado y asignación exclusiva de Área Temática persistida oficialmente.',
+      asignacion: this.serializeBigInt(asignacion),
+      codigoActa,
+      tokenActa,
+    };
+  }
+
+  /**
    * Genera un enlace temporal con expiración y slug único para el espectador móvil.
    */
   async generarEnlaceEspectador(
@@ -703,8 +761,8 @@ export class SorteosService {
           ? {
               idAsignacion: asignacion.idAsignacion.toString(),
               area: asignacion.area.nombre,
-              casoTitulo: asignacion.caso.titulo,
-              casoContenido: asignacion.caso.contenido,
+              casoTitulo: asignacion.caso?.titulo || 'Asignación Exclusiva de Área Temática',
+              casoContenido: asignacion.caso?.contenido || 'El caso será proporcionado por el Tribunal o Docente Evaluador.',
               codigoActa: asignacion.codigoActa,
               tokenActa: asignacion.tokenActa,
               plazoLimiteEntrega: asignacion.plazoLimiteEntrega,
@@ -747,9 +805,89 @@ export class SorteosService {
     user: AuthenticatedUser,
   ): Promise<{ buffer: Buffer; filename: string; codigoActa: string }> {
     const idDef = BigInt(idDefensa);
+    console.log(`[generarActaPdf] Buscando asignación para idDefensa: ${idDefensa}`);
     const asignacion = await this.repository.findAsignacionByDefensa(idDef);
+    console.log(`[generarActaPdf] Resultado de asignación:`, asignacion ? `ENCONTRADA (ID: ${asignacion.idAsignacion})` : 'NULL');
 
     if (!asignacion) {
+      // Fallback resiliente: Si no hay asignacionCaso pero la defensa tiene sorteo o casoUtilizado
+      const defensaFallback = await this.repository.findDefensaParaActaFallback(idDef);
+      if (defensaFallback && (defensaFallback.casoUtilizado || defensaFallback.sorteos.length > 0 || defensaFallback.estadoDefensa !== 'PROGRAMADA')) {
+        const est = defensaFallback.instancia?.proceso?.estudiante;
+        if (!est) {
+          throw new NotFoundException(`No se encontraron datos del postulante para la defensa ${idDefensa}.`);
+        }
+        const car = est.planEstudio.carrera;
+        const fac = (car as any).facultad?.nombre || 'Facultad de Tecnología';
+        const sorteoReciente = defensaFallback.sorteos?.[0];
+        const usuarioEjec = sorteoReciente?.usuarioEjecutor || {
+          primerNombre: 'Secretaría',
+          primerApellido: 'de Facultad',
+          correoInstitucional: 'secretaria@utepsa.edu.bo',
+          rol: { nombre: 'COMISIÓN DE SORTEO' },
+        };
+
+        const areaNombre =
+          defensaFallback.casoUtilizado?.area?.nombre ||
+          sorteoReciente?.area?.areaResultado?.nombre ||
+          'Área General Asignada';
+
+        const casoInfo = defensaFallback.casoUtilizado
+          ? {
+              idCaso: String(defensaFallback.casoUtilizado.idCasoEstudio),
+              titulo: defensaFallback.casoUtilizado.titulo,
+              contenido: defensaFallback.casoUtilizado.contenido,
+            }
+          : sorteoReciente?.caso?.casoSeleccionado
+          ? {
+              idCaso: String(sorteoReciente.caso.casoSeleccionado.idCasoEstudio),
+              titulo: sorteoReciente.caso.casoSeleccionado.titulo,
+              contenido: sorteoReciente.caso.casoSeleccionado.contenido,
+            }
+          : {
+              idCaso: 'N/A',
+              titulo: 'Asignación Exclusiva de Área Temática',
+              contenido: 'El caso de estudio será definido por la instancia evaluadora correspondiente.',
+            };
+
+        const codigoActa = `ACTA-DEF-${defensaFallback.idDefensa}-${new Date(defensaFallback.fechaDefensa).getFullYear()}`;
+
+        const datosActaFallback: DatosActaSorteo = {
+          codigoActa,
+          tokenActa: undefined,
+          fechaAsignacion: sorteoReciente?.fechaHora || defensaFallback.fechaDefensa,
+          plazoLimiteEntrega: null,
+          estudiante: {
+            nombreCompleto: est.nombreCompleto,
+            carnetIdentidad: est.carnetIdentidad,
+            carnetEstudiantil: est.carnetEstudiantil,
+            correoInstitucional: est.correoInstitucional,
+            carrera: car.nombre,
+            facultad: fac,
+            planEstudio: est.planEstudio.nombre,
+          },
+          defensa: {
+            idDefensa: String(defensaFallback.idDefensa),
+            tipoDefensa: defensaFallback.tipoDefensa?.nombre || 'INTERNA',
+            fechaDefensa: defensaFallback.fechaDefensa,
+            periodoAcademico: defensaFallback.periodoAcademico,
+          },
+          area: {
+            nombre: areaNombre,
+          },
+          caso: casoInfo,
+          usuarioEjecutor: {
+            nombreCompleto: `${usuarioEjec.primerNombre} ${usuarioEjec.primerApellido}`,
+            correo: usuarioEjec.correoInstitucional,
+            rol: (usuarioEjec.rol as any)?.nombre || 'COMISIÓN DE SORTEO',
+          },
+        };
+
+        const buffer = await this.actasPdfService.generarActaPdfBuffer(datosActaFallback);
+        const filename = `Acta-Sorteo-${codigoActa}.pdf`;
+        return { buffer, filename, codigoActa };
+      }
+
       throw new NotFoundException(`No existe asignación ni acta oficial para la defensa ${idDefensa}.`);
     }
 
@@ -791,11 +929,17 @@ export class SorteosService {
       area: {
         nombre: asignacion.area.nombre,
       },
-      caso: {
-        idCaso: String(asignacion.caso.idCasoEstudio),
-        titulo: asignacion.caso.titulo,
-        contenido: asignacion.caso.contenido,
-      },
+      caso: asignacion.caso
+        ? {
+            idCaso: String(asignacion.caso.idCasoEstudio),
+            titulo: asignacion.caso.titulo,
+            contenido: asignacion.caso.contenido,
+          }
+        : {
+            idCaso: 'N/A',
+            titulo: 'Asignación Exclusiva de Área Temática',
+            contenido: 'El caso de estudio será definido por la instancia evaluadora correspondiente.',
+          },
       usuarioEjecutor: {
         nombreCompleto: `${usuarioEjec.primerNombre} ${usuarioEjec.primerApellido}`,
         correo: usuarioEjec.correoInstitucional,

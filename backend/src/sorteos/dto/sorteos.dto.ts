@@ -93,3 +93,24 @@ export class CrearEnlaceEspectadorDto {
   duracionMinutos?: number;
 }
 
+export class FinalizarSorteoSoloAreaDto {
+  @IsNotEmpty()
+  @IsString()
+  idDefensa: string;
+
+  @IsNotEmpty()
+  @IsString()
+  idArea: string;
+
+  @IsOptional()
+  @IsBoolean()
+  estudiantePresente?: boolean;
+
+  @IsOptional()
+  @IsString()
+  motivoInasistencia?: string;
+
+  @IsOptional()
+  @IsString()
+  tokenSesionLive?: string;
+}
