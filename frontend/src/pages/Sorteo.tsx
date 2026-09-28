@@ -890,33 +890,8 @@ export default function PaginaSorteo() {
       return AREAS_CATALOGO[carreraKey]
     }
 
-    // Aislamiento estricto: Nunca devolver áreas de otra carrera o facultad
-    return [
-      {
-        id: `area-${postulanteSeleccionado.id}-1`,
-        codigo: 'AREA-01',
-        nombre: `Área Troncal Profesional — ${postulanteSeleccionado.carrera}`,
-        descripcion: `Competencias formativas principales de ${postulanteSeleccionado.carrera}`,
-        color: '#9E1B32',
-        casosDisponibles: 3,
-      },
-      {
-        id: `area-${postulanteSeleccionado.id}-2`,
-        codigo: 'AREA-02',
-        nombre: `Mención de Especialidad — ${postulanteSeleccionado.carrera}`,
-        descripcion: `Estudio y resolución de casos en ${postulanteSeleccionado.carrera}`,
-        color: '#121316',
-        casosDisponibles: 3,
-      },
-      {
-        id: `area-${postulanteSeleccionado.id}-3`,
-        codigo: 'AREA-03',
-        nombre: `Gestión y Aplicación Técnica — ${postulanteSeleccionado.carrera}`,
-        descripcion: `Integración interdisciplinaria en ${postulanteSeleccionado.carrera}`,
-        color: '#FFFFFF',
-        casosDisponibles: 2,
-      },
-    ]
+    // Si no hay áreas reales, devolvemos vacío para bloquear el sorteo
+    return []
   }, [postulanteSeleccionado, areasDb])
 
   // Convertir áreas a items para RuletaCanvas
@@ -984,33 +959,8 @@ export default function PaginaSorteo() {
 
     if (filtrados.length > 0) return filtrados
 
-    // Fallback garantizado específico para el área ganadora
-    return [
-      {
-        id: `caso-${areaGanadora.id}-01`,
-        codigo: `CASO-${areaGanadora.codigo}-01`,
-        titulo: `Resolución de Caso Técnico Aplicado en ${areaGanadora.nombre}`,
-        areaId: areaGanadora.id,
-        areaNombre: areaGanadora.nombre,
-        contenido: `Planteamiento y defensa de solución técnica especializada en ${areaGanadora.nombre}, considerando criterios de viabilidad, normativas vigentes y mejores prácticas académicas.`,
-        usosActuales: 0,
-        maxUsos: 2,
-        plazoHoras: postulanteSeleccionado?.tipoDefensa === 'Interna' ? 24 : 48,
-        color: '#9E1B32',
-      },
-      {
-        id: `caso-${areaGanadora.id}-02`,
-        codigo: `CASO-${areaGanadora.codigo}-02`,
-        titulo: `Dictamen Profesional y Estrategia en ${areaGanadora.nombre}`,
-        areaId: areaGanadora.id,
-        areaNombre: areaGanadora.nombre,
-        contenido: `Evaluación de escenarios de contingencia y formulación de plan de acción estratégico aplicado al campo de ${areaGanadora.nombre}.`,
-        usosActuales: 0,
-        maxUsos: 2,
-        plazoHoras: postulanteSeleccionado?.tipoDefensa === 'Interna' ? 24 : 48,
-        color: '#121316',
-      },
-    ]
+    // Si no hay casos disponibles reales, devolvemos vacío para bloquear el sorteo
+    return []
   }, [areaGanadora, casosDb, postulanteSeleccionado])
 
   // Convertir casos a items para RuletaCanvas
@@ -1140,6 +1090,24 @@ export default function PaginaSorteo() {
       const rawArea = String(area.id)
       const idDefensa = rawDefensa.replace(/\D/g, '') || rawDefensa
       const idArea = rawArea.replace(/\D/g, '') || rawArea
+
+      // 🔍 DIAGNÓSTICO TEMPORAL — ver qué IDs se mandan al backend
+      console.group('%c[SGSEG] persistirSorteoEnDb', 'color: #C8102E; font-weight: bold')
+      console.log('postulante.id        :', postulante.id)
+      console.log('postulante.idDefensa :', postulante.idDefensa)
+      console.log('rawDefensa           :', rawDefensa)
+      console.log('idDefensa (limpio)   :', idDefensa)
+      console.log('area.id (rawArea)    :', rawArea)
+      console.log('idArea (limpio)      :', idArea)
+      if (caso) {
+        const rawCasoLog = String(caso.id)
+        const idCasoLog = rawCasoLog.replace(/\D/g, '') || rawCasoLog
+        console.log('caso.id (rawCaso)    :', rawCasoLog)
+        console.log('idCaso (limpio)      :', idCasoLog)
+      }
+      console.log('¿idDefensa numérico? :', /^\d+$/.test(idDefensa))
+      console.log('¿idArea numérico?    :', /^\d+$/.test(idArea))
+      console.groupEnd()
 
       if (caso) {
         const rawCaso = String(caso.id)
