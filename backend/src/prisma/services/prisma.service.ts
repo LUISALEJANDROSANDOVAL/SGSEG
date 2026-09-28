@@ -13,6 +13,9 @@ export class PrismaService
   constructor() {
     const connectionString =
       process.env.DATABASE_URL ||
+      process.env.DATABASE_URL_DATABASE_URL ||
+      process.env.DATABASE_URL_POSTGRES_URL ||
+      process.env.DATABASE_URL_PRISMA_DATABASE_URL ||
       process.env.STORAGE_URL ||
       process.env.POSTGRES_PRISMA_URL ||
       process.env.POSTGRES_URL ||
