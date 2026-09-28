@@ -531,10 +531,10 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                       />
                     </div>
 
-                    {/* City/Town */}
+                    {/* Ciudad/Origen */}
                     <div>
                       <label className="block text-xs font-bold text-gray-800 mb-1">
-                        City/Town
+                        Ciudad/Origen
                       </label>
                       <input
                         type="text"
@@ -624,9 +624,9 @@ export function ModalEditarPerfil({ abierto, onCerrar }: ModalEditarPerfilProps)
                     <p className="text-xs sm:text-sm text-gray-600 mt-1">Bolivia (Estado Plurinacional de)</p>
                   </div>
 
-                  {/* City/Town */}
+                  {/* Ciudad/Origen */}
                   <div>
-                    <p className="text-xs sm:text-sm font-bold text-gray-800">City/Town</p>
+                    <p className="text-xs sm:text-sm font-bold text-gray-800">Ciudad/Origen</p>
                     <p className="text-xs sm:text-sm text-gray-600 mt-1">Santa Cruz</p>
                   </div>
 
