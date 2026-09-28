@@ -1,11 +1,26 @@
 import axios from 'axios';
 
+const DEFAULT_BACKEND_URL = 'https://sgseg-cseb.vercel.app';
+
 const rawBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
 
-// Asegurar que si se ingresa la URL de Railway (con o sin /api), siempre termine en /api
+let targetUrl = rawBaseUrl;
+
+// Si se ejecuta en navegador fuera de localhost (ej. Vercel) y no se definió VITE_API_URL o apunta a localhost
+if (
+  typeof window !== 'undefined' &&
+  window.location.hostname !== 'localhost' &&
+  window.location.hostname !== '127.0.0.1'
+) {
+  if (!targetUrl || targetUrl.includes('localhost') || targetUrl.includes('127.0.0.1')) {
+    targetUrl = DEFAULT_BACKEND_URL;
+  }
+}
+
+// Asegurar que la URL siempre termine en /api
 let baseURL = '/api';
-if (rawBaseUrl) {
-  const cleanUrl = rawBaseUrl.replace(/\/+$/, '');
+if (targetUrl) {
+  const cleanUrl = targetUrl.replace(/\/+$/, '');
   baseURL = cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
 }
 
