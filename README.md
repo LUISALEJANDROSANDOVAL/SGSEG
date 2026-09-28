@@ -132,3 +132,5 @@ Toda la documentación técnica, manuales y reportes se encuentran en la carpeta
 7. 👥 [Documentación de Usuarios y Roles](file:///c:/SGSEG/docs/usuarios.md) — Especificación de roles institucionales y endpoints de autenticación.
 8. 📥 [Módulo 3: Importador Masivo de Estudiantes](file:///c:/SGSEG/docs/modulo3_importador_estudiantes.md) — Especificación del procesamiento por lotes, normalización de datos y reportes de errores.
 9. 📑 [Informes de QA y Auditorías Anteriores](file:///c:/SGSEG/docs/qa) — Informes de pruebas de integración, seguridad TK-12, auditoría TK-16 y límites de concurrencia.
+10. 🌐 [Catálogo Completo de Variables de Entorno](file:///c:/SGSEG/docs/variables_entorno.md) — Especificación exhaustiva de variables de backend, frontend, base de datos y plantillas para Docker y Cloud.
+11. 📊 [Auditoría Forense de Contribuciones del Equipo](file:///c:/SGSEG/docs/auditoria_contribuciones_equipo.md) — Escaneo completo de Git (commits, líneas vivas en HEAD y desglose por capas) de los 4 integrantes.

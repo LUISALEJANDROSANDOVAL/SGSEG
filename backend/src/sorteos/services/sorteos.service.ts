@@ -810,6 +810,84 @@ export class SorteosService {
     console.log(`[generarActaPdf] Resultado de asignación:`, asignacion ? `ENCONTRADA (ID: ${asignacion.idAsignacion})` : 'NULL');
 
     if (!asignacion) {
+      // Fallback resiliente: Si no hay asignacionCaso pero la defensa tiene sorteo o casoUtilizado
+      const defensaFallback = await this.repository.findDefensaParaActaFallback(idDef);
+      if (defensaFallback && (defensaFallback.casoUtilizado || defensaFallback.sorteos.length > 0 || defensaFallback.estadoDefensa !== 'PROGRAMADA')) {
+        const est = defensaFallback.instancia?.proceso?.estudiante;
+        if (!est) {
+          throw new NotFoundException(`No se encontraron datos del postulante para la defensa ${idDefensa}.`);
+        }
+        const car = est.planEstudio.carrera;
+        const fac = (car as any).facultad?.nombre || 'Facultad de Tecnología';
+        const sorteoReciente = defensaFallback.sorteos?.[0];
+        const usuarioEjec = sorteoReciente?.usuarioEjecutor || {
+          primerNombre: 'Secretaría',
+          primerApellido: 'de Facultad',
+          correoInstitucional: 'secretaria@utepsa.edu.bo',
+          rol: { nombre: 'COMISIÓN DE SORTEO' },
+        };
+
+        const areaNombre =
+          defensaFallback.casoUtilizado?.area?.nombre ||
+          sorteoReciente?.area?.areaResultado?.nombre ||
+          'Área General Asignada';
+
+        const casoInfo = defensaFallback.casoUtilizado
+          ? {
+              idCaso: String(defensaFallback.casoUtilizado.idCasoEstudio),
+              titulo: defensaFallback.casoUtilizado.titulo,
+              contenido: defensaFallback.casoUtilizado.contenido,
+            }
+          : sorteoReciente?.caso?.casoSeleccionado
+          ? {
+              idCaso: String(sorteoReciente.caso.casoSeleccionado.idCasoEstudio),
+              titulo: sorteoReciente.caso.casoSeleccionado.titulo,
+              contenido: sorteoReciente.caso.casoSeleccionado.contenido,
+            }
+          : {
+              idCaso: 'N/A',
+              titulo: 'Asignación Exclusiva de Área Temática',
+              contenido: 'El caso de estudio será definido por la instancia evaluadora correspondiente.',
+            };
+
+        const codigoActa = `ACTA-DEF-${defensaFallback.idDefensa}-${new Date(defensaFallback.fechaDefensa).getFullYear()}`;
+
+        const datosActaFallback: DatosActaSorteo = {
+          codigoActa,
+          tokenActa: undefined,
+          fechaAsignacion: sorteoReciente?.fechaHora || defensaFallback.fechaDefensa,
+          plazoLimiteEntrega: null,
+          estudiante: {
+            nombreCompleto: est.nombreCompleto,
+            carnetIdentidad: est.carnetIdentidad,
+            carnetEstudiantil: est.carnetEstudiantil,
+            correoInstitucional: est.correoInstitucional,
+            carrera: car.nombre,
+            facultad: fac,
+            planEstudio: est.planEstudio.nombre,
+          },
+          defensa: {
+            idDefensa: String(defensaFallback.idDefensa),
+            tipoDefensa: defensaFallback.tipoDefensa?.nombre || 'INTERNA',
+            fechaDefensa: defensaFallback.fechaDefensa,
+            periodoAcademico: defensaFallback.periodoAcademico,
+          },
+          area: {
+            nombre: areaNombre,
+          },
+          caso: casoInfo,
+          usuarioEjecutor: {
+            nombreCompleto: `${usuarioEjec.primerNombre} ${usuarioEjec.primerApellido}`,
+            correo: usuarioEjec.correoInstitucional,
+            rol: (usuarioEjec.rol as any)?.nombre || 'COMISIÓN DE SORTEO',
+          },
+        };
+
+        const buffer = await this.actasPdfService.generarActaPdfBuffer(datosActaFallback);
+        const filename = `Acta-Sorteo-${codigoActa}.pdf`;
+        return { buffer, filename, codigoActa };
+      }
+
       throw new NotFoundException(`No existe asignación ni acta oficial para la defensa ${idDefensa}.`);
     }
 

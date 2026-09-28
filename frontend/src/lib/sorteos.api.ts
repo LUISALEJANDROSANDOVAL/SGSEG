@@ -326,3 +326,37 @@ export const sorteosApi = {
   },
 };
 
+/**
+ * Descarga y abre el diálogo nativo para guardar el archivo PDF del Acta Oficial de Sorteo.
+ */
+export async function descargarArchivoActa(
+  idDefensa: string | number,
+  codigoActa?: string,
+): Promise<void> {
+  const cleanId = String(idDefensa).replace(/\D/g, '') || String(idDefensa);
+  const blob = await sorteosApi.descargarActaPdf(cleanId);
+
+  // Manejar el caso en que el backend responde con un error serializado en JSON dentro del blob
+  if (blob.type === 'application/json') {
+    const text = await blob.text();
+    let errorMsg = 'Error al obtener el acta de sorteo.';
+    try {
+      const parsed = JSON.parse(text);
+      errorMsg = parsed.message || errorMsg;
+    } catch {
+      // Ignorar parse error
+    }
+    throw new Error(errorMsg);
+  }
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  const nombreLimpio = codigoActa ? codigoActa.replace(/[/\\?%*:|"<>]/g, '_') : `DEF-${cleanId}`;
+  link.download = `Acta-Sorteo-${nombreLimpio}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+

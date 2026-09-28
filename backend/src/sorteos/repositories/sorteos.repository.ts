@@ -581,6 +581,17 @@ export class SorteosRepository {
         defensa: {
           include: {
             tipoDefensa: true,
+            casoUtilizado: {
+              include: {
+                area: true,
+              },
+            },
+            asignacionCaso: {
+              include: {
+                area: true,
+                caso: true,
+              },
+            },
             instancia: {
               include: {
                 proceso: {
@@ -1061,6 +1072,69 @@ export class SorteosRepository {
             primerApellido: true,
             correoInstitucional: true,
             rol: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Consulta una defensa y sus sorteos/casos asociados para emisión resiliente de actas PDF.
+   */
+  async findDefensaParaActaFallback(idDefensa: bigint) {
+    return this.prisma.defensaExamenGrado.findUnique({
+      where: { idDefensa },
+      include: {
+        tipoDefensa: true,
+        casoUtilizado: {
+          include: {
+            area: true,
+          },
+        },
+        instancia: {
+          include: {
+            proceso: {
+              include: {
+                estudiante: {
+                  include: {
+                    planEstudio: {
+                      include: {
+                        carrera: {
+                          include: {
+                            facultad: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        sorteos: {
+          orderBy: { fechaHora: 'desc' },
+          take: 1,
+          include: {
+            area: {
+              include: {
+                areaResultado: true,
+              },
+            },
+            caso: {
+              include: {
+                casoSeleccionado: true,
+              },
+            },
+            usuarioEjecutor: {
+              select: {
+                idUsuario: true,
+                primerNombre: true,
+                primerApellido: true,
+                correoInstitucional: true,
+                rol: true,
+              },
+            },
           },
         },
       },
