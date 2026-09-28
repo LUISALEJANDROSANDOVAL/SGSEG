@@ -40,6 +40,14 @@ server.use((req, res, next) => {
   if (req.url === '/api' || req.url === '/api/') {
     return res.status(200).json({
       status: 'online',
+      version: '1.0.2',
+      databaseConfigured: !!(
+        process.env.DATABASE_URL ||
+        process.env.DATABASE_URL_DATABASE_URL ||
+        process.env.DATABASE_URL_POSTGRES_URL ||
+        process.env.STORAGE_URL ||
+        process.env.POSTGRES_PRISMA_URL
+      ),
       sistema: 'SGSEG - Sistema de Gestión de Graduación UTEPSA',
       apiPrefix: '/api',
       endpoints: {

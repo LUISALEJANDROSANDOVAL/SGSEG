@@ -115,17 +115,6 @@ export class ActasPdfService {
     doc.font('Times-Roman').text('_________________________________', { underline: false });
 
     doc.moveDown(1.5);
-    doc.text('Las áreas de conocimiento son:');
-    doc.moveDown(0.5);
-    
-    // 5 bullets
-    const bulletIndent = 60;
-    for(let i=0; i<5; i++) {
-        doc.circle(bulletIndent, doc.y + 4, 2).fill('#000000');
-        doc.moveDown(1.2);
-    }
-    
-    doc.moveDown(1);
     doc.text('Realizado el sorteo, al estudiante le corresponde el área:');
     doc.moveDown(1);
     doc.font('Times-Bold').text(datos.area.nombre, { align: 'center', underline: true });
@@ -145,38 +134,35 @@ export class ActasPdfService {
     
     doc.text(`El acto concluyó a horas. ${horasFin} y para constancia firman al pie de la presente Acta de Sorteo los presentes.`);
 
-    doc.moveDown(4);
+    doc.moveDown(5);
 
-    // Signature table
+    // Signatures
     const tableY = doc.y;
-    const colWidth = 220;
-    const leftX = 60;
-    const rightX = leftX + colWidth + 20;
+    const colWidth = 200;
+    const leftX = 70;
+    const rightX = doc.page.width - 70 - colWidth;
     
-    // Draw dashed borders
-    doc.save();
-    doc.dash(3, { space: 3 });
-    doc.lineWidth(0.5);
-    // Outer box Left
-    doc.rect(leftX, tableY, colWidth, 120).stroke();
-    // Inner line for row 2 left
-    doc.moveTo(leftX, tableY + 70).lineTo(leftX + colWidth, tableY + 70).stroke();
-    
-    // Outer box Right
-    doc.rect(rightX, tableY, colWidth, 120).stroke();
-    // Inner line for row 2 right
-    doc.moveTo(rightX, tableY + 70).lineTo(rightX + colWidth, tableY + 70).stroke();
-    doc.restore();
-
-    // Signatures text
     doc.font('Times-Roman').fontSize(11);
-    doc.text(datos.usuarioEjecutor.nombreCompleto, leftX, tableY + 40, { width: colWidth, align: 'center' });
-    doc.font('Times-Bold').text('Jefe de Carrera', leftX, tableY + 52, { width: colWidth, align: 'center' });
 
-    doc.font('Times-Roman').text('______________________', rightX, tableY + 40, { width: colWidth, align: 'center' });
-    doc.font('Times-Bold').text('Testigo Académico', rightX, tableY + 52, { width: colWidth, align: 'center' });
+    // Fila 1 (Jefe de Carrera y Testigo)
+    doc.text('____________________________________', leftX, tableY, { width: colWidth, align: 'center' });
+    doc.text('____________________________________', rightX, tableY, { width: colWidth, align: 'center' });
+    
+    doc.moveDown(0.2);
+    const textY = doc.y;
+    doc.text(datos.usuarioEjecutor.nombreCompleto, leftX, textY, { width: colWidth, align: 'center' });
+    doc.text('Testigo Académico', rightX, textY, { width: colWidth, align: 'center' });
 
-    doc.font('Times-Bold').text('Estudiante Postulante', leftX, tableY + 105, { width: colWidth, align: 'center' });
+    doc.moveDown(0.2);
+    doc.font('Times-Bold').text('Jefe de Carrera', leftX, doc.y, { width: colWidth, align: 'center' });
+
+    // Fila 2 (Estudiante Postulante)
+    doc.moveDown(4);
+    const bottomY = doc.y;
+    doc.font('Times-Roman').text('____________________________________', leftX, bottomY, { width: colWidth, align: 'center' });
+    
+    doc.moveDown(0.2);
+    doc.font('Times-Bold').text('Estudiante Postulante', leftX, doc.y, { width: colWidth, align: 'center' });
 
     // Page number bottom right
     doc.fontSize(10).font('Times-Roman');
