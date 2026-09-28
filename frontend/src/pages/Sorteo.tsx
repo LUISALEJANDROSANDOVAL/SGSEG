@@ -3036,46 +3036,6 @@ export default function PaginaSorteo() {
                   </h2>
                 </div>
 
-                {/* Banner de Verificación Compacto e Integrado */}
-                <div className="flex items-center justify-between gap-4 w-full max-w-xl border border-white/10 bg-white/5 px-4 py-2 text-xs">
-                  <div className="flex items-center gap-3">
-                    {qrCodeUrl && (
-                      <img
-                        src={qrCodeUrl}
-                        alt="Código QR Sorteo"
-                        className="size-9 bg-white p-0.5 border border-white/30 cursor-pointer hover:scale-105 transition-transform"
-                        onClick={() => setMostrarModalQR(true)}
-                        title="Clic para ampliar código QR"
-                      />
-                    )}
-                    <span className="font-semibold text-neutral-200">Móvil Postulante:</span>
-                    {liveSessionData?.estudianteListo ? (
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 font-mono font-bold">
-                        CONECTADO & LISTO
-                      </span>
-                    ) : liveSessionData?.estudianteConectado ? (
-                      <span className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 font-mono font-bold">
-                        EN LÍNEA
-                      </span>
-                    ) : (
-                      <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 font-mono font-bold">
-                        ESPERANDO ESCANEO
-                      </span>
-                    )}
-                  </div>
-
-                  {qrCodeUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setMostrarModalQR(true)}
-                      className="border border-white/20 bg-white/10 hover:bg-white/20 text-white text-[11px] px-2.5 py-1 transition-colors cursor-pointer font-semibold inline-flex items-center gap-1"
-                    >
-                      <QrCode className="size-3 text-[#C8102E]" />
-                      <span>Ver QR</span>
-                    </button>
-                  )}
-                </div>
-
                 <RuletaCanvas
                   items={ruletaItemsAreas}
                   size={540}
