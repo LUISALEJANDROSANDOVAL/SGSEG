@@ -59,7 +59,14 @@ export default function Login() {
       await login(userEmail, userPass);
       navigate(destination, { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Error en las credenciales.');
+      const serverMessage = err.response?.data?.message;
+      if (err.message === 'Network Error' || !err.response) {
+        setError(
+          'Error de conexión con el backend (Network Error). Verifica que VITE_API_URL esté configurada en Vercel apuntando a la URL del backend.'
+        );
+      } else {
+        setError(serverMessage || err.message || 'Error en las credenciales.');
+      }
     } finally {
       setSubmitting(false);
     }

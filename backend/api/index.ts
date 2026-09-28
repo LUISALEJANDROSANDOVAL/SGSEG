@@ -13,18 +13,42 @@ import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter
 const server = express();
 let isAppInitialized = false;
 
+// Middleware de CORS a nivel de Express para garantizar que preflights OPTIONS y errores siempre respondan con cabeceras CORS
+server.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    req.headers['access-control-request-headers'] ||
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+  );
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
 async function bootstrapServer() {
   const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
 
-  const corsOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
-    : true;
-
   app.enableCors({
-    origin: corsOrigins,
+    origin: (origin, callback) => callback(null, true),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+    ],
   });
 
   app.setGlobalPrefix('api', {
@@ -43,3 +67,4 @@ export default async function handler(req: Request, res: Response) {
   }
   server(req, res);
 }
+

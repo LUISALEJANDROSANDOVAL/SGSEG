@@ -13,21 +13,22 @@ async function bootstrap() {
 
   // CORS Configuration
   const corsOrigins =
-    process.env.NODE_ENV === 'production'
-      ? process.env.CORS_ORIGINS
-        ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
-        : true
-      : [
-          'http://localhost:5173',
-          'http://localhost:3000',
-          'http://localhost:5174',
-        ];
+    process.env.NODE_ENV === 'production' && process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+      : (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) =>
+          callback(null, true);
 
   app.enableCors({
     origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+    ],
   });
 
   app.setGlobalPrefix('api', {
