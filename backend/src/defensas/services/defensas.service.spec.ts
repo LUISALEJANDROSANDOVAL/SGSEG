@@ -75,7 +75,7 @@ describe('DefensasService', () => {
         fechaDefensa,
       );
 
-      expect(reglas.modalidad).toBe('ANTICIPADO_CONJUNTO');
+      expect(reglas.modalidad).toBe('ANTICIPADO_SOLO_AREA');
       expect(reglas.plazoPreparacionDias).toBe(10);
       expect(reglas.fechaSorteoAreaRecomendada).toBe('2026-10-10');
     });

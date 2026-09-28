@@ -18,6 +18,7 @@ import {
   CrearEnlaceEspectadorDto,
   FilterSorteosDto,
   FinalizarSorteoDto,
+  FinalizarSorteoSoloAreaDto,
   SortearAreaDto,
   SortearCasoDto,
   SorteoConjuntoDto,
@@ -37,7 +38,7 @@ export class SorteosController {
    * Exclusivo para Coordinación y Secretaría.
    */
   @Post('area')
-  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sortearArea(
     @Body() dto: SortearAreaDto,
@@ -51,7 +52,7 @@ export class SorteosController {
    * Exclusivo para Coordinación y Secretaría.
    */
   @Post('caso')
-  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sortearCaso(
     @Body() dto: SortearCasoDto,
@@ -65,7 +66,7 @@ export class SorteosController {
    * Exclusivo para Coordinación y Secretaría.
    */
   @Post('conjunto')
-  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async sorteoConjunto(
     @Body() dto: SorteoConjuntoDto,
@@ -79,13 +80,26 @@ export class SorteosController {
    * Exclusivo para Coordinación y Secretaría.
    */
   @Post('finalizar')
-  @Roles('COORDINACION', 'SECRETARIADO', 'SUPER_ADMIN')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async finalizarSorteo(
     @Body() dto: FinalizarSorteoDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.sorteosService.finalizarSorteo(dto, user);
+  }
+
+  /**
+   * Finaliza el sorteo de Solo Área y formaliza la asignación atómica.
+   */
+  @Post('finalizar-area')
+  @Roles('COORDINACION', 'SECRETARIADO', 'JEFE_CARRERA', 'SUPER_ADMIN')
+  @HttpCode(HttpStatus.CREATED)
+  async finalizarSorteoSoloArea(
+    @Body() dto: FinalizarSorteoSoloAreaDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.sorteosService.finalizarSorteoSoloArea(dto, user);
   }
 
   /**

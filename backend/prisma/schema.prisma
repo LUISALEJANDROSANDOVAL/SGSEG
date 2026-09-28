@@ -343,7 +343,7 @@ model AsignacionCaso {
   idEstudiante       BigInt             @map("id_estudiante")
   idDefensa          BigInt             @unique @map("id_defensa")
   idArea             BigInt             @map("id_area")
-  idCaso             BigInt             @map("id_caso")
+  idCaso             BigInt?            @map("id_caso")
   idUsuarioEjecutor  BigInt             @map("id_usuario_ejecutor")
   idSorteo           BigInt?            @map("id_sorteo")
   tokenActa          String?            @map("token_acta") @db.VarChar(100)
@@ -351,11 +351,12 @@ model AsignacionCaso {
   fechaAsignacion    DateTime           @default(now()) @map("fecha_asignacion")
   plazoLimiteEntrega DateTime?          @map("plazo_limite_entrega")
   estado             String             @default("ASIGNADO") @db.VarChar(30)
+  modalidad          String             @default("AREA_Y_CASO") @db.VarChar(30)
 
   estudiante         Estudiante         @relation(fields: [idEstudiante], references: [idEstudiante], onDelete: Restrict)
   defensa            DefensaExamenGrado @relation(fields: [idDefensa], references: [idDefensa], onDelete: Restrict)
   area               AreaAcademica      @relation(fields: [idArea], references: [idArea], onDelete: Restrict)
-  caso               CasoEstudio        @relation(fields: [idCaso], references: [idCasoEstudio], onDelete: Restrict)
+  caso               CasoEstudio?       @relation(fields: [idCaso], references: [idCasoEstudio], onDelete: Restrict)
   usuarioEjecutor    Usuario            @relation(fields: [idUsuarioEjecutor], references: [idUsuario], onDelete: Restrict)
   sorteo             Sorteo?            @relation(fields: [idSorteo], references: [idSorteo], onDelete: SetNull)
 

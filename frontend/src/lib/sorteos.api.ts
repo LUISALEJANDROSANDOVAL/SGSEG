@@ -137,12 +137,28 @@ export interface FinalizarSorteoPayload {
   tokenSesionLive?: string;
 }
 
+export interface FinalizarSorteoSoloAreaPayload {
+  idDefensa: string;
+  idArea: string;
+  estudiantePresente?: boolean;
+  motivoInasistencia?: string;
+  tokenSesionLive?: string;
+}
+
 export const sorteosApi = {
   /**
    * Finaliza el sorteo y formaliza atómicamente la asignación oficial (Área, Caso y Estudiante) en PostgreSQL.
    */
   async finalizarSorteo(payload: FinalizarSorteoPayload): Promise<FinalizarSorteoResponse> {
     const { data } = await api.post<FinalizarSorteoResponse>('/sorteos/finalizar', payload);
+    return data;
+  },
+
+  /**
+   * Finaliza el sorteo de Solo Área y formaliza atómicamente la asignación oficial en PostgreSQL.
+   */
+  async finalizarSorteoSoloArea(payload: FinalizarSorteoSoloAreaPayload): Promise<FinalizarSorteoResponse> {
+    const { data } = await api.post<FinalizarSorteoResponse>('/sorteos/finalizar-area', payload);
     return data;
   },
 

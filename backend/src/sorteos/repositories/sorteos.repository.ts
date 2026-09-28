@@ -943,6 +943,90 @@ export class SorteosRepository {
     }
   }
 
+  async finalizarYAsignarSorteoSoloArea(params: {
+    idDefensa: bigint;
+    idEstudiante: bigint;
+    idArea: bigint;
+    idUsuarioEjecutor: bigint;
+    idPlanEstudioContexto: bigint;
+    fechaDefensaContexto: Date;
+    estudiantePresente?: boolean;
+    motivoInasistencia?: string;
+    tokenActa?: string;
+    codigoActa?: string;
+  }) {
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. Validar estado de la defensa
+      const defensa = await tx.defensaExamenGrado.findUnique({
+        where: { idDefensa: params.idDefensa },
+        include: {
+          asignacionCaso: true,
+          sorteos: {
+            orderBy: { fechaHora: 'desc' },
+            take: 1,
+          },
+        },
+      });
+
+      if (!defensa) {
+        throw new NotFoundException(`Defensa con ID ${params.idDefensa} no encontrada.`);
+      }
+
+      if (defensa.asignacionCaso && ['ASIGNADO', 'EN_CURSO'].includes(defensa.asignacionCaso.estado)) {
+        throw new BadRequestException('Esta defensa ya cuenta con una asignación activa.');
+      }
+
+      // 2. Obtener o registrar registro maestro de Sorteo
+      let idSorteo = defensa.sorteos[0]?.idSorteo;
+      if (!idSorteo) {
+        const nuevoSorteo = await tx.sorteo.create({
+          data: {
+            idDefensa: params.idDefensa,
+            idUsuarioEjecutor: params.idUsuarioEjecutor,
+            idPlanEstudioContexto: params.idPlanEstudioContexto,
+            fechaDefensaContexto: params.fechaDefensaContexto,
+            estadoSorteo: 'ACTIVO',
+            estudiantePresente: params.estudiantePresente ?? true,
+            motivoInasistencia: params.motivoInasistencia,
+          },
+        });
+        idSorteo = nuevoSorteo.idSorteo;
+      }
+
+      // 3. Persistir la asignación definitiva (sin caso)
+      const asignacion = await tx.asignacionCaso.create({
+        data: {
+          idEstudiante: params.idEstudiante,
+          idDefensa: params.idDefensa,
+          idArea: params.idArea,
+          idCaso: null,
+          modalidad: 'SOLO_AREA',
+          idUsuarioEjecutor: params.idUsuarioEjecutor,
+          idSorteo,
+          tokenActa: params.tokenActa,
+          codigoActa: params.codigoActa,
+          estado: 'ASIGNADO',
+        },
+        include: {
+          estudiante: { include: { planEstudio: { include: { carrera: true } } } },
+          area: true,
+          defensa: { include: { tipoDefensa: true } },
+          usuarioEjecutor: {
+            select: { idUsuario: true, primerNombre: true, primerApellido: true, correoInstitucional: true, rol: true },
+          },
+        },
+      });
+
+      // 4. Actualizar estado de la defensa
+      await tx.defensaExamenGrado.update({
+        where: { idDefensa: params.idDefensa },
+        data: { estadoDefensa: 'CASO_ASIGNADO' },
+      });
+
+      return asignacion;
+    });
+  }
+
   /**
    * Consulta la asignación formal de una defensa por su ID.
    */
