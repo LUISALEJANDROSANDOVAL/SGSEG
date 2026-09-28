@@ -593,54 +593,60 @@ export function RuletaCanvas({
       )}
 
       {/* Botón de Giro Principal o Bloqueo Oficial (No re-sorteo) */}
-      <div className="mt-3.5 sm:mt-4 flex w-full max-w-sm flex-col items-center gap-2">
-        {readOnly ? (
-          isSpinning ? (
-            <div className="flex w-full items-center justify-center gap-2 border border-[#9E1B32]/30 bg-[#9E1B32]/10 py-2.5 px-4 text-xs font-semibold text-[#9E1B32] shadow-2xs animate-pulse">
-              <RefreshCw className="size-4 animate-spin text-[#9E1B32]" />
-              <span>Girando ruleta en tiempo real en la sala oficial...</span>
-            </div>
-          ) : ganador ? (
-            actionButton || (
+      {(!ganador || isSpinning || actionButton !== null) && (
+        <div className="mt-3.5 sm:mt-4 flex w-full max-w-sm flex-col items-center gap-2">
+          {readOnly ? (
+            isSpinning ? (
+              <div className="flex w-full items-center justify-center gap-2 border border-[#9E1B32]/30 bg-[#9E1B32]/10 py-2.5 px-4 text-xs font-semibold text-[#9E1B32] shadow-2xs animate-pulse">
+                <RefreshCw className="size-4 animate-spin text-[#9E1B32]" />
+                <span>Girando ruleta en tiempo real en la sala oficial...</span>
+              </div>
+            ) : ganador ? (
+              actionButton !== undefined ? (
+                actionButton
+              ) : (
+                <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
+                  <Lock className="size-4 text-[#9E1B32]" />
+                  <span>Acto Oficial Sorteado y Registrado por el Tribunal</span>
+                </div>
+              )
+            ) : (
+              <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2 px-4 text-xs font-medium text-neutral-500 shadow-2xs">
+                <span>Aguardando inicio del sorteo por el tribunal...</span>
+              </div>
+            )
+          ) : ganador && !isSpinning ? (
+            actionButton !== undefined ? (
+              actionButton
+            ) : (
               <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
                 <Lock className="size-4 text-[#9E1B32]" />
-                <span>Acto Oficial Sorteado y Registrado por el Tribunal</span>
+                <span>Acto Oficial Sorteado y Registrado (Bloqueado)</span>
               </div>
             )
           ) : (
-            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2 px-4 text-xs font-medium text-neutral-500 shadow-2xs">
-              <span>Aguardando inicio del sorteo por el tribunal...</span>
-            </div>
-          )
-        ) : ganador && !isSpinning ? (
-          actionButton || (
-            <div className="flex w-full items-center justify-center gap-2 border border-line bg-surface py-2.5 px-4 text-xs font-semibold text-neutral-700 shadow-2xs">
-              <Lock className="size-4 text-[#9E1B32]" />
-              <span>Acto Oficial Sorteado y Registrado (Bloqueado)</span>
-            </div>
-          )
-        ) : (
-          <button
-            type="button"
-            onClick={girarRuleta}
-            disabled={isSpinning || disabled || items.length === 0}
-            className="group relative flex w-full items-center justify-center gap-2 rounded-none border border-[#9E1B32] bg-[#9E1B32] px-6 py-2.5 sm:py-3 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#821528] active:bg-[#6c1121] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`size-4 transition-transform ${
-                isSpinning ? 'animate-spin' : 'group-hover:rotate-180 duration-500'
-              }`}
-            />
-            {isSpinning ? 'Sorteando en vivo...' : spinButtonText}
-          </button>
-        )}
+            <button
+              type="button"
+              onClick={girarRuleta}
+              disabled={isSpinning || disabled || items.length === 0}
+              className="group relative flex w-full items-center justify-center gap-2 rounded-none border border-[#9E1B32] bg-[#9E1B32] px-6 py-2.5 sm:py-3 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-[#821528] active:bg-[#6c1121] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`size-4 transition-transform ${
+                  isSpinning ? 'animate-spin' : 'group-hover:rotate-180 duration-500'
+                }`}
+              />
+              {isSpinning ? 'Sorteando en vivo...' : spinButtonText}
+            </button>
+          )}
 
-        {items.length === 0 && (
-          <p className="text-xs text-red-500">
-            No hay elementos disponibles para sortear en esta categoría.
-          </p>
-        )}
-      </div>
+          {items.length === 0 && (
+            <p className="text-xs text-red-500">
+              No hay elementos disponibles para sortear en esta categoría.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

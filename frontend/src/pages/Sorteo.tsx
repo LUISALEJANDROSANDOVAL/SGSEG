@@ -2275,22 +2275,7 @@ export default function PaginaSorteo() {
                     subtitle="Giro aleatorio CSPRNG auditable con desaceleración natural"
                     spinButtonText="Girar Ruleta de Áreas"
                     readOnly={!puedeOperarSorteo}
-                    actionButton={
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (esSoloArea) {
-                            handleAvanzarAFormalizacion(true)
-                          } else {
-                            setPasoActual(3)
-                          }
-                        }}
-                        className="group relative flex w-full items-center justify-center gap-2 border border-emerald-600 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all hover:bg-emerald-700 active:scale-[0.99] cursor-pointer"
-                      >
-                        <span>{esSoloArea ? 'Formalizar Acta de Área & Finalizar Sorteo' : 'Continuar al Sorteo de Caso'}</span>
-                        <ArrowRight className="size-4" />
-                      </button>
-                    }
+                    actionButton={null}
                   />
 
                   {!puedeOperarSorteo && (
@@ -3131,22 +3116,7 @@ export default function PaginaSorteo() {
                   spinButtonText="Girar Ruleta de Áreas"
                   accentColor="#9E1B32"
                   readOnly={!puedeOperarSorteo}
-                  actionButton={
-                    <button
-                      type="button"
-                      onClick={() => {
-                          if (esSoloArea) {
-                            handleAvanzarAFormalizacion(true)
-                          } else {
-                            setPasoActual(3)
-                          }
-                        }}
-                      className="group relative flex w-full items-center justify-center gap-2 border border-emerald-500 bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl transition-all hover:bg-emerald-500 active:scale-[0.99] cursor-pointer"
-                    >
-                      <span>{esSoloArea ? 'Formalizar Acta de Área & Finalizar Sorteo' : 'Continuar al Sorteo de Caso'}</span>
-                      <ArrowRight className="size-4" />
-                    </button>
-                  }
+                  actionButton={null}
                 />
 
                 {areaGanadora && (
