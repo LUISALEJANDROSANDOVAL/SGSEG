@@ -2999,45 +2999,6 @@ export default function PaginaSorteo() {
                 </button>
               )}
 
-              {/* Botón de Siguiente Fase en Cabecera de Proyector (Siempre Visible) */}
-              {pasoActual === 2 && areaGanadora && (
-                <button
-                  type="button"
-                  onClick={() => {
-                          if (esSoloArea) {
-                            handleAvanzarAFormalizacion(true)
-                          } else {
-                            setPasoActual(3)
-                          }
-                        }}
-                  className="flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all shadow-md animate-pulse cursor-pointer"
-                >
-                  <ArrowRight className="size-4" />
-                  <span>{esSoloArea ? 'Formalizar Acta de Área →' : 'Continuar a Casos →'}</span>
-                </button>
-              )}
-
-              {pasoActual === 3 && casoGanador && (
-                <button
-                  type="button"
-                  disabled={guardandoEnDb}
-                  onClick={() => handleAvanzarAFormalizacion(esSoloArea)}
-                  className="flex items-center gap-2 border border-emerald-500 bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-all shadow-md animate-pulse cursor-pointer disabled:opacity-50"
-                >
-                  {guardandoEnDb ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      <span>Guardando Acta...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ArrowRight className="size-4" />
-                      <span>Formalizar Acta Oficial →</span>
-                    </>
-                  )}
-                </button>
-              )}
-
               <button
                 type="button"
                 onClick={handleCerrarProyector}
