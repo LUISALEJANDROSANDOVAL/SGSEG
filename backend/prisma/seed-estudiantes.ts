@@ -352,38 +352,41 @@ export async function seedEstudiantes() {
   // 5. Inserción Transaccional Masiva (prisma.$transaction) con upsert idempotente
   console.log('🔄 Ejecutando transacción masiva de inserción/actualización...');
 
-  await prisma.$transaction(async (tx) => {
-    for (const st of preparedStudents) {
-      const existing = await tx.estudiante.findUnique({
-        where: { carnetEstudiantil: st.carnetEstudiantil },
-      });
+  await prisma.$transaction(
+    async (tx) => {
+      for (const st of preparedStudents) {
+        const existing = await tx.estudiante.findUnique({
+          where: { carnetEstudiantil: st.carnetEstudiantil },
+        });
 
-      await tx.estudiante.upsert({
-        where: { carnetEstudiantil: st.carnetEstudiantil },
-        create: {
-          idPlanEstudio: st.idPlanEstudio,
-          carnetEstudiantil: st.carnetEstudiantil,
-          carnetIdentidad: st.carnetIdentidad,
-          nombreCompleto: st.nombreCompleto,
-          correoInstitucional: st.correoInstitucional,
-          estado: 'ACTIVO',
-        },
-        update: {
-          idPlanEstudio: st.idPlanEstudio,
-          carnetIdentidad: st.carnetIdentidad,
-          nombreCompleto: st.nombreCompleto,
-          correoInstitucional: st.correoInstitucional,
-          estado: 'ACTIVO',
-        },
-      });
+        await tx.estudiante.upsert({
+          where: { carnetEstudiantil: st.carnetEstudiantil },
+          create: {
+            idPlanEstudio: st.idPlanEstudio,
+            carnetEstudiantil: st.carnetEstudiantil,
+            carnetIdentidad: st.carnetIdentidad,
+            nombreCompleto: st.nombreCompleto,
+            correoInstitucional: st.correoInstitucional,
+            estado: 'ACTIVO',
+          },
+          update: {
+            idPlanEstudio: st.idPlanEstudio,
+            carnetIdentidad: st.carnetIdentidad,
+            nombreCompleto: st.nombreCompleto,
+            correoInstitucional: st.correoInstitucional,
+            estado: 'ACTIVO',
+          },
+        });
 
-      if (!existing) {
-        createdCount++;
-      } else {
-        updatedCount++;
+        if (!existing) {
+          createdCount++;
+        } else {
+          updatedCount++;
+        }
       }
-    }
-  });
+    },
+    { timeout: 60000, maxWait: 20000 },
+  );
 
   const duration = Date.now() - startTime;
 

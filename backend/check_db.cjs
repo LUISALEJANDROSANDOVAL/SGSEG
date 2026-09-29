@@ -1,5 +1,16 @@
 const { PrismaClient } = require('@prisma/client');
-const p = new PrismaClient();
+const { PrismaPg } = require('@prisma/adapter-pg');
+const { Pool } = require('pg');
+require('dotenv').config();
+
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.STORAGE_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  'postgresql://sgseg:sgseg@localhost:5437/sgseg?schema=public';
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+const p = new PrismaClient({ adapter });
 
 async function main() {
   const defensas = await p.defensaExamenGrado.findMany({
