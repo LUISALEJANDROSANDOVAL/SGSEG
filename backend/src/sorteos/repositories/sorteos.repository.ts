@@ -830,6 +830,12 @@ export class SorteosRepository {
           defensa.asignacionCaso &&
           ['ASIGNADO', 'EN_CURSO'].includes(defensa.asignacionCaso.estado)
         ) {
+          if (defensa.asignacionCaso.idArea === params.idArea && defensa.asignacionCaso.idCaso === params.idCaso) {
+            return tx.asignacionCaso.findUnique({
+              where: { idAsignacion: defensa.asignacionCaso.idAsignacion },
+              include: { estudiante: { include: { planEstudio: { include: { carrera: true } } } }, area: true, caso: true, defensa: { include: { tipoDefensa: true } }, usuarioEjecutor: { select: { idUsuario: true, primerNombre: true, primerApellido: true, correoInstitucional: true, rol: true } } }
+            });
+          }
           throw new BadRequestException(
             'Esta defensa ya cuenta con una asignación de caso activa.',
           );
@@ -984,6 +990,12 @@ export class SorteosRepository {
       }
 
       if (defensa.asignacionCaso && ['ASIGNADO', 'EN_CURSO'].includes(defensa.asignacionCaso.estado)) {
+        if (defensa.asignacionCaso.idArea === params.idArea) {
+          return tx.asignacionCaso.findUnique({
+            where: { idAsignacion: defensa.asignacionCaso.idAsignacion },
+            include: { estudiante: { include: { planEstudio: { include: { carrera: true } } } }, area: true, caso: true, defensa: { include: { tipoDefensa: true } }, usuarioEjecutor: { select: { idUsuario: true, primerNombre: true, primerApellido: true, correoInstitucional: true, rol: true } } }
+          });
+        }
         throw new BadRequestException('Esta defensa ya cuenta con una asignación activa.');
       }
 

@@ -110,7 +110,26 @@ export class DefensasRepository {
         });
       }
 
-      // 3. Crear o actualizar defensa programada
+      // 3. Crear o actualizar defensa programada preservando estado si ya hay asignación
+      const existingDefensa = await tx.defensaExamenGrado.findUnique({
+        where: {
+          idInstancia_idTipoDefensa: {
+            idInstancia: instancia.idInstancia,
+            idTipoDefensa: data.idTipoDefensa,
+          },
+        },
+        include: { asignacionCaso: true },
+      });
+
+      let estadoPreservado: any = 'PROGRAMADA';
+      if (
+        existingDefensa &&
+        existingDefensa.asignacionCaso &&
+        ['ASIGNADO', 'EN_CURSO'].includes(existingDefensa.asignacionCaso.estado)
+      ) {
+        estadoPreservado = existingDefensa.estadoDefensa; // Generalmente CASO_ASIGNADO
+      }
+
       const defensa = await tx.defensaExamenGrado.upsert({
         where: {
           idInstancia_idTipoDefensa: {
@@ -121,7 +140,7 @@ export class DefensasRepository {
         update: {
           fechaDefensa: data.fechaDefensa,
           periodoAcademico: data.periodoAcademico,
-          estadoDefensa: 'PROGRAMADA',
+          estadoDefensa: estadoPreservado,
         },
         create: {
           idInstancia: instancia.idInstancia,
@@ -316,6 +335,12 @@ export class DefensasRepository {
       orderBy: { fechaDefensa: 'asc' },
       include: {
         tipoDefensa: true,
+        asignacionCaso: {
+          include: {
+            caso: true,
+            area: true,
+          }
+        },
         casoUtilizado: {
           include: {
             area: true,

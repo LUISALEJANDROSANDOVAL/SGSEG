@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { await prisma.defensaExamenGrado.updateMany({ where: { asignacionCaso: { estado: 'ASIGNADO' }, estadoDefensa: 'PROGRAMADA' }, data: { estadoDefensa: 'CASO_ASIGNADO' }}); console.log('Fixed inconsistency'); } main();

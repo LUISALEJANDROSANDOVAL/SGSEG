@@ -96,7 +96,7 @@ export function esCarreraSoloArea(carreraNombre?: string | null): boolean {
     lower.includes('contadur') ||
     lower.includes('comercio') ||
     lower.includes('turismo') ||
-    lower.includes('comunicaci') ||
+    (lower.includes('comunicaci') && !lower.includes('telecomunicaci')) ||
     lower.includes('negocio')
   ) {
     return true;

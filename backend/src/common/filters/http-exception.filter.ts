@@ -24,6 +24,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         ? exception.getResponse()
         : 'Error interno del servidor';
 
+    if (!(exception instanceof HttpException)) {
+      console.error('[Unhandled Exception]:', exception);
+    }
+
     let message: any = 'Error interno del servidor';
     let error: string | undefined = undefined;
 

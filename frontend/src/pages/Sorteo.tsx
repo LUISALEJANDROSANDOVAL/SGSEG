@@ -706,6 +706,12 @@ export default function PaginaSorteo() {
           const fechaStr = fDef && !isNaN(fDef.getTime()) ? fDef.toLocaleDateString('es-BO') : '28/09/2026'
           const horaStr = fDef && !isNaN(fDef.getTime()) ? fDef.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '09:00 AM'
 
+          // Normalizar estado si está desincronizado
+          let estadoReal = def.estadoDefensa;
+          if ((estadoReal === 'PROGRAMADA' || estadoReal === 'AREA_SORTEADA') && ((def as any).asignacionCaso?.estado === 'ASIGNADO' || def.casoUtilizado)) {
+            estadoReal = 'CASO_ASIGNADO';
+          }
+
           return {
             id: String(def.idDefensa),
             idDefensa: String(def.idDefensa),
@@ -728,9 +734,9 @@ export default function PaginaSorteo() {
             fechaDefensa: fechaStr,
             horaDefensa: horaStr,
             promedioAcademico: 88.5,
-            estadoDefensa: def.estadoDefensa,
-            casoAsignadoTitulo: def.casoUtilizado?.titulo,
-            areaAsignadaNombre: def.casoUtilizado?.area?.nombre,
+            estadoDefensa: estadoReal,
+            casoAsignadoTitulo: (def as any).asignacionCaso?.caso?.titulo || def.casoUtilizado?.titulo,
+            areaAsignadaNombre: (def as any).asignacionCaso?.area?.nombre || def.casoUtilizado?.area?.nombre,
           }
         })
 
@@ -839,6 +845,8 @@ export default function PaginaSorteo() {
 
   // Sincronizar postulante seleccionado cuando se filtra la lista
   useEffect(() => {
+    if (pasoActual > 1) return; // Evitar perder el estudiante seleccionado mientras estamos en pasos avanzados
+
     if (postulantesFiltrados.length > 0) {
       if (!postulanteSeleccionado || !postulantesFiltrados.some((p) => p.id === postulanteSeleccionado?.id)) {
         setPostulanteSeleccionado(postulantesFiltrados[0])
@@ -846,7 +854,7 @@ export default function PaginaSorteo() {
     } else {
       setPostulanteSeleccionado(null)
     }
-  }, [postulantesFiltrados, postulanteSeleccionado])
+  }, [postulantesFiltrados, postulanteSeleccionado, pasoActual])
 
   // Cargar áreas dinámicamente desde API para la carrera del estudiante
   useEffect(() => {

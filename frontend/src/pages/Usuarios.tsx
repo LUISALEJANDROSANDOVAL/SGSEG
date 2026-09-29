@@ -66,12 +66,22 @@ export default function PaginaUsuarios() {
   };
 
   const abrirModalEditar = (u: any) => {
+    const roleMapping: Record<string, string> = {
+      'COORDINACION': 'Coordinador General',
+      'SECRETARIADO': 'Secretario de Facultad',
+      'JEFE_CARRERA': 'Jefe de Carrera',
+      'VICERRECTORADO': 'Vicerrectorado',
+      'REGISTRO': 'Registro',
+      'DEFENSA': 'Defensas de Grado',
+      'SUPER_ADMIN': 'Administrador General',
+    };
+
     setEditId(u.id);
     setFormNombre(u.nombre);
     setFormEmail(u.email);
     setFormPassword(''); // Contraseña vacía por seguridad al editar
-    setFormRol(u.rol);
-    setFormCarreraId(u.carreraId || '');
+    setFormRol(roleMapping[u.rol] || u.rol);
+    setFormCarreraId(u.carreraId || (u.carreras && u.carreras.length > 0 ? u.carreras[0].idCarrera : ''));
     setFormActivo(u.activo);
     setModalAbierto(true);
   };
@@ -347,7 +357,7 @@ export default function PaginaUsuarios() {
                     >
                       <option value="">Seleccione carrera...</option>
                       {carreras.map((c) => (
-                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                        <option key={c.id || c.idCarrera} value={c.id || c.idCarrera}>{c.nombre}</option>
                       ))}
                     </select>
                   </div>

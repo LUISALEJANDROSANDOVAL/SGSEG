@@ -211,6 +211,18 @@ async function seedCatalogoOficial(): Promise<{
             },
           });
         }
+
+        // Generar 10 casos adicionales automáticamente para no quedarse sin casos (como solicitó el usuario)
+        for (let i = 1; i <= 10; i++) {
+          await prisma.casoEstudio.create({
+            data: {
+              idArea: area.idArea,
+              titulo: `Caso Práctico Adicional #${i} - ${areaDef.nombre}`,
+              contenido: `Este es un caso generado automáticamente para el área de ${areaDef.nombre}. El postulante deberá realizar un análisis integral, identificando las variables críticas y proponiendo soluciones viables acordes a la normativa y buenas prácticas de ${carDef.nombre}.`,
+              estado: 'DISPONIBLE',
+            },
+          });
+        }
       }
     }
   }
