@@ -65,6 +65,7 @@ export class CasosRepository {
       where.OR = [
         { titulo: { contains: term, mode: 'insensitive' } },
         { contenido: { contains: term, mode: 'insensitive' } },
+        { area: { nombre: { contains: term, mode: 'insensitive' } } },
       ];
     }
 

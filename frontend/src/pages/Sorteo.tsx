@@ -11,6 +11,10 @@ import QRCode from 'qrcode'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import {
+  AREAS_CATALOGO_COMPLETO,
+  CASOS_CATALOGO_COMPLETO,
+} from '@/data/sorteo-catalogos'
+import {
   esJefeCarrera,
   getJefeCarreraId,
   getJefeCarreraNombre,
@@ -223,348 +227,20 @@ const POSTULANTES_CATALOGO: PostulanteSorteo[] = [
   },
 ]
 
-// Áreas académicas disponibles con paleta institucional UTEPSA (Rojo, Negro, Blanco)
+// Áreas académicas sincronizadas oficialmente con la Base de Datos UTEPSA
 const AREAS_CATALOGO: Record<string, AreaAcademicaSorteo[]> = {
-  'Ingeniería de Sistemas': [
-    {
-      id: 'area-sis-1',
-      codigo: 'SIS-SOF',
-      nombre: 'Ingeniería de Software y Arquitectura Cloud',
-      descripcion: 'Microservicios, patrones de diseño y escalabilidad transaccional.',
-      color: '#121316',
-      casosDisponibles: 4,
-    },
-    {
-      id: 'area-sis-2',
-      codigo: 'SIS-SEG',
-      nombre: 'Ciberseguridad y Auditoría de Sistemas',
-      descripcion: 'Criptografía aplicada, seguridad perimetral y pentesting.',
-      color: '#C8102E',
-      casosDisponibles: 3,
-    },
-    {
-      id: 'area-sis-3',
-      codigo: 'SIS-DAT',
-      nombre: 'Bases de Datos y Analítica Avanzada',
-      descripcion: 'Modelado relacional, Big Data e Inteligencia Artificial.',
-      color: '#FFFFFF',
-      casosDisponibles: 3,
-    },
-  ],
-  Derecho: [
-    {
-      id: 'area-der-1',
-      codigo: 'DER-PEN',
-      nombre: 'Derecho Penal y Procesal Penal',
-      descripcion: 'Teoría del delito, garantías constitucionales y litigación oral penal.',
-      color: '#C8102E',
-      casosDisponibles: 4,
-    },
-    {
-      id: 'area-der-2',
-      codigo: 'DER-CIV',
-      nombre: 'Derecho Civil y Contratos',
-      descripcion: 'Obligaciones civiles, responsabilidad extracontractual y derecho sucesorio.',
-      color: '#121316',
-      casosDisponibles: 3,
-    },
-    {
-      id: 'area-der-3',
-      codigo: 'DER-CON',
-      nombre: 'Derecho Constitucional y DDHH',
-      descripcion: 'Acciones de defensa, control de convencionalidad y tutela judicial.',
-      color: '#FFFFFF',
-      casosDisponibles: 3,
-    },
-    {
-      id: 'area-der-4',
-      codigo: 'DER-LAB',
-      nombre: 'Derecho Laboral y Seguridad Social',
-      descripcion: 'Relaciones de trabajo, beneficios sociales y regímenes especiales.',
-      color: '#9E1B32',
-      casosDisponibles: 2,
-    },
-    {
-      id: 'area-der-5',
-      codigo: 'DER-ADM',
-      nombre: 'Derecho Administrativo y Regulatorio',
-      descripcion: 'Procedimientos sancionadores, contrataciones estatales y recursos.',
-      color: '#1E293B',
-      casosDisponibles: 3,
-    },
-    {
-      id: 'area-der-6',
-      codigo: 'DER-COM',
-      nombre: 'Derecho Comercial y Societario',
-      descripcion: 'Sociedades mercantiles, títulos valores y reorganizaciones empresariales.',
-      color: '#F4F4F5',
-      casosDisponibles: 3,
-    },
-  ],
-  'Administración de Empresas': [
-    {
-      id: 'area-adm-1',
-      codigo: 'ADM-EST',
-      nombre: 'Dirección Estratégica y Gestión',
-      descripcion: 'Planificación corporativa, balanced scorecard y gestión del cambio.',
-      color: '#C8102E',
-      casosDisponibles: 3,
-    },
-    {
-      id: 'area-adm-2',
-      codigo: 'ADM-FIN',
-      nombre: 'Finanzas Corporativas y PyMEs',
-      descripcion: 'Estructura de capital, valuación de empresas y flujo de caja.',
-      color: '#121316',
-      casosDisponibles: 4,
-    },
-    {
-      id: 'area-adm-3',
-      codigo: 'ADM-OPE',
-      nombre: 'Operaciones y Cadena de Suministro',
-      descripcion: 'Logística integral, optimización de procesos y calidad total.',
-      color: '#FFFFFF',
-      casosDisponibles: 2,
-    },
-    {
-      id: 'area-adm-4',
-      codigo: 'ADM-TAL',
-      nombre: 'Gestión del Talento Humano',
-      descripcion: 'Cultura organizacional, evaluación de desempeño y retención.',
-      color: '#9E1B32',
-      casosDisponibles: 3,
-    },
-  ],
-  'Ingeniería Comercial': [
-    {
-      id: 'area-com-1',
-      codigo: 'COM-MKT',
-      nombre: 'Marketing Estratégico y Digital',
-      descripcion: 'Posicionamiento omnicanal, métricas digitales y experiencia de cliente.',
-      color: '#C8102E',
-      casosDisponibles: 3,
-    },
-    {
-      id: 'area-com-2',
-      codigo: 'COM-INT',
-      nombre: 'Comercio Exterior y Negociación',
-      descripcion: 'Incoterms, apertura de mercados internacionales y logística aduanera.',
-      color: '#121316',
-      casosDisponibles: 3,
-    },
-    {
-      id: 'area-com-3',
-      codigo: 'COM-PRO',
-      nombre: 'Formulación y Evaluación de Proyectos',
-      descripcion: 'Análisis de viabilidad económica, TIR/VAN y modelos de negocio.',
-      color: '#FFFFFF',
-      casosDisponibles: 2,
-    },
-  ],
-  Psicología: [
-    {
-      id: 'area-psi-1',
-      codigo: 'PSI-CLI',
-      nombre: 'Psicología Clínica y de la Salud',
-      descripcion: 'Evaluación psicodiagnóstica, modelos de psicoterapia e intervención en crisis.',
-      color: '#C8102E',
-      casosDisponibles: 0,
-    },
-    {
-      id: 'area-psi-2',
-      codigo: 'PSI-ORG',
-      nombre: 'Psicología Organizacional y del Trabajo',
-      descripcion: 'Comportamiento organizacional, clima laboral, evaluación y bienestar ocupacional.',
-      color: '#121316',
-      casosDisponibles: 0,
-    },
-    {
-      id: 'area-psi-3',
-      codigo: 'PSI-EDU',
-      nombre: 'Psicología Educativa y del Desarrollo',
-      descripcion: 'Dificultades del aprendizaje, neuroeducación y orientación psicopedagógica.',
-      color: '#FFFFFF',
-      casosDisponibles: 0,
-    },
-    {
-      id: 'area-psi-4',
-      codigo: 'PSI-SOC',
-      nombre: 'Psicología Social y Comunitaria',
-      descripcion: 'Proyectos psicosociales, intervención en comunidades y prevención de violencia.',
-      color: '#9E1B32',
-      casosDisponibles: 0,
-    },
-  ],
+  ...AREAS_CATALOGO_COMPLETO,
+  'Ingeniería de Sistemas': AREAS_CATALOGO_COMPLETO['Sistemas'] || [],
+  'Sistemas': AREAS_CATALOGO_COMPLETO['Sistemas'] || [],
+  'Redes y Telecomunicaciones': AREAS_CATALOGO_COMPLETO['Redes y Telecomunicaciones'] || [],
+  'Derecho': AREAS_CATALOGO_COMPLETO['Derecho'] || [],
+  'Administración de Empresas': AREAS_CATALOGO_COMPLETO['Administración General'] || [],
+  'Ingeniería Comercial': AREAS_CATALOGO_COMPLETO['Ingeniería Comercial'] || [],
+  'Psicología': AREAS_CATALOGO_COMPLETO['Psicología'] || [],
 }
 
-// Catálogo de Casos de Estudio clasificados por área (con control de usos <= 2)
-const CASOS_CATALOGO: CasoEstudioSorteo[] = [
-  // Casos Derecho Penal
-  {
-    id: 'caso-der-01',
-    codigo: 'CASO-DP-014',
-    titulo: 'Defensa Penal en Delitos Económicos y Compliance Corporativo',
-    areaId: 'area-der-1',
-    areaNombre: 'Derecho Penal y Procesal Penal',
-    contenido:
-      'Análisis integral de responsabilidad penal de personas jurídicas en presunto desvío de fondos bancarios, cadena de custodia probatoria digital y aplicación de la excepción de prescripción.',
-    usosActuales: 1,
-    maxUsos: 2,
-    plazoHoras: 48,
-    color: '#9E1B32',
-  },
-  {
-    id: 'caso-der-02',
-    codigo: 'CASO-DP-028',
-    titulo: 'Litigación Oral y Medidas Cautelares en Delitos Contra la Salud Pública',
-    areaId: 'area-der-1',
-    areaNombre: 'Derecho Penal y Procesal Penal',
-    contenido:
-      'Diseño de teoría del caso acusatoria y defensiva respecto a tipicidad subjetiva, pruebas periciales toxicológicas y proporcionalidad de la detención preventiva.',
-    usosActuales: 0,
-    maxUsos: 2,
-    plazoHoras: 48,
-    color: '#1E293B',
-  },
-  {
-    id: 'caso-der-03',
-    codigo: 'CASO-DP-045',
-    titulo: 'Casación Penal por Vicios de Sentencia y Valoración de Prueba Ilícita',
-    areaId: 'area-der-1',
-    areaNombre: 'Derecho Penal y Procesal Penal',
-    contenido:
-      'Interposición de recurso extraordinario de casación por violación del debido proceso y aplicación indebida de reglas de la sana crítica en la valoración testifical.',
-    usosActuales: 1,
-    maxUsos: 2,
-    plazoHoras: 48,
-    color: '#B45309',
-  },
-  {
-    id: 'caso-der-04',
-    codigo: 'CASO-DP-062',
-    titulo: 'Salidas Alternativas y Reparación Integral en Homicidio Culposo',
-    areaId: 'area-der-1',
-    areaNombre: 'Derecho Penal y Procesal Penal',
-    contenido:
-      'Negociación de acuerdo conciliatorio, indemnización por daño civil y solicitud de suspensión condicional del proceso en sede de audiencia preliminar.',
-    usosActuales: 0,
-    maxUsos: 2,
-    plazoHoras: 48,
-    color: '#047857',
-  },
-
-  // Casos Derecho Civil
-  {
-    id: 'caso-civ-01',
-    codigo: 'CASO-DC-019',
-    titulo: 'Resolución Contractual por Incumplimiento y Cláusula Penal Inmobiliaria',
-    areaId: 'area-der-2',
-    areaNombre: 'Derecho Civil y Contratos',
-    contenido:
-      'Demanda ordinaria de resolución de contrato de compraventa con arras penitenciales, excepciones de fuerza mayor y liquidación judicial de daños y perjuicios.',
-    usosActuales: 1,
-    maxUsos: 2,
-    plazoHoras: 48,
-    color: '#9E1B32',
-  },
-  {
-    id: 'caso-civ-02',
-    codigo: 'CASO-DC-033',
-    titulo: 'Acción Reivindicatoria y Usucapión Decenal con Doble Partida Registral',
-    areaId: 'area-der-2',
-    areaNombre: 'Derecho Civil y Contratos',
-    contenido:
-      'Conflicto de mejor derecho propietario sobre inmueble urbano con superposición de folios reales en Derechos Reales y posesión continuada pacífica.',
-    usosActuales: 0,
-    maxUsos: 2,
-    plazoHoras: 48,
-    color: '#1E293B',
-  },
-
-  // Casos Derecho Constitucional
-  {
-    id: 'caso-con-01',
-    codigo: 'CASO-CO-007',
-    titulo: 'Acción de Amparo Constitucional por Vulneración del Non Bis In Idem',
-    areaId: 'area-der-3',
-    areaNombre: 'Derecho Constitucional y DDHH',
-    contenido:
-      'Doble juzgamiento sancionador en sede administrativa y jurisdiccional, fundamentación de medidas cautelares constitucionales y jurisprudencia vinculante del TCP.',
-    usosActuales: 1,
-    maxUsos: 2,
-    plazoHoras: 48,
-    color: '#9E1B32',
-  },
-  {
-    id: 'caso-con-02',
-    codigo: 'CASO-CO-022',
-    titulo: 'Acción Popular en Defensa de los Derechos Colectivos y Medio Ambiente',
-    areaId: 'area-der-3',
-    areaNombre: 'Derecho Constitucional y DDHH',
-    contenido:
-      'Tutela de acuíferos urbanos frente a concesiones industriales sin manifiesto de impacto ambiental y declaratoria de pausa ecológica judicial.',
-    usosActuales: 0,
-    maxUsos: 2,
-    plazoHoras: 48,
-    color: '#047857',
-  },
-
-  // Casos Administración
-  {
-    id: 'caso-adm-01',
-    codigo: 'CASO-AD-011',
-    titulo: 'Reestructuración Financiera y Estratégica de una PyME Agroindustrial',
-    areaId: 'area-adm-1',
-    areaNombre: 'Dirección Estratégica y Gestión',
-    contenido:
-      'Plan integral de saneamiento patrimonial, refinanciamiento de pasivos bancarios a largo plazo y redireccionamiento del modelo de distribución regional.',
-    usosActuales: 1,
-    maxUsos: 2,
-    plazoHoras: 72,
-    color: '#9E1B32',
-  },
-  {
-    id: 'caso-adm-02',
-    codigo: 'CASO-AD-025',
-    titulo: 'Optimización de Capital de Trabajo y Políticas de Cobranza en Retail',
-    areaId: 'area-adm-2',
-    areaNombre: 'Finanzas Corporativas y PyMEs',
-    contenido:
-      'Reingeniería del ciclo de conversión de efectivo (CCC), scoring crediticio de cartera vencida y estructuración de emisión de pagarés bursátiles.',
-    usosActuales: 0,
-    maxUsos: 2,
-    plazoHoras: 72,
-    color: '#1E293B',
-  },
-
-  // Casos Comercial
-  {
-    id: 'caso-com-01',
-    codigo: 'CASO-MK-031',
-    titulo: 'Estrategia de Penetración Omnicanal para Marca de Consumo Masivo',
-    areaId: 'area-com-1',
-    areaNombre: 'Marketing Estratégico y Digital',
-    contenido:
-      'Diseño del customer journey, modelo de atribución digital, plan de medios programáticos y fijación de precios dinámicos para competir en el eje central.',
-    usosActuales: 1,
-    maxUsos: 2,
-    plazoHoras: 72,
-    color: '#9E1B32',
-  },
-  {
-    id: 'caso-com-02',
-    codigo: 'CASO-MK-054',
-    titulo: 'Apertura de Exportación de Alimentos Procesados al Mercado Andino',
-    areaId: 'area-com-2',
-    areaNombre: 'Comercio Exterior y Negociación',
-    contenido:
-      'Cumplimiento de barreras fitosanitarias, selección de Incoterm 2020 DPU/FOB, matriz de riesgo cambiario y estructuración de carta de crédito irrevocable.',
-    usosActuales: 0,
-    maxUsos: 2,
-    plazoHoras: 72,
-    color: '#B45309',
-  },
-]
+// Catálogo de Casos de Estudio sincronizado para todas las áreas y carreras
+const CASOS_CATALOGO: CasoEstudioSorteo[] = CASOS_CATALOGO_COMPLETO
 
 export default function PaginaSorteo() {
   const { user } = useAuth()
@@ -674,6 +350,7 @@ export default function PaginaSorteo() {
   // Estados de datos dinámicos desde API
   const [areasDb, setAreasDb] = useState<AreaAcademicaSorteo[]>([])
   const [casosDb, setCasosDb] = useState<CasoEstudioSorteo[]>([])
+  const [cargandoCasos, setCargandoCasos] = useState<boolean>(false)
 
   // Historial de la sesión
   const [historialSesion, setHistorialSesion] = useState<RegistroHistorialSorteo[]>([])
@@ -916,30 +593,73 @@ export default function PaginaSorteo() {
         setCasosDb([])
         return
       }
+      setCargandoCasos(true)
       try {
-        const resp = await casosApi.getCasos({ idArea: areaGanadora.id, estado: 'DISPONIBLE' })
+        const idAreaClean = String(areaGanadora.id).replace(/\D/g, '')
+        let resp: any = null
+
+        // 1. Intento principal por ID numérico si está disponible
+        if (idAreaClean) {
+          resp = await casosApi.getCasos({ idArea: idAreaClean, estado: 'DISPONIBLE', limit: 50 })
+        }
+
+        // 2. Si no hay resultados por ID, buscar por el nombre textual del área
+        if (!resp || !resp.items || resp.items.length === 0) {
+          resp = await casosApi.getCasos({
+            idCarrera: postulanteSeleccionado?.carreraId,
+            search: areaGanadora.nombre,
+            estado: 'DISPONIBLE',
+            limit: 50,
+          })
+        }
+
+        // 3. Fallback transversal: consultar inventario de la carrera y filtrar por nombre de área
+        if ((!resp || !resp.items || resp.items.length === 0) && postulanteSeleccionado?.carreraId) {
+          const respCarrera = await casosApi.getCasos({
+            idCarrera: postulanteSeleccionado.carreraId,
+            estado: 'DISPONIBLE',
+            limit: 100,
+          })
+          if (respCarrera && respCarrera.items) {
+            const areaNorm = areaGanadora.nombre.trim().toLowerCase()
+            const matchItems = respCarrera.items.filter((c: any) => {
+              const cAreaNorm = (c.area?.nombre || '').trim().toLowerCase()
+              return cAreaNorm.includes(areaNorm) || areaNorm.includes(cAreaNorm)
+            })
+            if (matchItems.length > 0) {
+              resp = { items: matchItems, pagination: respCarrera.pagination }
+            }
+          }
+        }
+
         if (resp && resp.items && resp.items.length > 0) {
-          const mapped: CasoEstudioSorteo[] = resp.items
-            .filter((c) => c.usos < c.umbral)
-            .map((c) => ({
-              id: String(c.idCasoEstudio),
-              codigo: `CASO-${String(c.idCasoEstudio).padStart(3, '0')}`,
-              titulo: c.titulo,
-              areaId: areaGanadora.id,
-              areaNombre: areaGanadora.nombre,
-              contenido: c.contenido,
-              usosActuales: c.usos,
-              maxUsos: c.umbral || 2,
-              plazoHoras: postulanteSeleccionado?.tipoDefensa === 'Interna' ? 24 : 48,
-              color: '#9E1B32',
-            }))
+          // Filtrar con stock (usos < umbral), o si todos alcanzaron umbral mostrar los disponibles para permitir sorteo
+          const disponibles = resp.items.filter((c: any) => (c.usos ?? 0) < (c.umbral ?? 2))
+          const casosFinales = disponibles.length > 0 ? disponibles : resp.items
+
+          const mapped: CasoEstudioSorteo[] = casosFinales.map((c: any) => ({
+            id: String(c.idCasoEstudio),
+            codigo: `CASO-${String(c.idCasoEstudio).padStart(3, '0')}`,
+            titulo: c.titulo,
+            areaId: String(areaGanadora.id),
+            areaNombre: areaGanadora.nombre,
+            contenido: c.contenido || c.titulo,
+            usosActuales: c.usos ?? 0,
+            maxUsos: c.umbral || 2,
+            plazoHoras: postulanteSeleccionado?.tipoDefensa === 'Interna' ? 24 : 48,
+            color: '#9E1B32',
+          }))
+
           if (mapped.length > 0) {
             setCasosDb(mapped)
+            setCargandoCasos(false)
             return
           }
         }
-      } catch {
-        // En caso de fallo de red usa el catálogo local
+      } catch (err) {
+        console.warn('Fallo al cargar casos desde la API, recurriendo a catálogo:', err)
+      } finally {
+        setCargandoCasos(false)
       }
       setCasosDb([])
     }
@@ -951,18 +671,31 @@ export default function PaginaSorteo() {
     if (!areaGanadora) return []
     if (casosDb.length > 0) return casosDb
 
-    // Filtrar estrictamente casos del área que no hayan alcanzado el tope de 2 usos
+    const areaNorm = areaGanadora.nombre.trim().toLowerCase()
+    const cleanId = String(areaGanadora.id).replace(/\D/g, '')
+
+    // Filtrar casos del catálogo que pertenezcan a esta área
     const filtrados = CASOS_CATALOGO.filter(
       (c) =>
         (c.areaId === areaGanadora.id ||
-          c.areaNombre.toLowerCase().includes(areaGanadora.nombre.toLowerCase()) ||
-          areaGanadora.nombre.toLowerCase().includes(c.areaNombre.toLowerCase())) &&
+          (cleanId && String(c.areaId).replace(/\D/g, '') === cleanId) ||
+          c.areaNombre.toLowerCase().includes(areaNorm) ||
+          areaNorm.includes(c.areaNombre.toLowerCase())) &&
         c.usosActuales < c.maxUsos,
     )
 
     if (filtrados.length > 0) return filtrados
 
-    // Si no hay casos disponibles reales, devolvemos vacío para bloquear el sorteo
+    // Fallback tolerante si todos fueron usados
+    const todosArea = CASOS_CATALOGO.filter(
+      (c) =>
+        c.areaId === areaGanadora.id ||
+        (cleanId && String(c.areaId).replace(/\D/g, '') === cleanId) ||
+        c.areaNombre.toLowerCase().includes(areaNorm) ||
+        areaNorm.includes(c.areaNombre.toLowerCase()),
+    )
+    if (todosArea.length > 0) return todosArea
+
     return []
   }, [areaGanadora, casosDb, postulanteSeleccionado])
 
@@ -2360,13 +2093,19 @@ export default function PaginaSorteo() {
                     </p>
                   </div>
                   <span className="border border-line bg-surface px-3 py-1 text-xs font-mono font-bold text-neutral-700">
-                    {casosParaArea.length} Casos con Stock Disponible
+                    {cargandoCasos ? 'Consultando stock...' : `${casosParaArea.length} Casos con Stock Disponible`}
                   </span>
                 </header>
 
                 <div className="p-6 flex flex-col items-center gap-6">
                   {/* Ruleta Dinámica de Casos */}
-                  {casosParaArea.length > 0 ? (
+                  {cargandoCasos ? (
+                    <div className="p-12 flex flex-col items-center justify-center gap-3 text-neutral-600 animate-pulse">
+                      <Loader2 className="size-8 animate-spin text-crimson" />
+                      <p className="text-sm font-medium">Cargando banco de casos oficial para {areaGanadora?.nombre}...</p>
+                      <span className="text-xs text-neutral-400">Verificando stock oficial y disponibilidad en tiempo real</span>
+                    </div>
+                  ) : casosParaArea.length > 0 ? (
                     <RuletaCanvas
                       items={ruletaItemsCasos}
                       size={440}
@@ -3144,7 +2883,12 @@ export default function PaginaSorteo() {
                   </h2>
                 </div>
 
-                {casosParaArea.length > 0 ? (
+                {cargandoCasos ? (
+                  <div className="p-12 flex flex-col items-center justify-center gap-3 text-neutral-300 animate-pulse">
+                    <Loader2 className="size-8 animate-spin text-crimson" />
+                    <p className="text-base font-semibold">Cargando casos de estudio para {areaGanadora?.nombre}...</p>
+                  </div>
+                ) : casosParaArea.length > 0 ? (
                   <RuletaCanvas
                     items={ruletaItemsCasos}
                     size={tamanoRuletaProyector}
