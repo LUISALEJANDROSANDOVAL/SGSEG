@@ -52,8 +52,10 @@ export class CasosService {
 
     const allowedCarreraIds = await this.resolveAllowedCarreras(user);
 
-    const idCarrera = filter.idCarrera ? BigInt(filter.idCarrera) : undefined;
-    const idArea = filter.idArea ? BigInt(filter.idArea) : undefined;
+    const cleanCarrera = filter.idCarrera ? String(filter.idCarrera).replace(/\D/g, '') : '';
+    const cleanArea = filter.idArea ? String(filter.idArea).replace(/\D/g, '') : '';
+    const idCarrera = cleanCarrera.length > 0 ? BigInt(cleanCarrera) : undefined;
+    const idArea = cleanArea.length > 0 ? BigInt(cleanArea) : undefined;
 
     const filterOptions = {
       idCarrera,
